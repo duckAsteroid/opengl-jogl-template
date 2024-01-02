@@ -3,7 +3,7 @@
 precision mediump float;
 
 const float PI = 3.1415926535897932384626433832795;
-const float FREQ = 1.;
+const float FREQ = .1;
 
 uniform float millis;
 in vec2 texCoord;
