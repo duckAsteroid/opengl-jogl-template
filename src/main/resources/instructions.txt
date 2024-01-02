@@ -1,0 +1,6 @@
+This program is used as a basis and framework for testing/experimenting with OpenGL shaders.
+
+The following controls
+
+The program runs in a loop
+

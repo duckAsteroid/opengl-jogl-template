@@ -1,0 +1,27 @@
+plugins {
+  id 'java'
+  id 'application'
+}
+
+group = 'com.asteroid.duck'
+version = '0.0.1'
+description = 'A template application for OpenGL (via JOGL) projects and experiments'
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+  // Open GL libraries
+  def joglVersion = '2.3.2'
+  implementation "org.jogamp.gluegen:gluegen-rt-main:$joglVersion"
+  implementation "org.jogamp.jogl:jogl-all-main:$joglVersion"
+}
+
+application {
+  mainClass = 'com.asteriod.duck.opengl.Main'
+}
+
+run {
+  workingDir = project.rootDir
+}
