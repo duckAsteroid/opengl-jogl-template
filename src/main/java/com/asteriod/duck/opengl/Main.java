@@ -2,6 +2,7 @@ package com.asteriod.duck.opengl;
 
 import com.jogamp.common.net.Uri;
 import com.jogamp.common.nio.Buffers;
+import com.jogamp.common.util.IOUtil;
 import com.jogamp.newt.event.KeyAdapter;
 import com.jogamp.newt.event.KeyEvent;
 import com.jogamp.newt.event.WindowAdapter;
@@ -12,8 +13,10 @@ import com.jogamp.opengl.util.Animator;
 import com.jogamp.opengl.util.glsl.ShaderCode;
 import com.jogamp.opengl.util.glsl.ShaderProgram;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
@@ -24,6 +27,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
 import static com.jogamp.opengl.GL.GL_DONT_CARE;
 import static com.jogamp.opengl.GL2ES2.*;
@@ -35,6 +39,13 @@ public class Main implements GLEventListener {
     public static final int LARGE_STEP = 100;
 
     private static GLWindow window;
+
+    private static String INSTRUCTIONS;
+
+    static {
+        INSTRUCTIONS = new BufferedReader(new InputStreamReader(Main.class.getResourceAsStream("/instructions.txt")))
+            .lines().collect(Collectors.joining("\n"));
+    }
 
     private ShaderProgram shaderProgram = null;
     private AtomicBoolean shaderDispose = new AtomicBoolean(false);
@@ -54,6 +65,7 @@ public class Main implements GLEventListener {
 
     public static void main(String[] args) {
         new Main().setup();
+        printInstructions();
     }
 
     private void setup() {
@@ -110,8 +122,15 @@ public class Main implements GLEventListener {
                     window.setFullscreen(!window.isFullscreen());
                     //System.out.println("Size: "+windowSizeString());
                 }
+                else {
+                    printInstructions();
+                }
             }
         });
+    }
+
+    public static void printInstructions() {
+        System.out.println(INSTRUCTIONS);
     }
 
     private void stepBack(boolean largeStep) {

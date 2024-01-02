@@ -1,6 +1,8 @@
 This program is used as a basis and framework for testing/experimenting with OpenGL shaders.
 
-The following controls
-
-The program runs in a loop
-
+The following keys can be used:
+	<ESC>          - Quit the program
+	<SPACE>        - Pause and unpause the program timer (the display loop keeps running)
+	<LEFT>/<RIGHT> - When paused, move the time forwards/backwards (<SHIFT> for larger steps)
+	<F11>          - Toggle full screen mode
+	<F5>           - Reload shader source
