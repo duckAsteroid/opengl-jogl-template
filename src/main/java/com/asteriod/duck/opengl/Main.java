@@ -183,8 +183,6 @@ public class Main implements GLEventListener {
         GL4 gl = drawable.getGL().getGL4();
         togglePause(); // start the clock
 
-        initDebug(gl);
-
         bkgBuffer = Buffers.newDirectFloatBuffer(4);
         bkgBuffer.put(0, new float[] {0.0f, 0.0f, 0.0f, 0.0f});
 
@@ -213,7 +211,7 @@ public class Main implements GLEventListener {
         gl.glGenBuffers(1, ibo, 0);
         gl.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, ibo[0]);
 
-        // Store the index data in the IBO
+        // Store the index data in the IBO - create two triangles
         indices = new short[] {0, 1, 2, 0, 2, 3};
         ShortBuffer indexBuffer = Buffers.newDirectShortBuffer(indices);
         gl.glBufferData(GL.GL_ELEMENT_ARRAY_BUFFER, indexBuffer.limit() * 2, indexBuffer, GL.GL_STATIC_DRAW);
@@ -308,38 +306,4 @@ public class Main implements GLEventListener {
         System.out.println("Size: "+windowSizeString());
     }
 
-    private void initDebug(GL4 gl) {
-
-        window.getContext().addGLDebugListener(new GLDebugListener() {
-            @Override
-            public void messageSent(GLDebugMessage event) {
-                System.out.println(event);
-                throw new RuntimeException(event.getDbgMsg());
-            }
-        });
-
-        gl.glDebugMessageControl(
-                GL_DONT_CARE,
-                GL_DONT_CARE,
-                GL_DONT_CARE,
-                0,
-                null,
-                false);
-
-        gl.glDebugMessageControl(
-                GL_DONT_CARE,
-                GL_DONT_CARE,
-                GL_DEBUG_SEVERITY_HIGH,
-                0,
-                null,
-                true);
-
-        gl.glDebugMessageControl(
-                GL_DONT_CARE,
-                GL_DONT_CARE,
-                GL_DEBUG_SEVERITY_MEDIUM,
-                0,
-                null,
-                true);
-    }
 }

@@ -9,11 +9,12 @@ description = 'A template application for OpenGL (via JOGL) projects and experim
 
 repositories {
   mavenCentral()
+  maven { url "https://jogamp.org/deployment/maven" }
 }
 
 dependencies {
   // Open GL libraries
-  def joglVersion = '2.3.2'
+  def joglVersion = '2.4.0'
   implementation "org.jogamp.gluegen:gluegen-rt-main:$joglVersion"
   implementation "org.jogamp.jogl:jogl-all-main:$joglVersion"
 }
