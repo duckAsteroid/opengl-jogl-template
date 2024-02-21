@@ -1,44 +1,39 @@
 package com.asteriod.duck.opengl;
 
-import com.jogamp.common.net.Uri;
-import com.jogamp.common.nio.Buffers;
-import com.jogamp.common.util.IOUtil;
-import com.jogamp.newt.event.KeyAdapter;
-import com.jogamp.newt.event.KeyEvent;
-import com.jogamp.newt.event.WindowAdapter;
-import com.jogamp.newt.event.WindowEvent;
-import com.jogamp.newt.opengl.GLWindow;
-import com.jogamp.opengl.*;
-import com.jogamp.opengl.util.Animator;
-import com.jogamp.opengl.util.glsl.ShaderCode;
-import com.jogamp.opengl.util.glsl.ShaderProgram;
 
+import com.asteriod.duck.opengl.util.Keys;
+import com.asteriod.duck.opengl.util.ShaderProgram;
+import org.lwjgl.glfw.GLFWErrorCallback;
+import org.lwjgl.opengl.GL;
+import org.lwjgl.system.MemoryStack;
+
+import java.awt.*;
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
-import static com.jogamp.opengl.GL.GL_DONT_CARE;
-import static com.jogamp.opengl.GL2ES2.*;
-import static com.jogamp.opengl.GL2ES2.GL_FRAGMENT_SHADER;
-import static com.jogamp.opengl.GL2ES3.GL_COLOR;
+import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
+import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.opengl.GL11.GL_FLOAT;
+import static org.lwjgl.opengl.GL15.*;
+import static org.lwjgl.opengl.GL20.glUseProgram;
+import static org.lwjgl.opengl.GL30.*;
+import static org.lwjgl.system.MemoryStack.stackPush;
+import static org.lwjgl.system.MemoryUtil.NULL;
 
-public class Main implements GLEventListener {
+
+public class Main {
     public static final int STEP = 10;
     public static final int LARGE_STEP = 100;
 
-    private static GLWindow window;
+    private long windowHandle;
+    private String windowTitle;
 
     private static String INSTRUCTIONS;
 
@@ -52,81 +47,88 @@ public class Main implements GLEventListener {
 
     private long elapsed;
     private long lastUpdate;
-    private Animator animator;
 
     private boolean paused = true;
 
-    private final float freq = 1; // Hz
-    private FloatBuffer bkgBuffer;
-    private short[] indices;
 
-    private int[] vbo;
-    private int[] ibo;
 
-    public static void main(String[] args) {
-        new Main().setup();
-        printInstructions();
-    }
+    private int vbo;
+    private int ibo;
+    private int vao;
 
-    private void setup() {
-        GLProfile glProfile = GLProfile.getGL4ES3();
-        GLCapabilities glCapabilities = new GLCapabilities(glProfile);
+    public Main(String title, int width, int height) {
+        this.windowTitle = title;
+        //System.out.println("INFO: OpenGL Version: "+glGetString(GL_VERSION));
+        GLFWErrorCallback.createPrint(System.err).set();
 
-        window = GLWindow.create(glCapabilities);
+        if(!glfwInit()) throw new RuntimeException("Unable to init GLFW");
 
-        window.setSize(600, 600);
-        window.setResizable(true);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        glfwWindowHint(GLFW_CONTEXT_DEBUG, GLFW_TRUE);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+
+        windowHandle = glfwCreateWindow(width, height, title, NULL, NULL);
+        // Make the OpenGL context current
+        glfwMakeContextCurrent(windowHandle);
+
+        glfwSetKeyCallback(windowHandle, this::keyCallback);
+        glfwSetFramebufferSizeCallback(windowHandle, this::frameBufferSizeCallback);
 
         updateTitle();
 
-        //window.setFullscreen(true);
-        window.setContextCreationFlags(GLContext.CTX_OPTION_DEBUG);
-        window.setVisible(true);
+        // Enable v-sync
+        glfwSwapInterval(1);
 
-        window.addGLEventListener(this);
+        // Make the window visible
+        glfwShowWindow(windowHandle);
 
-        elapsed = 0;
 
-        animator = new Animator(window);
-        animator.setUpdateFPSFrames(1, null);
-        animator.setRunAsFastAsPossible(true);
-        animator.start();
+        // kick off GL
+        GL.createCapabilities();
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    }
 
-        window.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowDestroyed(WindowEvent e) {
-                animator.stop();
-                System.exit(0);
-            }
-        });
+    public static void main(String[] args) throws Exception {
+        Keys keys = new Keys();
 
-        window.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                if (KeyEvent.VK_ESCAPE == e.getKeyCode()) {
-                    exit();
-                }
-                else if (KeyEvent.VK_SPACE == e.getKeyCode()) {
-                    togglePause();
-                }
-                else if (KeyEvent.VK_LEFT == e.getKeyCode()) {
-                    stepBack((e.getModifiers() & KeyEvent.SHIFT_MASK) != 0);
-                }
-                else if (KeyEvent.VK_RIGHT == e.getKeyCode()) {
-                    stepForward((e.getModifiers() & KeyEvent.SHIFT_MASK) != 0);
-                }
-                else if (KeyEvent.VK_F5 == e.getKeyCode()) {
-                    shaderDispose.set(true);
-                }
-                else if (KeyEvent.VK_F11 == e.getKeyCode()) {
-                    window.setFullscreen(!window.isFullscreen());
-                    //System.out.println("Size: "+windowSizeString());
-                }
-                else {
-                    printInstructions();
-                }
-            }
-        });
+        Main main = new Main("Shader Playground", 800, 600);
+        printInstructions();
+        main.displayLoop();
+    }
+
+    public void frameBufferSizeCallback(long window, int width, int height) {
+
+    }
+
+    public void keyCallback(long window, int key, int scancode, int action, int mode) {
+        if (GLFW_KEY_ESCAPE == key) {
+            exit();
+        }
+        else if (GLFW_KEY_SPACE == key) {
+            togglePause();
+        }
+        else if (GLFW_KEY_LEFT == key) {
+            stepBack((mode & GLFW_MOD_SHIFT) != 0);
+        }
+        else if (GLFW_KEY_RIGHT == key) {
+            stepForward((mode & GLFW_MOD_SHIFT) != 0);
+        }
+        else if (GLFW_KEY_F5 == key) {
+            shaderDispose.set(true);
+        }
+        else if (GLFW_KEY_F11 == key) {
+            toggleFullscreen();
+        }
+        else {
+            printInstructions();
+        }
+    }
+
+    public static void toggleFullscreen() {
+
     }
 
     public static void printInstructions() {
@@ -168,25 +170,40 @@ public class Main implements GLEventListener {
 
     private void exit() {
         System.out.println("Exit");
-        window.destroy();
+        glfwSetWindowShouldClose(windowHandle, true);
     }
 
     private void updateTitle() {
-        window.setTitle("Shader playground ["+windowSizeString()+"]");
+        glfwSetWindowTitle(windowHandle,windowTitle + " ["+windowSizeString()+"]");
     }
 
     public String windowSizeString() {
+        Dimension window = getWindowSize();
         return window.getWidth()+"x"+window.getHeight();
     }
 
-    public void init(GLAutoDrawable drawable) {
-        GL4 gl = drawable.getGL().getGL4();
+    public Dimension getWindowSize() {
+        try ( MemoryStack stack = stackPush() ) {
+            IntBuffer pWidth = stack.mallocInt(1); // int*
+            IntBuffer pHeight = stack.mallocInt(1); // int*
+
+            // Get the window size passed to glfwCreateWindow
+            glfwGetWindowSize(windowHandle, pWidth, pHeight);
+
+            return new Dimension(pWidth.get(0), pHeight.get(0));
+        }
+    }
+
+    public void init() throws IOException {
+
         togglePause(); // start the clock
 
-        bkgBuffer = Buffers.newDirectFloatBuffer(4);
-        bkgBuffer.put(0, new float[] {0.0f, 0.0f, 0.0f, 0.0f});
+        initShaderProgram();
 
-        initShaderProgram(gl);
+        initBuffers();
+    }
+
+    private void initBuffers() {
 
         // Define the vertices of the rectangle
         float[] vertices = {
@@ -196,84 +213,59 @@ public class Main implements GLEventListener {
                 -1.0f, 1.0f // top left
         };
 
-        // Create a VBO and bind it
-        vbo = new int[1];
-        gl.glGenBuffers(1, vbo, 0);
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, vbo[0]);
+        short[] indices = new short[]{0, 1, 2, 0, 2, 3};
 
-        // Store the vertex data in the VBO
-        FloatBuffer vertexBuffer = Buffers.newDirectFloatBuffer(vertices);
-        gl.glBufferData(GL.GL_ARRAY_BUFFER, vertexBuffer.limit() * 4, vertexBuffer, GL.GL_STATIC_DRAW);
+        try(MemoryStack stack = MemoryStack.stackPush()) {
+            vao = glGenVertexArrays();
+            glBindVertexArray(vao);
 
+            // Create a VBO and bind it
+            vbo = glGenBuffers();
+            glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-        // Create an IBO and bind it
-        ibo = new int[1];
-        gl.glGenBuffers(1, ibo, 0);
-        gl.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, ibo[0]);
+            // Store the vertex data in the VBO
+            FloatBuffer vertexBuffer = stack.floats(vertices);
+            glBufferData(GL_ARRAY_BUFFER, vertexBuffer, GL_STATIC_DRAW);
 
-        // Store the index data in the IBO - create two triangles
-        indices = new short[] {0, 1, 2, 0, 2, 3};
-        ShortBuffer indexBuffer = Buffers.newDirectShortBuffer(indices);
-        gl.glBufferData(GL.GL_ELEMENT_ARRAY_BUFFER, indexBuffer.limit() * 2, indexBuffer, GL.GL_STATIC_DRAW);
+            glVertexAttribPointer(0,3, GL_FLOAT, false,0,0L);
+            glEnableVertexAttribArray(0);
 
+            // Create an IBO and bind it
+            ibo = glGenBuffers();
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+
+            // Store the index data in the IBO - create two triangles
+            ShortBuffer indexBuffer = stack.shorts(indices);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBuffer, GL_STATIC_DRAW);
+        }
     }
 
-    private static Uri[] fromPath(Path p) {
-	    try {
-          Uri uri = Uri.valueOf(p.toUri());
-          return new Uri[] { uri };
-      } catch (URISyntaxException e) {
-		    e.printStackTrace();
-	    }
-	    return new Uri[0];
-    }
 
-    public void initShaderProgram(GL4 gl) {
+    public void initShaderProgram() throws IOException {
         if (shaderProgram != null) {
-            shaderProgram.destroy(gl);
+            shaderProgram.destroy();
             System.out.println("Shader disposed");
         }
         // load the GLSL Shaders
-        ShaderCode
-                vertShader = ShaderCode.create(gl, GL_VERTEX_SHADER, 1, fromPath(Paths.get("src/main/glsl/main.vert")), true);
-        ShaderCode fragShader =
-                ShaderCode.create(gl, GL_FRAGMENT_SHADER, 1, fromPath(Paths.get("src/main/glsl/main.frag")), true);
-
-        ShaderProgram shaderProgram = new ShaderProgram();
-
-        shaderProgram.add(vertShader);
-        shaderProgram.add(fragShader);
-
-        shaderProgram.init(gl);
-
-        this.shaderProgram = shaderProgram;
-
-        if (!shaderProgram.link(gl, System.err)) {
-            ByteBuffer buffer = Buffers.newDirectByteBuffer(2 * 1024);
-            gl.glGetShaderInfoLog(shaderProgram.program(), 1, IntBuffer.wrap(new int[]{buffer.limit()}), buffer);
-            buffer.flip();
-            System.err.println(StandardCharsets.UTF_8.decode(buffer));
-        }
+        this.shaderProgram = ShaderProgram.compile(Paths.get("src/main/glsl/main.vert"), Paths.get("src/main/glsl/main.frag"), null);
 
         System.out.println("Shaders loaded");
     }
 
-    @Override
-    public void dispose(GLAutoDrawable glAutoDrawable) {
-        GL4 gl = glAutoDrawable.getGL().getGL4();
-        shaderProgram.destroy(gl);
+    public void dispose() {
+
+        if (shaderProgram!=null) {
+            shaderProgram.destroy();
+        }
     }
 
-    @Override
-    public void display(GLAutoDrawable drawable) {
-        GL4 gl = (GL4) GLContext.getCurrentGL();
-        gl.glClearBufferfv(GL_COLOR, 0, bkgBuffer);
+    public void render() throws IOException {
         if (shaderDispose.get()) {
-            initShaderProgram(gl);
+            initShaderProgram();
             shaderDispose.set(false);
         }
-        if (shaderProgram != null && shaderProgram.program() > 0) {
-            gl.glUseProgram(shaderProgram.program());
+        if (shaderProgram != null && shaderProgram.id() > NULL) {
+            shaderProgram.use();
 
             if (!paused) {
                 long now = System.currentTimeMillis();
@@ -281,27 +273,69 @@ public class Main implements GLEventListener {
                 lastUpdate = now;
             }
 
-            int uniformLocation = gl.glGetUniformLocation(shaderProgram.program(), "millis");
-            gl.glUniform1f(uniformLocation, timer());
+            shaderProgram.setFloat("millis", timer(), false);
 
-            // Enable the vertex attribute array and specify the vertex attribute pointer
-            int positionAttribute = gl.glGetAttribLocation(shaderProgram.program(), "position");
-            gl.glEnableVertexAttribArray(positionAttribute);
-            gl.glVertexAttribPointer(positionAttribute, 2, GL.GL_FLOAT, false, 0, 0);
+            shaderProgram.setVertexAttribPointer("position", 2, GL_FLOAT, false, 0, 0);
+
 
         }
-        gl.glBindBuffer(GL.GL_ARRAY_BUFFER, vbo[0]);
-        gl.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, ibo[0]);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
 
-        gl.glDrawElements(GL.GL_TRIANGLES, indices.length, GL.GL_UNSIGNED_SHORT, 0);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 
-        gl.glUseProgram(0);
+        glUseProgram(0);
     }
 
-    @Override
-    public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
-        GL4 gl = drawable.getGL().getGL4();
-        gl.glViewport(x, y, width, height);
+    public void displayLoop() throws IOException {
+        // initialize
+        // ---------------
+        init();
+
+        // deltaTime variables
+        // -------------------
+        double deltaTime = 0.0f;
+        double lastFrame = 0.0f;
+
+        while (!glfwWindowShouldClose(windowHandle))
+        {
+            // calculate delta time
+            // --------------------
+            double currentFrame = glfwGetTime();
+            deltaTime = currentFrame - lastFrame;
+            lastFrame = currentFrame;
+            glfwPollEvents();
+
+            // manage user input
+            // -----------------
+            //processInput((float) deltaTime);
+
+            // update game state
+            // -----------------
+            //update(deltaTime);
+
+            // render
+            // ------
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+            render();
+
+            glfwSwapBuffers(windowHandle);
+        }
+
+        // delete all resources
+        // ---------------------
+        dispose();
+
+        glfwFreeCallbacks(windowHandle);
+        glfwSetErrorCallback(null).free();
+        glfwDestroyWindow(windowHandle);
+
+        glfwTerminate();
+    }
+
+    public void reshape(int x, int y, int width, int height) {
+        glViewport(x, y, width, height);
         updateTitle();
         System.out.println("Size: "+windowSizeString());
     }
