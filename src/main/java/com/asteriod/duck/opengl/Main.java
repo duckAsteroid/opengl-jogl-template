@@ -1,9 +1,11 @@
 package com.asteriod.duck.opengl;
 
 
-import com.asteriod.duck.opengl.util.Keys;
+import com.asteriod.duck.opengl.util.keys.Keys;
 import com.asteriod.duck.opengl.util.ShaderProgram;
+import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.GLFWErrorCallback;
+import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryStack;
 
@@ -35,6 +37,8 @@ public class Main {
     private long windowHandle;
     private String windowTitle;
 
+    private Rectangle windowed = null;
+
     private static String INSTRUCTIONS;
 
     static {
@@ -49,8 +53,6 @@ public class Main {
     private long lastUpdate;
 
     private boolean paused = true;
-
-
 
     private int vbo;
     private int ibo;
@@ -67,7 +69,7 @@ public class Main {
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
         glfwWindowHint(GLFW_CONTEXT_DEBUG, GLFW_TRUE);
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
         windowHandle = glfwCreateWindow(width, height, title, NULL, NULL);
         // Make the OpenGL context current
@@ -92,43 +94,82 @@ public class Main {
     }
 
     public static void main(String[] args) throws Exception {
-        Keys keys = new Keys();
 
-        Main main = new Main("Shader Playground", 800, 600);
+        Main main = new Main("Shader Playground", 1024, 1024);
         printInstructions();
         main.displayLoop();
     }
 
     public void frameBufferSizeCallback(long window, int width, int height) {
-
+        glViewport(0, 0, width, height);
+        updateTitle();
     }
 
     public void keyCallback(long window, int key, int scancode, int action, int mode) {
-        if (GLFW_KEY_ESCAPE == key) {
-            exit();
-        }
-        else if (GLFW_KEY_SPACE == key) {
-            togglePause();
-        }
-        else if (GLFW_KEY_LEFT == key) {
-            stepBack((mode & GLFW_MOD_SHIFT) != 0);
-        }
-        else if (GLFW_KEY_RIGHT == key) {
-            stepForward((mode & GLFW_MOD_SHIFT) != 0);
-        }
-        else if (GLFW_KEY_F5 == key) {
-            shaderDispose.set(true);
-        }
-        else if (GLFW_KEY_F11 == key) {
-            toggleFullscreen();
-        }
-        else {
-            printInstructions();
+        if (action == GLFW_PRESS) {
+            if (GLFW_KEY_ESCAPE == key) {
+                exit();
+            } else if (GLFW_KEY_SPACE == key) {
+                togglePause();
+            } else if (GLFW_KEY_LEFT == key) {
+                stepBack((mode & GLFW_MOD_SHIFT) != 0);
+            } else if (GLFW_KEY_RIGHT == key) {
+                stepForward((mode & GLFW_MOD_SHIFT) != 0);
+            } else if (GLFW_KEY_F5 == key) {
+                shaderDispose.set(true);
+            } else if (GLFW_KEY_F11 == key) {
+                toggleFullscreen();
+            } else {
+                printInstructions();
+            }
         }
     }
 
-    public static void toggleFullscreen() {
+    public void toggleFullscreen() {
+        if (windowed == null) {
+            windowed = getWindow();
+            long monitor = glfwGetCurrentMonitor(windowHandle);
+            GLFWVidMode mode = glfwGetVideoMode(monitor);
+            glfwSetWindowMonitor(windowHandle, monitor, 0, 0, mode.width(), mode.height(), mode.refreshRate());
+        } else {
+            glfwSetWindowMonitor(windowHandle, NULL, windowed.x, windowed.y, windowed.width, windowed.height, 0 );
+            windowed = null;
+        }
+    }
 
+    public static long glfwGetCurrentMonitor(long window) {
+        int[] wx = {0}, wy = {0}, ww = {0}, wh = {0};
+        int[] mx = {0}, my = {0}, mw = {0}, mh = {0};
+        int overlap, bestoverlap;
+        long bestmonitor;
+        PointerBuffer monitors;
+        GLFWVidMode mode;
+
+        bestoverlap = 0;
+        bestmonitor = glfwGetPrimaryMonitor();// (You could set this back to NULL, but I'd rather be guaranteed to get a valid monitor);
+
+        glfwGetWindowPos(window, wx, wy);
+        glfwGetWindowSize(window, ww, wh);
+        monitors = glfwGetMonitors();
+
+        while(monitors.hasRemaining()) {
+            long monitor = monitors.get();
+            mode = glfwGetVideoMode(monitor);
+            glfwGetMonitorPos(monitor, mx, my);
+            mw[0] = mode.width();
+            mh[0] = mode.height();
+
+            overlap =
+                    Math.max(0, Math.min(wx[0] + ww[0], mx[0] + mw[0]) - Math.max(wx[0], mx[0])) *
+                            Math.max(0, Math.min(wy[0] + wh[0], my[0] + mh[0]) - Math.max(wy[0], my[0]));
+
+            if (bestoverlap < overlap) {
+                bestoverlap = overlap;
+                bestmonitor = monitor;
+            }
+        }
+
+        return bestmonitor;
     }
 
     public static void printInstructions() {
@@ -178,11 +219,11 @@ public class Main {
     }
 
     public String windowSizeString() {
-        Dimension window = getWindowSize();
+        Rectangle window = getWindow();
         return window.getWidth()+"x"+window.getHeight();
     }
 
-    public Dimension getWindowSize() {
+    public Rectangle getWindow() {
         try ( MemoryStack stack = stackPush() ) {
             IntBuffer pWidth = stack.mallocInt(1); // int*
             IntBuffer pHeight = stack.mallocInt(1); // int*
@@ -190,7 +231,11 @@ public class Main {
             // Get the window size passed to glfwCreateWindow
             glfwGetWindowSize(windowHandle, pWidth, pHeight);
 
-            return new Dimension(pWidth.get(0), pHeight.get(0));
+            IntBuffer pX = stack.mallocInt(1);
+            IntBuffer pY = stack.mallocInt(1);
+            glfwGetWindowPos(windowHandle, pX, pY);
+
+            return new Rectangle(pX.get(0), pY.get(0), pWidth.get(0), pHeight.get(0));
         }
     }
 
@@ -226,9 +271,6 @@ public class Main {
             // Store the vertex data in the VBO
             FloatBuffer vertexBuffer = stack.floats(vertices);
             glBufferData(GL_ARRAY_BUFFER, vertexBuffer, GL_STATIC_DRAW);
-
-            glVertexAttribPointer(0,3, GL_FLOAT, false,0,0L);
-            glEnableVertexAttribArray(0);
 
             // Create an IBO and bind it
             ibo = glGenBuffers();
