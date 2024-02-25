@@ -1,13 +1,17 @@
 package com.asteriod.duck.opengl;
 
 
+import com.asteriod.duck.opengl.util.ResourceManager;
 import com.asteriod.duck.opengl.util.keys.Keys;
 import com.asteriod.duck.opengl.util.ShaderProgram;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.GLFWErrorCallback;
+import org.lwjgl.glfw.GLFWImage;
 import org.lwjgl.glfw.GLFWVidMode;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryStack;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.awt.*;
 import java.io.BufferedReader;
@@ -31,6 +35,7 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 
 
 public class Main {
+    private static final Logger LOG = LoggerFactory.getLogger(Main.class);
     public static final int STEP = 10;
     public static final int LARGE_STEP = 100;
 
@@ -80,7 +85,18 @@ public class Main {
 
         updateTitle();
 
-        // Enable v-sync
+        try (GLFWImage.Buffer icons = GLFWImage.malloc(1)) {
+            ResourceManager.ImageData imgData = ResourceManager.instance().loadTextureData("icon16.png", true);
+            icons.position(0)
+                    .width(imgData.size().width)
+                    .height(imgData.size().height)
+                    .pixels(imgData.buffer());
+            glfwSetWindowIcon(windowHandle, icons);
+        } catch (IOException e) {
+	        LOG.error("Unable to load window icon", e);
+        }
+
+	    // Enable v-sync
         glfwSwapInterval(1);
 
         // Make the window visible
@@ -94,7 +110,6 @@ public class Main {
     }
 
     public static void main(String[] args) throws Exception {
-
         Main main = new Main("Shader Playground", 1024, 1024);
         printInstructions();
         main.displayLoop();
