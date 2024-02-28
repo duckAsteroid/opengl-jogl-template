@@ -1,5 +1,6 @@
 package com.asteriod.duck.opengl.util;
 
+import com.asteriod.duck.opengl.util.resources.Resource;
 import org.joml.Matrix4f;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
@@ -19,7 +20,7 @@ import java.util.function.Function;
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL32.GL_GEOMETRY_SHADER;
 
-public class ShaderProgram {
+public class ShaderProgram implements Resource {
 	private static final Logger LOG = LoggerFactory.getLogger(ShaderProgram.class);
 	private final int id;
 
@@ -85,7 +86,6 @@ public class ShaderProgram {
 		}
 		return new ShaderProgram(id);
 	}
-
 
 
 	public enum CompilationChecker implements Function<Integer, Optional<String>> {
@@ -186,6 +186,8 @@ public class ShaderProgram {
 			glUniformMatrix4fv(glGetUniformLocation(id, name), false, fb);
 		}
 	}
+
+
 
 	public void setVertexAttribPointer(String name, int size, int type, boolean normalized, int stride, long pointer) {
 		try(MemoryStack stack = MemoryStack.stackPush()) {

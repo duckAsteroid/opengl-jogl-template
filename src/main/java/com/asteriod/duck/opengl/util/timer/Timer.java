@@ -5,10 +5,26 @@ import org.lwjgl.glfw.GLFW;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * This provides the ability to measure elapsed time in the GL application.
+ * The timer can be paused and resumed to aid debugging.
+ * The timer is decoupled from the time source. Two sources are supported currently:
+ * {@link #glfwGetTimeInstance()} - using Open GL time
+ * {@link #systemCurrentTimeMillisInstance()} - using {@link System#currentTimeMillis()}
+ */
 public class Timer {
-	private boolean paused;
+	private final AtomicBoolean paused = new AtomicBoolean(false);
+	/**
+	 * A source of timestamps in seconds since some arbitrary epoch
+	 */
 	private final Callable<Double> timeSource;
+	/**
+	 * The measured elapsed time - calculated in the last update
+	 */
 	private double elapsed;
+	/**
+	 * The timestamp of the last update
+	 */
 	private double lastUpdate;
 
 	public static Timer glfwGetTimeInstance() {
@@ -16,19 +32,28 @@ public class Timer {
 	}
 
 	public static Timer systemCurrentTimeMillisInstance() {
-		return new Timer(()->(double)System.currentTimeMillis());
+		return new Timer(()->System.currentTimeMillis() / 1000.0);
 	}
+
 	public Timer(Callable<Double> timeSource) {
 		this.timeSource = timeSource;
 		reset();
 	}
 
+	/**
+	 * Reset the timer to start counting elapsed time from {@link #now()}
+	 */
 	public void reset() {
-		this.paused = false;
+		setPaused(false);
 		this.lastUpdate = now();
 		this.elapsed = 0;
 	}
 
+	/**
+	 * Get the latest timestamp from the source.
+	 * @return the timestamp
+	 * @throws RuntimeException if cannot get data from source
+	 */
 	private double now() {
 		try {
 			return timeSource.call();
@@ -38,16 +63,27 @@ public class Timer {
 		}
 	}
 
-	public void step(long stepSize) {
+	/**
+	 * Used to manually step forward by an amount (also in seconds)
+	 * @param stepSize
+	 */
+	public void step(double stepSize) {
 		elapsed += stepSize;
 	}
 
+	/**
+	 * The time elapsed when updated (in seconds) since the timer started
+	 * @return elapsed time in seconds
+	 */
 	public double elapsed() {
 		return elapsed;
 	}
 
+	/**
+	 * Called to update the timer with a new elapsed time calculated from {@link #now()}
+	 */
 	public void update() {
-		if (!paused) {
+		if (!paused.get()) {
 			double now = now();
 			double delta = now - lastUpdate;
 			lastUpdate = now;
@@ -55,17 +91,27 @@ public class Timer {
 		}
 	}
 
+	/**
+	 * Is the time paused?
+	 */
 	public boolean isPaused() {
-		return paused;
+		return paused.get();
 	}
 
+	/**
+	 * Pause or unpause the timer
+	 */
 	public void setPaused(boolean paused) {
-		this.paused = paused;
+		this.paused.set(paused);
 	}
 
 	public boolean togglePaused() {
-		this.paused = !this.paused;
-		return this.paused;
+		boolean current = paused.get();
+		boolean set = false;
+		while(!set) {
+			set = paused.compareAndSet(current, !current);
+		}
+		return !current;
 	}
 
 	@Override

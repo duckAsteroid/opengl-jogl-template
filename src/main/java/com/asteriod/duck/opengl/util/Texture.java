@@ -1,10 +1,12 @@
 package com.asteriod.duck.opengl.util;
 
+import com.asteriod.duck.opengl.util.resources.Resource;
+
 import java.nio.ByteBuffer;
 
 import static org.lwjgl.opengl.GL11.*;
 
-public class Texture {
+public class Texture implements Resource {
 
 	private int ID;
 	private int Width;
@@ -44,6 +46,10 @@ public class Texture {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, this.Filter_Max);
 		// unbind texture
 		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+
+	public int id() {
+		return ID;
 	}
 
 	public void Bind()
