@@ -59,25 +59,12 @@ public class Main extends GLWindow {
         main.displayLoop();
     }
 
-
-    public void keyCallback(long window, int key, int scancode, int action, int mode) {
-        if (action == GLFW_PRESS) {
-            if (GLFW_KEY_ESCAPE == key) {
-                exit();
-            } else if (GLFW_KEY_SPACE == key) {
-                timer.togglePaused();
-            } else if (GLFW_KEY_LEFT == key) {
-                stepBack((mode & GLFW_MOD_SHIFT) != 0);
-            } else if (GLFW_KEY_RIGHT == key) {
-                stepForward((mode & GLFW_MOD_SHIFT) != 0);
-            } else if (GLFW_KEY_F5 == key) {
-                shaderDispose.set(true);
-            } else if (GLFW_KEY_F11 == key) {
-                toggleFullscreen();
-            } else {
-                printInstructions();
-            }
-        }
+    public void registerKeys() {
+        registerKeyAction(GLFW_KEY_SPACE, timer::togglePaused);
+        registerKeyAction(GLFW_KEY_LEFT, () -> stepBack(false));
+        registerKeyAction (GLFW_KEY_RIGHT, () -> stepForward(false));
+        registerKeyAction(GLFW_KEY_F5, () -> shaderDispose.set(true));
+        registerKeyAction(GLFW_KEY_I, Main::printInstructions);
     }
 
 

@@ -1,5 +1,8 @@
 package com.asteriod.duck.opengl.util;
 
+import com.asteriod.duck.opengl.util.keys.Key;
+import com.asteriod.duck.opengl.util.keys.KeyCombination;
+import com.asteriod.duck.opengl.util.keys.Keys;
 import com.asteriod.duck.opengl.util.resources.texture.ImageData;
 import com.asteriod.duck.opengl.util.resources.ResourceManager;
 import org.lwjgl.PointerBuffer;
@@ -14,6 +17,9 @@ import org.slf4j.LoggerFactory;
 import java.awt.*;
 import java.io.IOException;
 import java.nio.IntBuffer;
+import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
 import static org.lwjgl.glfw.GLFW.*;
@@ -24,8 +30,10 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 public abstract class GLWindow {
 	private static final Logger LOG = LoggerFactory.getLogger(GLWindow.class);
 
-	private long windowHandle;
-	private String windowTitle;
+	private final long windowHandle;
+	private final String windowTitle;
+
+	private final Map<KeyCombination, Runnable> keyActions = new HashMap<>();
 
 	private Rectangle windowed = null;
 
@@ -45,6 +53,9 @@ public abstract class GLWindow {
 		windowHandle = glfwCreateWindow(width, height, title, NULL, NULL);
 		// Make the OpenGL context current
 		glfwMakeContextCurrent(windowHandle);
+
+		registerKeyAction (GLFW_KEY_ESCAPE, this::exit);
+		registerKeyAction(GLFW_KEY_F11, this::toggleFullscreen);
 
 		glfwSetKeyCallback(windowHandle, this::keyCallback);
 		glfwSetFramebufferSizeCallback(windowHandle, this::frameBufferSizeCallback);
@@ -77,7 +88,34 @@ public abstract class GLWindow {
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	}
 
-	public abstract void keyCallback(long window, int key, int scancode, int action, int mode);
+	public void registerKeyAction(int key, Runnable runnable) {
+		Key knownKey = Keys.instance().keyFor(key).orElseThrow(() -> new IllegalArgumentException("Unknown key code: " + key));
+		keyActions.put(new KeyCombination(Set.of(knownKey), Collections.emptySet()), runnable);
+	}
+
+	public void registerKeyAction(KeyCombination combo, Runnable runnable) {
+		keyActions.put(combo, runnable);
+	}
+
+	public void registerKeyAction(Set<KeyCombination> keyCombinations, Runnable runnable) {
+		for(KeyCombination combo : keyCombinations) {
+			keyActions.put(combo, runnable);
+		}
+	}
+
+	public final void keyCallback(long window, int key, int scancode, int actionCode, int mode) {
+		if (actionCode == GLFW_PRESS) {
+			Optional<Key> knownKey = Keys.instance().keyFor(key);
+			if (knownKey.isPresent()) {
+				Set<Key> mods = Keys.instance().modsFor(mode);
+				KeyCombination combo = new KeyCombination(Set.of(knownKey.get()), mods);
+				if (keyActions.containsKey(combo)) {
+					Runnable action = keyActions.get(combo);
+					action.run();
+				}
+			}
+		}
+	}
 
 	public void frameBufferSizeCallback(long window, int width, int height) {
 		glViewport(0, 0, width, height);
@@ -88,6 +126,7 @@ public abstract class GLWindow {
 		// initialize
 		// ---------------
 		init();
+		registerKeys();
 
 		while (!glfwWindowShouldClose(windowHandle))
 		{
@@ -111,6 +150,8 @@ public abstract class GLWindow {
 
 		glfwTerminate();
 	}
+
+	public abstract void registerKeys();
 
 	public abstract void init() throws IOException;
 	public abstract void render() throws IOException;

@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class Keys {
@@ -72,12 +73,21 @@ public class Keys {
 		return Arrays.stream(GLFW.class.getFields()).filter(f -> f.getName().startsWith(startsWith));
 	}
 
+	public Optional<Key> keyFor(int key) {
+		return Optional.ofNullable(keysByCode.get(key));
+	}
+
+	public Set<Key> modsFor(int mods) {
+		return modsByCode.values().stream()
+						.filter(k -> (k.code() & mods) == k.code())
+						.collect(Collectors.toSet());
+	}
+
 	public Key keyFor(char key) {
 		if (Character.isAlphabetic(key) && Character.isUpperCase(key)) {
 			return keysByCode.get((int)key);
 		}
 		else throw new IllegalArgumentException("Invalid simple key");
-
 	}
 
 	public Key keyForName(String name) {
