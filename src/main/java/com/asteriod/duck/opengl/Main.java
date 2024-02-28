@@ -2,38 +2,29 @@ package com.asteriod.duck.opengl;
 
 
 import com.asteriod.duck.opengl.util.GLWindow;
-import com.asteriod.duck.opengl.util.resources.ImageData;
 import com.asteriod.duck.opengl.util.resources.ResourceManager;
-import com.asteriod.duck.opengl.util.Texture;
-import com.asteriod.duck.opengl.util.ShaderProgram;
+import com.asteriod.duck.opengl.util.resources.texture.Texture;
+import com.asteriod.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteriod.duck.opengl.util.timer.Timer;
-import org.lwjgl.PointerBuffer;
-import org.lwjgl.glfw.GLFWErrorCallback;
-import org.lwjgl.glfw.GLFWImage;
-import org.lwjgl.glfw.GLFWVidMode;
-import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
 import java.nio.file.Paths;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.GL_FLOAT;
 import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL20.glUseProgram;
 import static org.lwjgl.opengl.GL30.*;
-import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
 
@@ -45,14 +36,14 @@ public class Main extends GLWindow {
     private static String INSTRUCTIONS;
 
     static {
-        INSTRUCTIONS = new BufferedReader(new InputStreamReader(Main.class.getResourceAsStream("/instructions.txt")))
+        INSTRUCTIONS = new BufferedReader(new InputStreamReader(Objects.requireNonNull(Main.class.getResourceAsStream("/instructions.txt"))))
             .lines().collect(Collectors.joining("\n"));
     }
 
     private ShaderProgram shaderProgram = null;
-    private AtomicBoolean shaderDispose = new AtomicBoolean(false);
+    private final AtomicBoolean shaderDispose = new AtomicBoolean(false);
 
-    private Timer timer = Timer.glfwGetTimeInstance();
+    private final Timer timer = Timer.glfwGetTimeInstance();
 
     private int vbo;
     private int ibo;

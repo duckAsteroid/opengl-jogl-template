@@ -1,6 +1,6 @@
-package com.asteriod.duck.opengl.util;
+package com.asteriod.duck.opengl.util.resources.shader;
 
-import com.asteriod.duck.opengl.util.resources.Resource;
+import com.asteriod.duck.opengl.util.resources.impl.Resource;
 import org.joml.Matrix4f;
 import org.joml.Vector2f;
 import org.joml.Vector3f;

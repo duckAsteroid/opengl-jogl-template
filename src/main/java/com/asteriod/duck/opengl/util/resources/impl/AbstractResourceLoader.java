@@ -1,4 +1,4 @@
-package com.asteriod.duck.opengl.util.resources;
+package com.asteriod.duck.opengl.util.resources.impl;
 
 import java.nio.file.Path;
 

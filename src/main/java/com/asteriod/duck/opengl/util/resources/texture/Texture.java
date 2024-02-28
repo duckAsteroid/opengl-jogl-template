@@ -1,6 +1,6 @@
-package com.asteriod.duck.opengl.util;
+package com.asteriod.duck.opengl.util.resources.texture;
 
-import com.asteriod.duck.opengl.util.resources.Resource;
+import com.asteriod.duck.opengl.util.resources.impl.Resource;
 
 import java.nio.ByteBuffer;
 

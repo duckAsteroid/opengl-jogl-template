@@ -1,26 +1,18 @@
 package com.asteriod.duck.opengl.util.resources;
 
-import com.asteriod.duck.opengl.util.ShaderProgram;
-import com.asteriod.duck.opengl.util.Texture;
+import com.asteriod.duck.opengl.util.resources.impl.Resource;
+import com.asteriod.duck.opengl.util.resources.shader.ShaderLoader;
+import com.asteriod.duck.opengl.util.resources.shader.ShaderProgram;
+import com.asteriod.duck.opengl.util.resources.texture.ImageData;
+import com.asteriod.duck.opengl.util.resources.texture.Texture;
+import com.asteriod.duck.opengl.util.resources.texture.TextureLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.imageio.ImageIO;
-import java.awt.*;
-import java.awt.color.ColorSpace;
-import java.awt.image.*;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.function.Function;
-
-import static org.lwjgl.opengl.GL11.GL_RGBA;
 
 
 public class ResourceManager {

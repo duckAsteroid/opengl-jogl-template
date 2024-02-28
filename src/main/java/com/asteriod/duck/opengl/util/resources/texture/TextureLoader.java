@@ -1,6 +1,6 @@
-package com.asteriod.duck.opengl.util.resources;
+package com.asteriod.duck.opengl.util.resources.texture;
 
-import com.asteriod.duck.opengl.util.Texture;
+import com.asteriod.duck.opengl.util.resources.impl.AbstractResourceLoader;
 
 import javax.imageio.ImageIO;
 import java.awt.*;

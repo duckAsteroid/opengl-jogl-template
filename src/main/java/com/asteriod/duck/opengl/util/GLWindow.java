@@ -1,6 +1,6 @@
 package com.asteriod.duck.opengl.util;
 
-import com.asteriod.duck.opengl.util.resources.ImageData;
+import com.asteriod.duck.opengl.util.resources.texture.ImageData;
 import com.asteriod.duck.opengl.util.resources.ResourceManager;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.GLFWErrorCallback;
@@ -89,28 +89,9 @@ public abstract class GLWindow {
 		// ---------------
 		init();
 
-		// deltaTime variables
-		// -------------------
-		double deltaTime = 0.0f;
-		double lastFrame = 0.0f;
-
 		while (!glfwWindowShouldClose(windowHandle))
 		{
-			// calculate delta time
-			// --------------------
-			double currentFrame = glfwGetTime();
-			deltaTime = currentFrame - lastFrame;
-			lastFrame = currentFrame;
 			glfwPollEvents();
-
-			// manage user input
-			// -----------------
-			//processInput((float) deltaTime);
-
-			// update game state
-			// -----------------
-			//update(deltaTime);
-
 			// render
 			// ------
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);

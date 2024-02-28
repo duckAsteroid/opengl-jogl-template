@@ -1,6 +1,6 @@
-package com.asteriod.duck.opengl.util.resources;
+package com.asteriod.duck.opengl.util.resources.shader;
 
-import com.asteriod.duck.opengl.util.ShaderProgram;
+import com.asteriod.duck.opengl.util.resources.impl.AbstractResourceLoader;
 
 import java.io.IOException;
 import java.nio.file.Path;
