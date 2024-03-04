@@ -26,6 +26,8 @@ public class Timer {
 	 * The timestamp of the last update
 	 */
 	private double lastUpdate;
+	private long updateCount;
+	private double updateDeltaSum;
 
 	public static Timer glfwGetTimeInstance() {
 		return new Timer(GLFW::glfwGetTime);
@@ -88,6 +90,8 @@ public class Timer {
 			double delta = now - lastUpdate;
 			lastUpdate = now;
 			elapsed += delta;
+			updateCount++;
+			updateDeltaSum += delta;
 		}
 	}
 
@@ -116,6 +120,7 @@ public class Timer {
 
 	@Override
 	public String toString() {
-		return elapsed() + " ms";
+		double averageDelta = updateDeltaSum / updateCount;
+		return elapsed() + " ms ("+averageDelta+"s)";
 	}
 }

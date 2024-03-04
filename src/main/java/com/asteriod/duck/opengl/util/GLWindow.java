@@ -36,6 +36,7 @@ public abstract class GLWindow {
 	private final Map<KeyCombination, Runnable> keyActions = new HashMap<>();
 
 	private Rectangle windowed = null;
+	private Rectangle window;
 
 	public GLWindow(String title, int width, int height, String icon) {
 		this.windowTitle = title;
@@ -59,6 +60,8 @@ public abstract class GLWindow {
 
 		glfwSetKeyCallback(windowHandle, this::keyCallback);
 		glfwSetFramebufferSizeCallback(windowHandle, this::frameBufferSizeCallback);
+
+		window = readWindow();
 
 		updateTitle();
 
@@ -92,6 +95,11 @@ public abstract class GLWindow {
 		Key knownKey = Keys.instance().keyFor(key).orElseThrow(() -> new IllegalArgumentException("Unknown key code: " + key));
 		keyActions.put(new KeyCombination(Set.of(knownKey), Collections.emptySet()), runnable);
 	}
+	public void registerKeyAction(int key, int mod, Runnable runnable) {
+		Key knownKey = Keys.instance().keyFor(key).orElseThrow(() -> new IllegalArgumentException("Unknown key code: " + key));
+		Set<Key> knownMods = Keys.instance().modsFor(mod);
+		keyActions.put(new KeyCombination(Set.of(knownKey), knownMods), runnable);
+	}
 
 	public void registerKeyAction(KeyCombination combo, Runnable runnable) {
 		keyActions.put(combo, runnable);
@@ -119,6 +127,7 @@ public abstract class GLWindow {
 
 	public void frameBufferSizeCallback(long window, int width, int height) {
 		glViewport(0, 0, width, height);
+		this.window = readWindow();
 		updateTitle();
 	}
 
@@ -160,7 +169,7 @@ public abstract class GLWindow {
 
 	public void toggleFullscreen() {
 		if (windowed == null) {
-			windowed = getWindow();
+			windowed = readWindow();
 			long monitor = glfwGetCurrentMonitor(windowHandle);
 			GLFWVidMode mode = glfwGetVideoMode(monitor);
 			glfwSetWindowMonitor(windowHandle, monitor, 0, 0, mode.width(), mode.height(), mode.refreshRate());
@@ -214,11 +223,14 @@ public abstract class GLWindow {
 	}
 
 	public String windowSizeString() {
-		Rectangle window = getWindow();
 		return window.getWidth()+"x"+window.getHeight();
 	}
 
 	public Rectangle getWindow() {
+		return window;
+	}
+
+	private Rectangle readWindow() {
 		try ( MemoryStack stack = stackPush() ) {
 			IntBuffer pWidth = stack.mallocInt(1); // int*
 			IntBuffer pHeight = stack.mallocInt(1); // int*
