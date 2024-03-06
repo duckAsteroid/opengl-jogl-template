@@ -18,8 +18,6 @@ import java.awt.*;
 import java.io.IOException;
 import java.nio.IntBuffer;
 import java.util.*;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
 import static org.lwjgl.glfw.GLFW.*;
@@ -27,14 +25,14 @@ import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
-public abstract class GLWindow {
+public abstract class GLWindow implements RenderContext {
 	private static final Logger LOG = LoggerFactory.getLogger(GLWindow.class);
 
 	private final long windowHandle;
 	private final String windowTitle;
 
 	private final Map<KeyCombination, Runnable> keyActions = new HashMap<>();
-
+	private final ResourceManager resourceManager = new ResourceManager("src/main/");
 	private Rectangle windowed = null;
 	private Rectangle window;
 
@@ -67,7 +65,7 @@ public abstract class GLWindow {
 
 		if (icon != null) {
 			try (GLFWImage.Buffer icons = GLFWImage.malloc(1)) {
-				ImageData imgData = ResourceManager.instance().LoadTextureData(icon, true);
+				ImageData imgData = resourceManager.LoadTextureData(icon, true);
 				icons.position(0)
 								.width(imgData.size().width)
 								.height(imgData.size().height)
@@ -89,6 +87,11 @@ public abstract class GLWindow {
 		GL.createCapabilities();
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	}
+
+	@Override
+	public ResourceManager getResourceManager() {
+		return resourceManager;
 	}
 
 	public void registerKeyAction(int key, Runnable runnable) {
@@ -164,7 +167,10 @@ public abstract class GLWindow {
 
 	public abstract void init() throws IOException;
 	public abstract void render() throws IOException;
-	public abstract void dispose();
+
+	public void dispose() {
+		resourceManager.clear();
+	}
 
 
 	public void toggleFullscreen() {

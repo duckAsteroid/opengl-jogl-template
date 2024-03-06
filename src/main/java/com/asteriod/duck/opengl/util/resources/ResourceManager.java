@@ -18,7 +18,6 @@ import java.util.HashMap;
 public class ResourceManager {
 	private static final Logger LOG = LoggerFactory.getLogger(ResourceManager.class);
 
-	private static ResourceManager SINGLETON = new ResourceManager("src/main/");
 	private final Path root;
 	private final ShaderLoader shaderLoader;
 	private final TextureLoader textureLoader;
@@ -28,11 +27,7 @@ public class ResourceManager {
 
 	private final HashMap<ResourceLocator, Resource> resources = new HashMap<>();
 
-	public static ResourceManager instance() {
-		return SINGLETON;
-	}
-
-	private ResourceManager(String root) {
+	public ResourceManager(String root) {
 		this.root = Paths.get(root);
 		this.textureLoader = new TextureLoader(this.root.resolve("resources/textures"));
 		this.shaderLoader = new ShaderLoader(this.root.resolve("glsl"));
