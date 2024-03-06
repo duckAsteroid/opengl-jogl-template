@@ -135,7 +135,7 @@ public class Main extends GLWindow {
         this.shaderProgram = ShaderProgram.compile(Paths.get("src/main/glsl/main.vert"), Paths.get("src/main/glsl/main.frag"), null);
         Texture molly = ResourceManager.instance().GetTexture("molly", "molly.jpg",false);
         molly.Bind();
-        shaderProgram.setInteger("molly", molly.id(), false);
+        shaderProgram.setInteger("texture", molly.id(), false);
 
         System.out.println("Shaders loaded");
     }
@@ -156,12 +156,7 @@ public class Main extends GLWindow {
 
         if (shaderProgram != null && shaderProgram.id() > NULL) {
             shaderProgram.use();
-
-            shaderProgram.setFloat("seconds", (float) timer.elapsed(), false);
-
             shaderProgram.setVertexAttribPointer("position", 2, GL_FLOAT, false, 0, 0);
-
-
         }
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
