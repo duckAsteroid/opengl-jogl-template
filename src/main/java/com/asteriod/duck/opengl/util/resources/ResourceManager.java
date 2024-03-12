@@ -33,6 +33,15 @@ public class ResourceManager {
 		this.shaderLoader = new ShaderLoader(this.root.resolve("glsl"));
 	}
 
+	public Texture GetTexture(String name) {
+		ResourceLocator locator = new ResourceLocator(Texture.class, name);
+		return (Texture) resources.get(locator);
+	}
+
+	public void PutTexture(String name, Texture texture) {
+		ResourceLocator locator = new ResourceLocator(Texture.class, name);
+		resources.put(locator, texture);
+	}
 
 	public Texture GetTexture(String name, String path, boolean alpha) {
 		ResourceLocator locator = new ResourceLocator(Texture.class, name);

@@ -41,4 +41,5 @@ application {
 
 run {
   workingDir = project.rootDir
+  jvmArgs = ["-javaagent:src/test/resources/lwjglx-debug-1.0.0.jar"]
 }

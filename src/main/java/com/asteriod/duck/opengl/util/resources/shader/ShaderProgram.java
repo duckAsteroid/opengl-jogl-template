@@ -128,59 +128,41 @@ public class ShaderProgram implements Resource {
 		return this;
 	}
 
-	public void setFloat(String name, float value, boolean useShader)
+	public void setFloat(String name, float value)
 	{
-		if (useShader)
-			this.use();
 		glUniform1f(glGetUniformLocation(id, name), value);
 	}
 
-	public void setInteger(String name, int value, boolean useShader)
+	public void setInteger(String name, int value)
 	{
-		if (useShader)
-			this.use();
 		glUniform1i(glGetUniformLocation(id, name), value);
 	}
-	public void setVector2f(String name, float x, float y, boolean useShader)
+	public void setVector2f(String name, float x, float y)
 	{
-		if (useShader)
-			this.use();
 		glUniform2f(glGetUniformLocation(id, name), x, y);
 	}
-	public void setVector2f(String name, Vector2f value, boolean useShader)
+	public void setVector2f(String name, Vector2f value)
 	{
-		if (useShader)
-			this.use();
 		glUniform2f(glGetUniformLocation(id, name), value.x, value.y);
 	}
-	public void setVector3f(String name, float x, float y, float z, boolean useShader)
+	public void setVector3f(String name, float x, float y, float z)
 	{
-		if (useShader)
-			this.use();
 		glUniform3f(glGetUniformLocation(id, name), x, y, z);
 	}
-	public void setVector3f(String name, Vector3f value, boolean useShader)
+	public void setVector3f(String name, Vector3f value)
 	{
-		if (useShader)
-			this.use();
 		glUniform3f(glGetUniformLocation(id, name), value.x, value.y, value.z);
 	}
-	public void setVector4f(String name, float x, float y, float z, float w, boolean useShader)
+	public void setVector4f(String name, float x, float y, float z, float w)
 	{
-		if (useShader)
-			this.use();
 		glUniform4f(glGetUniformLocation(id, name), x, y, z, w);
 	}
-	public void setVector4f(String name, Vector4f value, boolean useShader)
+	public void setVector4f(String name, Vector4f value)
 	{
-		if (useShader)
-			this.use();
 		glUniform4f(glGetUniformLocation(id, name), value.x, value.y, value.z, value.w);
 	}
-	public void setMatrix4(String name, Matrix4f matrix, boolean useShader)
+	public void setMatrix4(String name, Matrix4f matrix)
 	{
-		if (useShader)
-			this.use();
 		try (MemoryStack stack = MemoryStack.stackPush()) {
 			FloatBuffer fb = matrix.get(stack.mallocFloat(16));
 			glUniformMatrix4fv(glGetUniformLocation(id, name), false, fb);

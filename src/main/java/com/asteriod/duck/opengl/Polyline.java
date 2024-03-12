@@ -45,7 +45,7 @@ public class Polyline implements RenderedItem {
 	private int bytesPerSample;
 
 	private float lineWidth = 2.0f;
-	private Vector4f lineColour = new Vector4f(0.0f,1.0f, 0.0f, 1.0f);
+	private Vector4f lineColour = new Vector4f(1.0f,1.0f, 1.0f, 1.0f);
 	private Random rnd = new Random();
 
 
@@ -56,11 +56,12 @@ public class Polyline implements RenderedItem {
 		audioBuffer.clear();
 		audioBuffer.limit(Math.min(available * bytesPerSample, audioBuffer.capacity()));
 		int read = openLine.read(audioBuffer.array(), 0, Math.min(audioBuffer.limit(), openLine.available()));
-		audioBuffer.position(read);
-		audioBuffer.flip();
+		if (read > 0) {
+			audioBuffer.position(read);
+			audioBuffer.flip();
 
-		rollingFloatBuffer.write(audioBuffer.asShortBuffer());
-
+			rollingFloatBuffer.write(audioBuffer.asShortBuffer());
+		}
 		pointBuffer.clear();
 		rollingFloatBuffer.read(pointBuffer);
 
@@ -107,7 +108,7 @@ public class Polyline implements RenderedItem {
 
 		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 		glEnable(GL_LINE_SMOOTH);
-		glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+		glHint(GL_LINE_SMOOTH_HINT, GL_FASTEST);
 
 		IntBuffer vaoPtr = mem.ints(vao);
 		glGenVertexArrays(vaoPtr);
@@ -161,8 +162,13 @@ public class Polyline implements RenderedItem {
 	public void doRender(RenderContext ctx) {
 		int points = fillPoints(pointBuffer);
 		Rectangle window = ctx.getWindow();
-		shaderProgram.setVector2f("resolution", window.width, window.height, false);
-		shaderProgram.setVector4f("lineColor", lineColour, true);
+		shaderProgram.use();
+		shaderProgram.setVector2f("resolution", window.width, window.height);
+		shaderProgram.setVector4f("lineColor", lineColour);
+
+		glClearColor(0.4f, 0.1f, 0.1f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 
 		glBindVertexArray(vao);
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -173,6 +179,8 @@ public class Polyline implements RenderedItem {
 		glDrawArrays(GL_LINE_STRIP, 0, points);
 
 		glBindVertexArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+
 	}
 
 	@Override

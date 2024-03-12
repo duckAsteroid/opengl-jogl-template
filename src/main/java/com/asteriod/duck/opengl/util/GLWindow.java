@@ -6,9 +6,7 @@ import com.asteriod.duck.opengl.util.keys.Keys;
 import com.asteriod.duck.opengl.util.resources.texture.ImageData;
 import com.asteriod.duck.opengl.util.resources.ResourceManager;
 import org.lwjgl.PointerBuffer;
-import org.lwjgl.glfw.GLFWErrorCallback;
-import org.lwjgl.glfw.GLFWImage;
-import org.lwjgl.glfw.GLFWVidMode;
+import org.lwjgl.glfw.*;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryStack;
 import org.slf4j.Logger;
@@ -33,13 +31,16 @@ public abstract class GLWindow implements RenderContext {
 
 	private final Map<KeyCombination, Runnable> keyActions = new HashMap<>();
 	private final ResourceManager resourceManager = new ResourceManager("src/main/");
+	private final GLFWKeyCallback glfwKeyCallback;
+	private final GLFWFramebufferSizeCallback glfwFramebufferSizeCallback;
+	private GLFWErrorCallback errorCallback;
 	private Rectangle windowed = null;
 	private Rectangle window;
 
 	public GLWindow(String title, int width, int height, String icon) {
 		this.windowTitle = title;
 		//System.out.println("INFO: OpenGL Version: "+glGetString(GL_VERSION));
-		GLFWErrorCallback.createPrint(System.err).set();
+		//this.errorCallback = GLFWErrorCallback.createPrint(System.err).set();
 
 		if(!glfwInit()) throw new RuntimeException("Unable to init GLFW");
 
@@ -56,8 +57,8 @@ public abstract class GLWindow implements RenderContext {
 		registerKeyAction (GLFW_KEY_ESCAPE, this::exit);
 		registerKeyAction(GLFW_KEY_F11, this::toggleFullscreen);
 
-		glfwSetKeyCallback(windowHandle, this::keyCallback);
-		glfwSetFramebufferSizeCallback(windowHandle, this::frameBufferSizeCallback);
+		this.glfwKeyCallback = glfwSetKeyCallback(windowHandle, this::keyCallback);
+		this.glfwFramebufferSizeCallback = glfwSetFramebufferSizeCallback(windowHandle, this::frameBufferSizeCallback);
 
 		window = readWindow();
 
@@ -169,7 +170,10 @@ public abstract class GLWindow implements RenderContext {
 	public abstract void render() throws IOException;
 
 	public void dispose() {
+		if (glfwKeyCallback != null) glfwKeyCallback.close();
+		if (glfwFramebufferSizeCallback != null) glfwFramebufferSizeCallback.close();
 		resourceManager.clear();
+		if (errorCallback != null) errorCallback.free();
 	}
 
 
