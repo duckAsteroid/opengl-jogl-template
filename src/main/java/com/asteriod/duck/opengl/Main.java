@@ -113,17 +113,13 @@ public class Main extends GLWindow implements RenderContext {
     public void dispose() {
         super.dispose();
         renderedItems.forEach(RenderedItem::dispose);
-        frameBuffer.dispose();
+        //frameBuffer.dispose();
     }
 
     public void render() throws IOException {
         timer.update();
 
-        //renderedItems.forEach(item -> item.doRender(this));
-        Rectangle window = getWindow();
 
-        //frameBuffer.bind();
-        //polyline.doRender(this);
         textureRenderer.doRender(this);
     }
 }

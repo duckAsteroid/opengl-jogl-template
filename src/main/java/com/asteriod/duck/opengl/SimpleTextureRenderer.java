@@ -90,7 +90,6 @@ public class SimpleTextureRenderer implements RenderedItem {
 		shaderProgram.setInteger("texture", texture.id());
 
 		System.out.println("Shaders loaded");
-		texture.UnBind();
 	}
 
 	@Override
