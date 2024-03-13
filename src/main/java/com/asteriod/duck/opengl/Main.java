@@ -4,6 +4,7 @@ package com.asteriod.duck.opengl;
 import com.asteriod.duck.opengl.util.GLWindow;
 import com.asteriod.duck.opengl.util.RenderContext;
 import com.asteriod.duck.opengl.util.RenderedItem;
+import com.asteriod.duck.opengl.util.resources.texture.Texture;
 import com.asteriod.duck.opengl.util.timer.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +24,7 @@ public class Main extends GLWindow implements RenderContext {
     private static final Logger LOG = LoggerFactory.getLogger(Main.class);
     public static final int STEP = 10;
     public static final int LARGE_STEP = 100;
+    private static final String TEXTURE = "molly";
 
     private static String INSTRUCTIONS;
 
@@ -37,8 +39,8 @@ public class Main extends GLWindow implements RenderContext {
 
     public Main(String title, int width, int height) {
         super(title, width, height, "icon16.png");
-        //renderedItems.add(new SimpleTextureRenderer());
-        renderedItems.add(new Polyline());
+        renderedItems.add(new SimpleTextureRenderer(TEXTURE));
+        //renderedItems.add(new Polyline());
     }
 
     @Override
@@ -75,6 +77,8 @@ public class Main extends GLWindow implements RenderContext {
 
     public void init() throws IOException {
         timer.reset(); // start the clock
+        Texture molly = getResourceManager().GetTexture(TEXTURE, "molly.jpg",false);
+        molly.Bind();
         // init rendered items
         renderedItems.forEach(item -> {
 	        try {

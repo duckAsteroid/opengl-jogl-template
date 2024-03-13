@@ -21,6 +21,7 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 
 public class SimpleTextureRenderer implements RenderedItem {
 
+	private final String textureName;
 	private ShaderProgram shaderProgram = null;
 
 	private final AtomicBoolean shaderDispose = new AtomicBoolean(false);
@@ -28,6 +29,10 @@ public class SimpleTextureRenderer implements RenderedItem {
 	private int vbo;
 	private int ibo;
 	private int vao;
+
+	public SimpleTextureRenderer(String textureName) {
+		this.textureName = textureName;
+	}
 	@Override
 	public void init(RenderContext ctx) throws IOException {
 		ctx.registerKeyAction(GLFW_KEY_F5, () -> shaderDispose.set(true));
@@ -78,7 +83,7 @@ public class SimpleTextureRenderer implements RenderedItem {
 		}
 		// load the GLSL Shaders
 		this.shaderProgram =ctx.getResourceManager().GetShader("main", "main.vert", "main.frag", null);
-		Texture molly = ctx.getResourceManager().GetTexture("molly", "molly.jpg",false);
+		Texture molly = ctx.getResourceManager().GetTexture(textureName);
 		molly.Bind();
 		shaderProgram.setInteger("texture", molly.id(), false);
 
@@ -112,8 +117,6 @@ public class SimpleTextureRenderer implements RenderedItem {
 
 	@Override
 	public void dispose() {
-		if (shaderProgram!=null) {
-			shaderProgram.destroy();
-		}
+
 	}
 }

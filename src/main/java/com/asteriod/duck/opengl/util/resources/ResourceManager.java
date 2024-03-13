@@ -23,6 +23,8 @@ public class ResourceManager {
 	private final TextureLoader textureLoader;
 
 
+
+
 	public record ResourceLocator(Class<? extends Resource> type, String name){}
 
 	private final HashMap<ResourceLocator, Resource> resources = new HashMap<>();
@@ -33,6 +35,13 @@ public class ResourceManager {
 		this.shaderLoader = new ShaderLoader(this.root.resolve("glsl"));
 	}
 
+	public Texture GetTexture(String textureName) {
+		ResourceLocator locator = new ResourceLocator(Texture.class, textureName);
+		if (!resources.containsKey(locator)) {
+			throw new IllegalArgumentException("No such resource as "+textureName);
+		}
+		return (Texture) resources.get(locator);
+	}
 
 	public Texture GetTexture(String name, String path, boolean alpha) {
 		ResourceLocator locator = new ResourceLocator(Texture.class, name);
