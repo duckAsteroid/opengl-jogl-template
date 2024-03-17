@@ -1,4 +1,4 @@
-package com.asteriod.duck.opengl.util.resources.shader;
+package com.asteriod.duck.opengl.util.resources.shader.vars;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL20.*;
@@ -6,6 +6,10 @@ import static org.lwjgl.opengl.GL21.*;
 import static org.lwjgl.opengl.GL30.*;
 import static org.lwjgl.opengl.GL46.*;
 
+/**
+ * An enum over the shader (uniform/attribute) variable data types
+ * <a href="https://registry.khronos.org/OpenGL-Refpages/gl4/html/glGetActiveUniform.xhtml">Original table</a>
+ */
 public enum ShaderVariableType {
 	FLOAT(GL_FLOAT,"float"),
 	FLOAT_VEC2(GL_FLOAT_VEC2,"vec2"),

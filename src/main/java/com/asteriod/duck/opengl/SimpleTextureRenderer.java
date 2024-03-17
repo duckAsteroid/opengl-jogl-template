@@ -3,10 +3,11 @@ package com.asteriod.duck.opengl;
 import com.asteriod.duck.opengl.util.RenderContext;
 import com.asteriod.duck.opengl.util.RenderedItem;
 import com.asteriod.duck.opengl.util.resources.shader.ShaderProgram;
+import com.asteriod.duck.opengl.util.resources.shader.vars.Variable;
+import com.asteriod.duck.opengl.util.resources.shader.vars.VariableType;
 import com.asteriod.duck.opengl.util.resources.texture.Texture;
 import com.asteriod.duck.opengl.util.resources.texture.TextureUnit;
 import org.lwjgl.system.MemoryStack;
-import org.w3c.dom.Text;
 
 import java.io.IOException;
 import java.nio.FloatBuffer;
@@ -91,9 +92,9 @@ public class SimpleTextureRenderer implements RenderedItem {
 		// load the GLSL Shaders
 		this.shaderProgram =ctx.getResourceManager().GetShader("main", "main.vert", "main.frag", null);
 		System.out.println("Shaders loaded");
-		Map<String, ShaderProgram.Variable> vars = shaderProgram.get(ShaderProgram.VariableType.UNIFORM);
+		Map<String, Variable> vars = shaderProgram.get(VariableType.UNIFORM);
 		vars.values().forEach(System.out::println);
-		vars = shaderProgram.get(ShaderProgram.VariableType.ATTRIBUTE);
+		vars = shaderProgram.get(VariableType.ATTRIBUTE);
 		vars.values().forEach(System.out::println);
 
 		this.texture = ctx.getResourceManager().GetTexture(textureName);

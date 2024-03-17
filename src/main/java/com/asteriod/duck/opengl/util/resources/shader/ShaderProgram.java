@@ -1,6 +1,9 @@
 package com.asteriod.duck.opengl.util.resources.shader;
 
 import com.asteriod.duck.opengl.util.resources.impl.Resource;
+import com.asteriod.duck.opengl.util.resources.shader.vars.ShaderVariableType;
+import com.asteriod.duck.opengl.util.resources.shader.vars.Variable;
+import com.asteriod.duck.opengl.util.resources.shader.vars.VariableType;
 import org.joml.Matrix4f;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
@@ -17,10 +20,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.Callable;
 import java.util.function.Function;
 
 import static org.lwjgl.opengl.GL20.*;
@@ -136,59 +137,6 @@ public class ShaderProgram implements Resource {
 		glUseProgram(id);
 		return this;
 	}
-
-	public interface VariableEx {
-		int maxNameLength(int program);
-		int count(int program);
-		void readVariable(int program, int index,  IntBuffer len, IntBuffer size, IntBuffer type, ByteBuffer value);
-	}
-
-	public enum VariableType implements VariableEx {
-
-		ATTRIBUTE(GL_ACTIVE_ATTRIBUTES, GL_ACTIVE_ATTRIBUTE_MAX_LENGTH) {
-			@Override
-			public void readVariable(int program, int index, IntBuffer len, IntBuffer size, IntBuffer type, ByteBuffer name) {
-				glGetActiveAttrib(program, index, len, size, type, name);
-			}
-		},
-
-		UNIFORM(GL_ACTIVE_UNIFORMS, GL_ACTIVE_UNIFORM_MAX_LENGTH ) {
-			@Override
-			public void readVariable(int program, int index, IntBuffer len, IntBuffer size, IntBuffer type, ByteBuffer name) {
-				glGetActiveUniform(program, index, len, size, type, name);
-			}
-		};
-
-		protected final int counter;
-		protected final int nameLengther;
-
-		VariableType( int counter, int nameLengther) {
-			this.counter = counter;
-			this.nameLengther = nameLengther;
-		}
-
-		@Override
-		public int maxNameLength(int program) {
-			try(MemoryStack stack = MemoryStack.stackPush()) {
-				IntBuffer tmp = stack.mallocInt(1);
-				glGetProgramiv(program, nameLengther, tmp);
-				return tmp.get();
-			}
-		}
-
-		@Override
-		public int count(int program) {
-			try(MemoryStack stack = MemoryStack.stackPush()) {
-				IntBuffer tmp = stack.mallocInt(1);
-				glGetProgramiv(program, counter, tmp);
-				return tmp.get();
-			}
-		}
-
-		@Override
-		public abstract void readVariable(int program, int index, IntBuffer len, IntBuffer size, IntBuffer type, ByteBuffer value);
-	}
-	public record Variable(VariableType type, String name, int size, ShaderVariableType dataType, int location) {}
 
 	public Map<String, Variable> get(VariableType type) {
 		try(MemoryStack stack = MemoryStack.stackPush()) {
