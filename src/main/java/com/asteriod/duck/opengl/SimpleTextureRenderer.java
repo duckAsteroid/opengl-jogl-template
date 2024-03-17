@@ -132,7 +132,7 @@ public class SimpleTextureRenderer implements RenderedItem {
 			shaderProgram.setVertexAttribPointer("position", 2, GL_FLOAT, false, 0, 0);
 			double amount = (Math.sin(Math.toRadians(ctx.getTimer().elapsed() * 100)) + 1.0 ) / 2.0;
 			shaderProgram.setFloat("amount", (float) amount);
-			System.out.print("amount="+amount+"\r");
+			System.out.printf("amount=%.2f\r", amount);
 		}
 
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
