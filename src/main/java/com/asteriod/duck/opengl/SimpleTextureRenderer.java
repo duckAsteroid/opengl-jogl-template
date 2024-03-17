@@ -99,6 +99,9 @@ public class SimpleTextureRenderer implements RenderedItem {
 		this.texture = ctx.getResourceManager().GetTexture(textureName);
 		theTexture = TextureUnit.index(1);
 
+		theTexture.bind(texture);
+		shaderProgram.use();
+		theTexture.useInShader(shaderProgram, "tex");
 	}
 
 	@Override
@@ -118,8 +121,6 @@ public class SimpleTextureRenderer implements RenderedItem {
 			shaderProgram.use();
 			shaderProgram.setVertexAttribPointer("position", 2, GL_FLOAT, false, 0, 0);
 		}
-		theTexture.bind(texture);
-		theTexture.useInShader(shaderProgram, "tex");
 
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
