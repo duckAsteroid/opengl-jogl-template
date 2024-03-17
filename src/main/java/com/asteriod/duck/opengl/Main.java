@@ -118,8 +118,6 @@ public class Main extends GLWindow implements RenderContext {
 
     public void render() throws IOException {
         timer.update();
-
-
-        textureRenderer.doRender(this);
+        renderedItems.forEach(item -> item.doRender(this));
     }
 }

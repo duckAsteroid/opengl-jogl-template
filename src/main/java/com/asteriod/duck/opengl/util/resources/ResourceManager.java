@@ -35,6 +35,9 @@ public class ResourceManager {
 
 	public Texture GetTexture(String name) {
 		ResourceLocator locator = new ResourceLocator(Texture.class, name);
+		if (!resources.containsKey(locator)) {
+			throw new IllegalArgumentException("No such resource as "+name);
+		}
 		return (Texture) resources.get(locator);
 	}
 
