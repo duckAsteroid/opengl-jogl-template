@@ -1,6 +1,6 @@
 #version 330
 in vec2 position;
-out vec2 texCoord;
+out vec2 texCoords;
 
 void main() {
   vec4 positionVec4 = vec4(position, 0.0, 1.0);
@@ -9,5 +9,5 @@ void main() {
 
   gl_Position = positionVec4;
 
-  texCoord = position;
+  texCoords = position;
 }

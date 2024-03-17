@@ -77,8 +77,8 @@ public class Main extends GLWindow implements RenderContext {
 
     public void init() throws IOException {
         timer.reset(); // start the clock
-        Texture molly = getResourceManager().GetTexture(TEXTURE, "molly.jpg",false);
-        molly.Bind();
+        getResourceManager().GetTexture(TEXTURE, "molly.jpg",false);
+
         // init rendered items
         renderedItems.forEach(item -> {
 	        try {

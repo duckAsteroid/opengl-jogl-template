@@ -10,19 +10,28 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.function.Function;
 
 import static org.lwjgl.opengl.GL20.*;
+import static org.lwjgl.opengl.GL20.glGetProgramiv;
 import static org.lwjgl.opengl.GL32.GL_GEOMETRY_SHADER;
 
 public class ShaderProgram implements Resource {
 	private static final Logger LOG = LoggerFactory.getLogger(ShaderProgram.class);
 	private final int id;
+
+	private final HashMap<String, Integer> uniformLocationCache = new HashMap<>();
 
 	private ShaderProgram(int id) {
 		this.id = id;
@@ -128,54 +137,136 @@ public class ShaderProgram implements Resource {
 		return this;
 	}
 
+	public interface VariableEx {
+		int maxNameLength(int program);
+		int count(int program);
+		void readVariable(int program, int index,  IntBuffer len, IntBuffer size, IntBuffer type, ByteBuffer value);
+	}
+
+	public enum VariableType implements VariableEx {
+
+		ATTRIBUTE(GL_ACTIVE_ATTRIBUTES, GL_ACTIVE_ATTRIBUTE_MAX_LENGTH) {
+			@Override
+			public void readVariable(int program, int index, IntBuffer len, IntBuffer size, IntBuffer type, ByteBuffer name) {
+				glGetActiveAttrib(program, index, len, size, type, name);
+			}
+		},
+
+		UNIFORM(GL_ACTIVE_UNIFORMS, GL_ACTIVE_UNIFORM_MAX_LENGTH ) {
+			@Override
+			public void readVariable(int program, int index, IntBuffer len, IntBuffer size, IntBuffer type, ByteBuffer name) {
+				glGetActiveUniform(program, index, len, size, type, name);
+			}
+		};
+
+		protected final int counter;
+		protected final int nameLengther;
+
+		VariableType( int counter, int nameLengther) {
+			this.counter = counter;
+			this.nameLengther = nameLengther;
+		}
+
+		@Override
+		public int maxNameLength(int program) {
+			try(MemoryStack stack = MemoryStack.stackPush()) {
+				IntBuffer tmp = stack.mallocInt(1);
+				glGetProgramiv(program, nameLengther, tmp);
+				return tmp.get();
+			}
+		}
+
+		@Override
+		public int count(int program) {
+			try(MemoryStack stack = MemoryStack.stackPush()) {
+				IntBuffer tmp = stack.mallocInt(1);
+				glGetProgramiv(program, counter, tmp);
+				return tmp.get();
+			}
+		}
+
+		@Override
+		public abstract void readVariable(int program, int index, IntBuffer len, IntBuffer size, IntBuffer type, ByteBuffer value);
+	}
+	public record Variable(VariableType type, String name, int size, ShaderVariableType dataType, int location) {}
+
+	public Map<String, Variable> get(VariableType type) {
+		try(MemoryStack stack = MemoryStack.stackPush()) {
+			final int count = type.count(id);
+			final int maxNameLength = type.maxNameLength(id);
+			ByteBuffer nameHolder = stack.malloc(maxNameLength);
+			IntBuffer sizeHolder = stack.mallocInt(1);
+			IntBuffer typeHolder = stack.mallocInt(1);
+			IntBuffer lengthHolder = stack.mallocInt(1);
+			HashMap<String, Variable> result = new HashMap<>(count);
+			for (int i = 0; i < count; i++) {
+				type.readVariable(id, i, lengthHolder, sizeHolder, typeHolder, nameHolder);
+				nameHolder.limit(lengthHolder.get(0));
+				final String name = StandardCharsets.US_ASCII.decode(nameHolder).toString();
+				ShaderVariableType variableType = ShaderVariableType.from(typeHolder.get(0));
+				Variable var = new Variable(type, name, sizeHolder.get(0), variableType, i);
+				result.put(name, var);
+			}
+			return result;
+		}
+	}
+
+	protected int uniformLocation(String uniformName) {
+		if (!uniformLocationCache.containsKey(uniformName)) {
+			int uniformLocation = glGetUniformLocation(id, uniformName);
+			uniformLocationCache.put(uniformName, uniformLocation);
+		}
+		return uniformLocationCache.get(uniformName);
+	}
+
 	public void setFloat(String name, float value, boolean useShader)
 	{
 		if (useShader)
 			this.use();
-		glUniform1f(glGetUniformLocation(id, name), value);
+		glUniform1f(uniformLocation(name), value);
 	}
 
 	public void setInteger(String name, int value, boolean useShader)
 	{
 		if (useShader)
 			this.use();
-		glUniform1i(glGetUniformLocation(id, name), value);
+		glUniform1i(uniformLocation(name), value);
 	}
 	public void setVector2f(String name, float x, float y, boolean useShader)
 	{
 		if (useShader)
 			this.use();
-		glUniform2f(glGetUniformLocation(id, name), x, y);
+		glUniform2f(uniformLocation(name), x, y);
 	}
 	public void setVector2f(String name, Vector2f value, boolean useShader)
 	{
 		if (useShader)
 			this.use();
-		glUniform2f(glGetUniformLocation(id, name), value.x, value.y);
+		glUniform2f(uniformLocation(name), value.x, value.y);
 	}
 	public void setVector3f(String name, float x, float y, float z, boolean useShader)
 	{
 		if (useShader)
 			this.use();
-		glUniform3f(glGetUniformLocation(id, name), x, y, z);
+		glUniform3f(uniformLocation(name), x, y, z);
 	}
 	public void setVector3f(String name, Vector3f value, boolean useShader)
 	{
 		if (useShader)
 			this.use();
-		glUniform3f(glGetUniformLocation(id, name), value.x, value.y, value.z);
+		glUniform3f(uniformLocation(name), value.x, value.y, value.z);
 	}
 	public void setVector4f(String name, float x, float y, float z, float w, boolean useShader)
 	{
 		if (useShader)
 			this.use();
-		glUniform4f(glGetUniformLocation(id, name), x, y, z, w);
+		glUniform4f(uniformLocation(name), x, y, z, w);
 	}
 	public void setVector4f(String name, Vector4f value, boolean useShader)
 	{
 		if (useShader)
 			this.use();
-		glUniform4f(glGetUniformLocation(id, name), value.x, value.y, value.z, value.w);
+		glUniform4f(uniformLocation(name), value.x, value.y, value.z, value.w);
 	}
 	public void setMatrix4(String name, Matrix4f matrix, boolean useShader)
 	{
@@ -183,7 +274,7 @@ public class ShaderProgram implements Resource {
 			this.use();
 		try (MemoryStack stack = MemoryStack.stackPush()) {
 			FloatBuffer fb = matrix.get(stack.mallocFloat(16));
-			glUniformMatrix4fv(glGetUniformLocation(id, name), false, fb);
+			glUniformMatrix4fv(uniformLocation(name), false, fb);
 		}
 	}
 
@@ -198,6 +289,7 @@ public class ShaderProgram implements Resource {
 	}
 
 	public void destroy() {
+		uniformLocationCache.clear();
 		glDeleteProgram(id);
 	}
 }

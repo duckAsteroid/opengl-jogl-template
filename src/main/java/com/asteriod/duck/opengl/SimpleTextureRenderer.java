@@ -4,11 +4,14 @@ import com.asteriod.duck.opengl.util.RenderContext;
 import com.asteriod.duck.opengl.util.RenderedItem;
 import com.asteriod.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteriod.duck.opengl.util.resources.texture.Texture;
+import com.asteriod.duck.opengl.util.resources.texture.TextureUnit;
 import org.lwjgl.system.MemoryStack;
+import org.w3c.dom.Text;
 
 import java.io.IOException;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_F5;
@@ -22,6 +25,9 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 public class SimpleTextureRenderer implements RenderedItem {
 
 	private final String textureName;
+
+	private TextureUnit theTexture;
+
 	private ShaderProgram shaderProgram = null;
 
 	private final AtomicBoolean shaderDispose = new AtomicBoolean(false);
@@ -29,6 +35,7 @@ public class SimpleTextureRenderer implements RenderedItem {
 	private int vbo;
 	private int ibo;
 	private int vao;
+	private Texture texture;
 
 	public SimpleTextureRenderer(String textureName) {
 		this.textureName = textureName;
@@ -83,11 +90,15 @@ public class SimpleTextureRenderer implements RenderedItem {
 		}
 		// load the GLSL Shaders
 		this.shaderProgram =ctx.getResourceManager().GetShader("main", "main.vert", "main.frag", null);
-		Texture molly = ctx.getResourceManager().GetTexture(textureName);
-		molly.Bind();
-		shaderProgram.setInteger("texture", molly.id(), false);
-
 		System.out.println("Shaders loaded");
+		Map<String, ShaderProgram.Variable> vars = shaderProgram.get(ShaderProgram.VariableType.UNIFORM);
+		vars.values().forEach(System.out::println);
+		vars = shaderProgram.get(ShaderProgram.VariableType.ATTRIBUTE);
+		vars.values().forEach(System.out::println);
+
+		this.texture = ctx.getResourceManager().GetTexture(textureName);
+		theTexture = TextureUnit.index(1);
+
 	}
 
 	@Override
@@ -107,6 +118,9 @@ public class SimpleTextureRenderer implements RenderedItem {
 			shaderProgram.use();
 			shaderProgram.setVertexAttribPointer("position", 2, GL_FLOAT, false, 0, 0);
 		}
+		theTexture.bind(texture);
+		theTexture.useInShader(shaderProgram, "tex");
+
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
 
