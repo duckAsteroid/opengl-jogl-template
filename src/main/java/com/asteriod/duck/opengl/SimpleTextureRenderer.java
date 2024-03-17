@@ -25,9 +25,7 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 
 public class SimpleTextureRenderer implements RenderedItem {
 
-	private final String textureName;
 
-	private TextureUnit theTexture;
 
 	private ShaderProgram shaderProgram = null;
 
@@ -36,16 +34,34 @@ public class SimpleTextureRenderer implements RenderedItem {
 	private int vbo;
 	private int ibo;
 	private int vao;
-	private Texture texture;
+	private final String[] textureNames;
+	private Texture[] textures;
+	private TextureUnit[] textureUnits;
 
 	public SimpleTextureRenderer(String textureName) {
-		this.textureName = textureName;
+		this(new String[]{textureName});
+	}
+	public SimpleTextureRenderer(String ... textureNames) {
+		this.textureNames = textureNames;
 	}
 	@Override
 	public void init(RenderContext ctx) throws IOException {
 		ctx.registerKeyAction(GLFW_KEY_F5, () -> shaderDispose.set(true));
 		initShaderProgram(ctx);
+		initTextures(ctx);
 		initBuffers();
+	}
+
+	private void initTextures(RenderContext ctx) {
+		this.textures = new Texture[textureNames.length];
+		this.textureUnits = new TextureUnit[textureNames.length];
+		shaderProgram.use();
+		for (int i = 0; i < textureNames.length; i++) {
+			this.textures[i] = ctx.getResourceManager().GetTexture(textureNames[i]);
+			this.textureUnits[i] = TextureUnit.index(i);
+			this.textureUnits[i].bind(textures[i]);
+			this.textureUnits[i].useInShader(shaderProgram, "tex"+i);
+		}
 	}
 
 
@@ -96,13 +112,6 @@ public class SimpleTextureRenderer implements RenderedItem {
 		vars.values().forEach(System.out::println);
 		vars = shaderProgram.get(VariableType.ATTRIBUTE);
 		vars.values().forEach(System.out::println);
-
-		this.texture = ctx.getResourceManager().GetTexture(textureName);
-		theTexture = TextureUnit.index(1);
-
-		theTexture.bind(texture);
-		shaderProgram.use();
-		theTexture.useInShader(shaderProgram, "tex");
 	}
 
 	@Override
@@ -121,6 +130,9 @@ public class SimpleTextureRenderer implements RenderedItem {
 		if (shaderProgram != null && shaderProgram.id() > NULL) {
 			shaderProgram.use();
 			shaderProgram.setVertexAttribPointer("position", 2, GL_FLOAT, false, 0, 0);
+			double amount = (Math.sin(Math.toRadians(ctx.getTimer().elapsed() * 100)) + 1.0 ) / 2.0;
+			shaderProgram.setFloat("amount", (float) amount);
+			System.out.print("amount="+amount+"\r");
 		}
 
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);

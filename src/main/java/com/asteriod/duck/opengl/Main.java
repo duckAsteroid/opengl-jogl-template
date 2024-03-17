@@ -47,7 +47,7 @@ public class Main extends GLWindow implements RenderContext {
         super(title, width, height, "icon16.png");
         //this.polyline = new Polyline();
         //renderedItems.add(polyline);
-        this.textureRenderer = new SimpleTextureRenderer(TEXTURE);
+        this.textureRenderer = new SimpleTextureRenderer(TEXTURE, "window");
         renderedItems.add(textureRenderer);
     }
 
@@ -88,6 +88,7 @@ public class Main extends GLWindow implements RenderContext {
         // init texture
 
         getResourceManager().GetTexture(TEXTURE, "molly.jpg", false);
+        getResourceManager().GetTexture("window", "window.jpeg", false);
 
         //this.frameBuffer = new FrameBuffer(tex);
         // init rendered items

@@ -148,6 +148,10 @@ public class ShaderProgram implements Resource {
 			IntBuffer lengthHolder = stack.mallocInt(1);
 			HashMap<String, Variable> result = new HashMap<>(count);
 			for (int i = 0; i < count; i++) {
+				lengthHolder.clear();
+				sizeHolder.clear();
+				typeHolder.clear();
+				nameHolder.clear();
 				type.readVariable(id, i, lengthHolder, sizeHolder, typeHolder, nameHolder);
 				nameHolder.limit(lengthHolder.get(0));
 				final String name = StandardCharsets.US_ASCII.decode(nameHolder).toString();
