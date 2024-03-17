@@ -38,6 +38,6 @@ public class TextureUnit {
 	}
 
 	public void useInShader(ShaderProgram program, String variable) {
-		program.setInteger(variable, index, false);
+		program.setInteger(variable, index);
 	}
 }

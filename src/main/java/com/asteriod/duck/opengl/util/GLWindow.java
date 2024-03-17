@@ -158,8 +158,9 @@ public abstract class GLWindow implements RenderContext {
 		dispose();
 
 		glfwFreeCallbacks(windowHandle);
-		glfwSetErrorCallback(null).free();
 		glfwDestroyWindow(windowHandle);
+
+		glfwSetErrorCallback(null);
 
 		glfwTerminate();
 	}
