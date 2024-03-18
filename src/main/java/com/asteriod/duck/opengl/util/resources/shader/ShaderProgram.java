@@ -13,6 +13,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
@@ -21,8 +23,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL20.glGetProgramiv;
@@ -225,5 +229,14 @@ public class ShaderProgram implements Resource {
 	public void destroy() {
 		uniformLocationCache.clear();
 		glDeleteProgram(id);
+	}
+
+	@Override
+	public String toString() {
+		Map<String, Variable> vars = get(VariableType.UNIFORM);
+		String uniforms = vars.values().stream().sorted().map(Objects::toString).collect(Collectors.joining("\n"));
+		vars = get(VariableType.ATTRIBUTE);
+		String attributes = vars.values().stream().sorted().map(Objects::toString).collect(Collectors.joining("\n"));
+		return "ShaderProgram(id="+id+")\n" + uniforms +"\n"+ attributes;
 	}
 }

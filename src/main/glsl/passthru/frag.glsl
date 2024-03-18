@@ -1,12 +1,13 @@
-#version 330 core
+#version 460
 
-in vec2 texCoord;
+precision mediump float;
 
-out vec3 color;
+uniform sampler2D tex;
 
-uniform sampler2D renderedTexture;
-uniform float time;
+in vec2 texCoords;
+out vec4 fragColor;
 
-void main(){
-    color = texture( renderedTexture, texCoord);
+void main() {
+    // copy the texel straight into the pixel
+    fragColor = texture(tex, texCoords);
 }

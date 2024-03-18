@@ -17,13 +17,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_F5;
 import static org.lwjgl.opengl.GL15.*;
-import static org.lwjgl.opengl.GL15.GL_STATIC_DRAW;
 import static org.lwjgl.opengl.GL20.glUseProgram;
 import static org.lwjgl.opengl.GL30.glBindVertexArray;
 import static org.lwjgl.opengl.GL30.glGenVertexArrays;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
-public class SimpleTextureRenderer implements RenderedItem {
+public class MultiTextureRenderer implements RenderedItem {
 
 
 
@@ -38,10 +37,10 @@ public class SimpleTextureRenderer implements RenderedItem {
 	private Texture[] textures;
 	private TextureUnit[] textureUnits;
 
-	public SimpleTextureRenderer(String textureName) {
+	public MultiTextureRenderer(String textureName) {
 		this(new String[]{textureName});
 	}
-	public SimpleTextureRenderer(String ... textureNames) {
+	public MultiTextureRenderer(String ... textureNames) {
 		this.textureNames = textureNames;
 	}
 	@Override
