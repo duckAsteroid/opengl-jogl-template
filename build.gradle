@@ -31,6 +31,11 @@ dependencies {
   // help for GL Vector types
   implementation "org.joml:joml:1.10.5"
 
+  // libjitsi
+  implementation 'com.github.ramanrajarathinam:native-utils:1.0.0'
+  implementation 'org.jitsi:libjitsi:1.1-33-g1d3d357b'
+
+
   // JUnit
   testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0-M1'
 
