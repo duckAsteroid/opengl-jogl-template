@@ -31,6 +31,10 @@ dependencies {
   // help for GL Vector types
   implementation "org.joml:joml:1.10.5"
 
+  // Open AL
+  implementation "org.lwjgl:lwjgl-openal"
+  implementation "org.lwjgl:lwjgl-openal::natives-windows"
+
   // JUnit
   testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0-M1'
 
