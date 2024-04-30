@@ -8,127 +8,100 @@ import com.asteriod.duck.opengl.util.resources.shader.vars.VariableType;
 import com.asteriod.duck.opengl.util.resources.texture.Texture;
 import com.asteriod.duck.opengl.util.resources.texture.TextureUnit;
 import org.lwjgl.system.MemoryStack;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_F5;
 import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL15.GL_STATIC_DRAW;
-import static org.lwjgl.opengl.GL20.glUseProgram;
+import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL30.glBindVertexArray;
 import static org.lwjgl.opengl.GL30.glGenVertexArrays;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
 public class PassthruTextureRenderer implements RenderedItem {
 
-
+	private static final Logger LOG = LoggerFactory.getLogger(PassthruTextureRenderer.class);
 
 	private ShaderProgram shaderProgram = null;
 
-	private final AtomicBoolean shaderDispose = new AtomicBoolean(false);
-
 	private int vbo;
-	private int ibo;
 	private int vao;
-	private final String textureName;
+	private final Supplier<Integer> textureIdSupplier;
 
-	public PassthruTextureRenderer(String textureName) {
-		this.textureName = textureName;
+	public PassthruTextureRenderer(Supplier<Integer> textureIdSupplier) {
+		this.textureIdSupplier = textureIdSupplier;
 	}
 	@Override
 	public void init(RenderContext ctx) throws IOException {
-		ctx.registerKeyAction(GLFW_KEY_F5, () -> shaderDispose.set(true));
 		initShaderProgram(ctx);
 		initTextures(ctx);
 		initBuffers();
 	}
 
+	private void initShaderProgram(RenderContext ctx) throws IOException {
+		// load the GLSL Shaders
+		this.shaderProgram =ctx.getResourceManager().GetShader("passthru", "passthru/vertex.glsl", "passthru/frag.glsl", null);
+		LOG.info("Using shader program {}", shaderProgram);
+	}
+
 	private void initTextures(RenderContext ctx) {
-		Texture texture = ctx.getResourceManager().GetTexture(textureName);
-		TextureUnit textureUnit = TextureUnit.index(0);
 		shaderProgram.use();
-		textureUnit.bind(texture);
-		textureUnit.useInShader(shaderProgram, "tex");
 	}
 
 
 	private void initBuffers() {
 
 		// Define the vertices of the rectangle
-		float[] vertices = {
-						-1.0f, -1.0f, // bottom left
-						1.0f, -1.0f, // bottom right
-						1.0f, 1.0f, // top right
-						-1.0f, 1.0f // top left
+		float[] quadVertices = {
+						// First triangle
+						-1.0f,  1.0f,  // Top Left
+						1.0f,  1.0f,  // Top Right
+						-1.0f, -1.0f,  // Bottom Left
+						// Second triangle
+						1.0f, -1.0f,  // Bottom Right
+						-1.0f, -1.0f,  // Bottom Left
+						1.0f,  1.0f   // Top Right
 		};
 
-		short[] indices = new short[]{0, 1, 2, 0, 2, 3};
 
 		try(MemoryStack stack = MemoryStack.stackPush()) {
+			// Create a VAO and VBO
 			vao = glGenVertexArrays();
-			glBindVertexArray(vao);
-
-			// Create a VBO and bind it
 			vbo = glGenBuffers();
+			// bind them
+			glBindVertexArray(vao);
 			glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
 			// Store the vertex data in the VBO
-			FloatBuffer vertexBuffer = stack.floats(vertices);
+			FloatBuffer vertexBuffer = stack.floats(quadVertices);
 			glBufferData(GL_ARRAY_BUFFER, vertexBuffer, GL_STATIC_DRAW);
 
-			// Create an IBO and bind it
-			ibo = glGenBuffers();
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(0, 2, GL_FLOAT, false, 2 * Float.BYTES, 0L);
 
-			// Store the index data in the IBO - create two triangles
-			ShortBuffer indexBuffer = stack.shorts(indices);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBuffer, GL_STATIC_DRAW);
 		}
-	}
-
-
-	public void initShaderProgram(RenderContext ctx) throws IOException {
-		if (shaderProgram != null) {
-			shaderProgram.destroy();
-			System.out.println("Shader disposed");
-		}
-		// load the GLSL Shaders
-		this.shaderProgram =ctx.getResourceManager().GetShader("passthru", "passthru/vertex.glsl", "passthru/frag.glsl", null);
-		System.out.println("PassThru shaders loaded:"+shaderProgram.toString());
 	}
 
 	@Override
 	public void doRender(RenderContext ctx) {
-
-		if (shaderDispose.get()) {
-			try {
-				initShaderProgram(ctx);
-				shaderDispose.set(false);
-			}
-			catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-
-		if (shaderProgram != null && shaderProgram.id() > NULL) {
-			shaderProgram.use();
-			shaderProgram.setVertexAttribPointer("position", 2, GL_FLOAT, false, 0, 0);
-		}
-
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
+		shaderProgram.use();
+		//glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, textureIdSupplier.get());
+		glDrawArrays(GL_TRIANGLES, 0, 6);
 
 		glUseProgram(0);
 	}
 
 	@Override
 	public void dispose() {
-
+		shaderProgram.destroy();
 	}
 }

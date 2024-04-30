@@ -27,7 +27,6 @@ public class ShaderLoader extends AbstractResourceLoader<ShaderProgram> {
 	 */
 	public ShaderProgram LoadShaderProgram(Path vertex, Path fragment, Path geometry) throws IOException {
 		final ShaderProgram shaderProgram = ShaderProgram.compile(vertex, fragment, geometry);
-		System.out.println("Loaded shader to "+shaderProgram.id());
 		return shaderProgram;
 	}
 

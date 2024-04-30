@@ -5,6 +5,9 @@ import com.asteriod.duck.opengl.util.keys.KeyCombination;
 import com.asteriod.duck.opengl.util.keys.Keys;
 import com.asteriod.duck.opengl.util.resources.texture.ImageData;
 import com.asteriod.duck.opengl.util.resources.ResourceManager;
+import org.joml.Vector3f;
+import org.joml.Vector4f;
+import org.joml.Vector4fc;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.*;
 import org.lwjgl.opengl.GL;
@@ -36,6 +39,8 @@ public abstract class GLWindow implements RenderContext {
 	private GLFWErrorCallback errorCallback;
 	private Rectangle windowed = null;
 	private Rectangle window;
+	private Vector4f backgroundColor = new Vector4f(0.0f);
+	private boolean clearScreen = true;
 
 	public GLWindow(String title, int width, int height, String icon) {
 		this.windowTitle = title;
@@ -95,6 +100,22 @@ public abstract class GLWindow implements RenderContext {
 		return resourceManager;
 	}
 
+	public Vector4f getBackgroundColor() {
+		return backgroundColor;
+	}
+
+	public void setBackgroundColor(Vector4f color) {
+		this.backgroundColor = color;
+	}
+
+	public boolean isClearScreen() {
+		return clearScreen;
+	}
+
+	public void setClearScreen(boolean clearScreen) {
+		this.clearScreen = clearScreen;
+	}
+
 	public void registerKeyAction(int key, Runnable runnable) {
 		Key knownKey = Keys.instance().keyFor(key).orElseThrow(() -> new IllegalArgumentException("Unknown key code: " + key));
 		keyActions.put(new KeyCombination(Set.of(knownKey), Collections.emptySet()), runnable);
@@ -141,13 +162,17 @@ public abstract class GLWindow implements RenderContext {
 		init();
 		registerKeys();
 
+		// loop
 		while (!glfwWindowShouldClose(windowHandle))
 		{
 			glfwPollEvents();
+
+			if(clearScreen) {
+				clearScreen();
+			}
+
 			// render
-			// ------
-			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-			glClear(GL_COLOR_BUFFER_BIT);
+			// ---------------------
 			render();
 
 			glfwSwapBuffers(windowHandle);
@@ -163,6 +188,11 @@ public abstract class GLWindow implements RenderContext {
 		glfwSetErrorCallback(null);
 
 		glfwTerminate();
+	}
+
+	public void clearScreen() {
+		glClearColor(backgroundColor.x, backgroundColor.y, backgroundColor.z, backgroundColor.w);
+		glClear(GL_COLOR_BUFFER_BIT);
 	}
 
 	public abstract void registerKeys();

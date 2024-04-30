@@ -3,12 +3,16 @@ package com.asteriod.duck.opengl.util.resources.texture;
 import com.asteriod.duck.opengl.util.resources.impl.Resource;
 import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GL46;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 
 import static org.lwjgl.opengl.GL11.*;
 
+
 public class Texture implements Resource {
+	private static final Logger LOG = LoggerFactory.getLogger(Texture.class);
 
 	private int ID;
 	public int Width;
@@ -32,6 +36,7 @@ public class Texture implements Resource {
 		this.Filter_Min = GL_LINEAR;
 		this.Filter_Max = GL_LINEAR;
 		ID = glGenTextures();
+		LOG.info("Created texture ID: " + ID);
 	}
 
 	// generate an empty texture (e.g. for rendering)

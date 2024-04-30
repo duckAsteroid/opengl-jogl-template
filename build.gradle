@@ -1,6 +1,7 @@
 plugins {
   id 'java'
   id 'application'
+  id "com.github.ben-manes.versions" version "0.51.0"
 }
 
 group = 'com.asteroid.duck'
@@ -14,7 +15,8 @@ repositories {
 dependencies {
   // Logging libraries
   implementation 'org.slf4j:slf4j-api:2.0.12'
-  runtimeOnly 'org.slf4j:slf4j-simple:2.0.12'
+  testImplementation 'ch.qos.logback:logback-classic:1.5.5'
+  //runtimeOnly 'org.slf4j:slf4j-simple:2.0.12'
 
   // Lightweight Java Game Libraries (LWJGL)
   implementation platform("org.lwjgl:lwjgl-bom:3.3.3")
@@ -44,7 +46,10 @@ application {
   mainClass = 'com.asteriod.duck.opengl.Main'
 }
 
-run {
+tasks.register("debugRun", JavaExec) {
+  group = ApplicationPlugin.APPLICATION_GROUP
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = application.mainClass
   workingDir = project.rootDir
   jvmArgs = ["-javaagent:src/test/resources/lwjglx-debug-1.0.0.jar=tn;o=open-gl.log"]
 }

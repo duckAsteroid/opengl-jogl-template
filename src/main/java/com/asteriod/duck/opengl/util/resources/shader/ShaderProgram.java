@@ -142,6 +142,10 @@ public class ShaderProgram implements Resource {
 		return this;
 	}
 
+	public void unuse() {
+		glUseProgram(0);
+	}
+
 	public Map<String, Variable> get(VariableType type) {
 		try(MemoryStack stack = MemoryStack.stackPush()) {
 			final int count = type.count(id);
@@ -234,9 +238,9 @@ public class ShaderProgram implements Resource {
 	@Override
 	public String toString() {
 		Map<String, Variable> vars = get(VariableType.UNIFORM);
-		String uniforms = vars.values().stream().sorted().map(Objects::toString).collect(Collectors.joining("\n"));
+		String uniforms = vars.values().stream().sorted().map(Objects::toString).collect(Collectors.joining(", ", "uniforms={", "}; "));
 		vars = get(VariableType.ATTRIBUTE);
-		String attributes = vars.values().stream().sorted().map(Objects::toString).collect(Collectors.joining("\n"));
-		return "ShaderProgram(id="+id+")\n" + uniforms +"\n"+ attributes;
+		String attributes = vars.values().stream().sorted().map(Objects::toString).collect(Collectors.joining(", ","attributes={", "}; "));
+		return "ShaderProgram(id="+id+"): " + uniforms + attributes;
 	}
 }

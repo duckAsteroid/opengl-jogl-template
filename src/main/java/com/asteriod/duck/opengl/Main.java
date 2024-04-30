@@ -18,6 +18,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static org.lwjgl.glfw.GLFW.*;
@@ -39,11 +40,23 @@ public class Main extends GLWindow implements RenderContext {
 
     private final Timer timer = Timer.glfwGetTimeInstance();
 
-    private final RenderedItem renderedItem;
+    private RenderedItem renderedItem;
 
     public Main(RenderedItem renderer, String title, int width, int height) {
         super(title, width, height, "icon16.png");
         this.renderedItem = renderer;
+    }
+
+    public Main(String title, int width, int height) {
+        super(title, width, height, "icon16.png");
+    }
+
+    public RenderedItem getRenderedItem() {
+        return renderedItem;
+    }
+
+    public void setRenderedItem(RenderedItem renderedItem) {
+        this.renderedItem = renderedItem;
     }
 
     @Override
@@ -53,9 +66,48 @@ public class Main extends GLWindow implements RenderContext {
 
 
     public static void main(String[] args) throws Exception {
-        Polyline polyline = new Polyline();
-        PassthruTextureRenderer renderer = new PassthruTextureRenderer("molly");
-        Main main = new Main(polyline, "Shader Playground", 1024, 1024);
+        Main main = new Main( "(cShader Playground", 1024, 1024);
+        main.setClearScreen(false);
+
+        // a multi texture renderer alternating between two textures
+        MultiTextureRenderer source = new MultiTextureRenderer("molly", "window");
+        Texture molly = main.getResourceManager().GetTexture("molly", "molly.jpg", false);
+        Texture window = main.getResourceManager().GetTexture("window", "window.jpeg", false);
+
+        // create an offscreen texture
+        Rectangle screen = main.getWindow();
+        Texture offscreen = new Texture();
+        offscreen.Generate(screen.width, screen.height, 0);
+        // the multi tex will render to the offscreen texture
+        TextureRenderer textureRenderer = new TextureRenderer(source, offscreen);
+
+        PassthruTextureRenderer passthrough = new PassthruTextureRenderer(offscreen::id);
+
+        RenderedItem renderItem = new RenderedItem() {
+
+            @Override
+            public void init(RenderContext ctx) throws IOException {
+                source.init(ctx);
+                textureRenderer.init(ctx);
+                passthrough.init(ctx);
+            }
+
+            @Override
+            public void doRender(RenderContext ctx) {
+                textureRenderer.doRender(ctx);
+                passthrough.doRender(ctx);
+            }
+
+            @Override
+            public void dispose() {
+                passthrough.dispose();
+                textureRenderer.dispose();
+                source.dispose();
+            }
+        };
+
+        main.setRenderedItem(renderItem);
+
         printInstructions();
         main.displayLoop();
     }
@@ -82,10 +134,6 @@ public class Main extends GLWindow implements RenderContext {
 
     public void init() throws IOException {
         timer.reset(); // start the clock
-        // init texture
-        getResourceManager().GetTexture("molly", "molly.jpg", false);
-        getResourceManager().GetTexture("window", "window.jpeg", false);
-
         renderedItem.init(this);
     }
 

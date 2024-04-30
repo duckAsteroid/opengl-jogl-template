@@ -8,6 +8,8 @@ import com.asteriod.duck.opengl.util.resources.shader.vars.VariableType;
 import com.asteriod.duck.opengl.util.resources.texture.Texture;
 import com.asteriod.duck.opengl.util.resources.texture.TextureUnit;
 import org.lwjgl.system.MemoryStack;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.FloatBuffer;
@@ -24,11 +26,9 @@ import static org.lwjgl.system.MemoryUtil.NULL;
 
 public class MultiTextureRenderer implements RenderedItem {
 
-
+	private static final Logger LOG = LoggerFactory.getLogger(MultiTextureRenderer.class);
 
 	private ShaderProgram shaderProgram = null;
-
-	private final AtomicBoolean shaderDispose = new AtomicBoolean(false);
 
 	private int vbo;
 	private int ibo;
@@ -45,10 +45,15 @@ public class MultiTextureRenderer implements RenderedItem {
 	}
 	@Override
 	public void init(RenderContext ctx) throws IOException {
-		ctx.registerKeyAction(GLFW_KEY_F5, () -> shaderDispose.set(true));
 		initShaderProgram(ctx);
 		initTextures(ctx);
 		initBuffers();
+	}
+
+	private void initShaderProgram(RenderContext ctx) throws IOException {
+		// load the GLSL Shaders
+		this.shaderProgram = ctx.getResourceManager().GetShader("multi-tex", "multi-tex/vert.glsl", "multi-tex/frag.glsl", null);
+		LOG.info("Using shader program {}", shaderProgram);
 	}
 
 	private void initTextures(RenderContext ctx) {
@@ -61,6 +66,7 @@ public class MultiTextureRenderer implements RenderedItem {
 			this.textureUnits[i].bind(textures[i]);
 			this.textureUnits[i].useInShader(shaderProgram, "tex"+i);
 		}
+		shaderProgram.unuse();
 	}
 
 
@@ -99,32 +105,8 @@ public class MultiTextureRenderer implements RenderedItem {
 	}
 
 
-	public void initShaderProgram(RenderContext ctx) throws IOException {
-		if (shaderProgram != null) {
-			shaderProgram.destroy();
-			System.out.println("Shader disposed");
-		}
-		// load the GLSL Shaders
-		this.shaderProgram =ctx.getResourceManager().GetShader("main", "main.vert", "main.frag", null);
-		System.out.println("Shaders loaded");
-		Map<String, Variable> vars = shaderProgram.get(VariableType.UNIFORM);
-		vars.values().forEach(System.out::println);
-		vars = shaderProgram.get(VariableType.ATTRIBUTE);
-		vars.values().forEach(System.out::println);
-	}
-
 	@Override
 	public void doRender(RenderContext ctx) {
-
-		if (shaderDispose.get()) {
-			try {
-				initShaderProgram(ctx);
-				shaderDispose.set(false);
-			}
-			catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
 
 		if (shaderProgram != null && shaderProgram.id() > NULL) {
 			shaderProgram.use();
@@ -139,7 +121,7 @@ public class MultiTextureRenderer implements RenderedItem {
 
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, 0);
 
-		glUseProgram(0);
+		shaderProgram.unuse();
 	}
 
 	@Override
