@@ -15,7 +15,7 @@ repositories {
 dependencies {
   // Logging libraries
   implementation 'org.slf4j:slf4j-api:2.0.12'
-  testImplementation 'ch.qos.logback:logback-classic:1.5.5'
+  runtimeOnly 'ch.qos.logback:logback-classic:1.5.5'
   //runtimeOnly 'org.slf4j:slf4j-simple:2.0.12'
 
   // Lightweight Java Game Libraries (LWJGL)

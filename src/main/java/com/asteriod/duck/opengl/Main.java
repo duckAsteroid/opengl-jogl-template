@@ -78,16 +78,16 @@ public class Main extends GLWindow implements RenderContext {
         Rectangle screen = main.getWindow();
         Texture offscreen = new Texture();
         offscreen.Generate(screen.width, screen.height, 0);
+        main.getResourceManager().PutTexture("offscreen", offscreen);
         // the multi tex will render to the offscreen texture
         TextureRenderer textureRenderer = new TextureRenderer(source, offscreen);
 
-        PassthruTextureRenderer passthrough = new PassthruTextureRenderer(offscreen::id);
+        PassthruTextureRenderer passthrough = new PassthruTextureRenderer("offscreen");
 
         RenderedItem renderItem = new RenderedItem() {
 
             @Override
             public void init(RenderContext ctx) throws IOException {
-                source.init(ctx);
                 textureRenderer.init(ctx);
                 passthrough.init(ctx);
             }
@@ -102,7 +102,6 @@ public class Main extends GLWindow implements RenderContext {
             public void dispose() {
                 passthrough.dispose();
                 textureRenderer.dispose();
-                source.dispose();
             }
         };
 

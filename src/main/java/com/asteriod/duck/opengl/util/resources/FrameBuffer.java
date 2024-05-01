@@ -21,13 +21,14 @@ public class FrameBuffer {
 			if (fboStatus == GL_FRAMEBUFFER_UNSUPPORTED) throw new IllegalArgumentException("Unsupported framebuffer type "+error);
 			throw new IllegalArgumentException("Error creating framebuffer "+error);
 		}
+		glViewport(0,0, target.Width, target.Height);
 		System.out.println("Frame buffer ready "+fbo);
 		unbind();
 	}
 
 	public void bind() {
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-		glViewport(0,0, target.Width, target.Height);
+
 	}
 
 	public void unbind() {

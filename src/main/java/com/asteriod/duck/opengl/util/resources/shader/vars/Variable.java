@@ -9,5 +9,9 @@ package com.asteriod.duck.opengl.util.resources.shader.vars;
  * @param location the index location in the shader
  */
 public record Variable(VariableType type, String name, int size, ShaderVariableType dataType,
-                       int location) {
+                       int location) implements Comparable<Variable> {
+	@Override
+	public int compareTo(Variable o) {
+		return this.name.compareTo(o.name);
+	}
 }

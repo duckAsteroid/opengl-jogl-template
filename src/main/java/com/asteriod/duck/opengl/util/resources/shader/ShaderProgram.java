@@ -55,7 +55,7 @@ public class ShaderProgram implements Resource {
 
 	private static String loadFrom(Path p) throws IOException {
 		if (p != null) {
-			return Files.readString(p, StandardCharsets.UTF_8);
+			return Files.readString(p, StandardCharsets.UTF_8) + "\n//Source: "+p.toAbsolutePath();
 		}
 		else return null;
 	}
@@ -146,7 +146,16 @@ public class ShaderProgram implements Resource {
 		glUseProgram(0);
 	}
 
+	private final Map<VariableType, Map<String, Variable>> variableCache = new HashMap<>();
+
 	public Map<String, Variable> get(VariableType type) {
+		if (!variableCache.containsKey(type)) {
+			variableCache.put(type, read(type));
+		}
+		return variableCache.get(type);
+	}
+
+	public Map<String, Variable> read(VariableType type) {
 		try(MemoryStack stack = MemoryStack.stackPush()) {
 			final int count = type.count(id);
 			final int maxNameLength = type.maxNameLength(id);
@@ -181,37 +190,38 @@ public class ShaderProgram implements Resource {
 
 	public void setFloat(String name, float value)
 	{
-		glUniform1f(glGetUniformLocation(id, name), value);
+		glUniform1f(uniformLocation(name), value);
 	}
 
 	public void setInteger(String name, int value)
 	{
-		glUniform1i(glGetUniformLocation(id, name), value);
+		glUniform1i(uniformLocation(name), value);
 	}
 	public void setVector2f(String name, float x, float y)
 	{
-		glUniform2f(glGetUniformLocation(id, name), x, y);
+		glUniform2f(uniformLocation(name), x, y);
 	}
 	public void setVector2f(String name, Vector2f value)
 	{
-		glUniform2f(glGetUniformLocation(id, name), value.x, value.y);
+		glUniform2f(uniformLocation(name), value.x, value.y);
 	}
 	public void setVector3f(String name, float x, float y, float z)
 	{
-		glUniform3f(glGetUniformLocation(id, name), x, y, z);
+		glUniform3f(uniformLocation(name), x, y, z);
 	}
 	public void setVector3f(String name, Vector3f value)
 	{
-		glUniform3f(glGetUniformLocation(id, name), value.x, value.y, value.z);
+		glUniform3f(uniformLocation(name), value.x, value.y, value.z);
 	}
 	public void setVector4f(String name, float x, float y, float z, float w)
 	{
-		glUniform4f(glGetUniformLocation(id, name), x, y, z, w);
+		glUniform4f(uniformLocation(name), x, y, z, w);
 	}
 	public void setVector4f(String name, Vector4f value)
 	{
-		glUniform4f(glGetUniformLocation(id, name), value.x, value.y, value.z, value.w);
+		glUniform4f(uniformLocation(name), value.x, value.y, value.z, value.w);
 	}
+
 	public void setMatrix4(String name, Matrix4f matrix)
 	{
 		try (MemoryStack stack = MemoryStack.stackPush()) {
@@ -220,14 +230,10 @@ public class ShaderProgram implements Resource {
 		}
 	}
 
-
-
 	public void setVertexAttribPointer(String name, int size, int type, boolean normalized, int stride, long pointer) {
-		try(MemoryStack stack = MemoryStack.stackPush()) {
-			int positionAttribute = glGetAttribLocation(id, name);
-			glEnableVertexAttribArray(positionAttribute);
-			glVertexAttribPointer(positionAttribute, size, type, normalized, stride, pointer);
-		}
+		int positionAttribute = glGetAttribLocation(id, name);
+		glEnableVertexAttribArray(positionAttribute);
+		glVertexAttribPointer(positionAttribute, size, type, normalized, stride, pointer);
 	}
 
 	public void destroy() {
