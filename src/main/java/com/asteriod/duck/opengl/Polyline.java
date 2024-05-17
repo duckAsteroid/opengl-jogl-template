@@ -12,6 +12,7 @@ import com.asteriod.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteriod.duck.opengl.util.timer.Timer;
 import org.joml.Random;
 import org.joml.Vector4f;
+import org.joml.Vector4fc;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.system.MemoryStack;
 
@@ -32,6 +33,9 @@ import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL30.*;
 
+/**
+ * https://github.com/jackaudio/jackaudio.github.com/wiki
+ */
 public class Polyline implements RenderedItem {
 	private ShaderProgram shaderProgram = null;
 	private int vbo;
@@ -46,7 +50,9 @@ public class Polyline implements RenderedItem {
 
 	private float lineWidth = 2.0f;
 	private Vector4f lineColour = new Vector4f(1.0f,1.0f, 1.0f, 1.0f);
+	private Vector4f backgroundColour = new Vector4f(0.4f, 0.4f, 0.4f, 1.0f);
 	private Random rnd = new Random();
+	private final boolean clear = false;
 
 
 	private int fillPoints(FloatBuffer pointBuffer) {
@@ -62,6 +68,7 @@ public class Polyline implements RenderedItem {
 
 			rollingFloatBuffer.write(audioBuffer.asShortBuffer());
 		}
+
 		pointBuffer.clear();
 		rollingFloatBuffer.read(pointBuffer);
 
@@ -105,23 +112,18 @@ public class Polyline implements RenderedItem {
 			throw new IOException(e);
 		}
 
-
-		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+		glClearColor(backgroundColour.x, backgroundColour.y, backgroundColour.z, backgroundColour.w);
 		glEnable(GL_LINE_SMOOTH);
 		glHint(GL_LINE_SMOOTH_HINT, GL_FASTEST);
 
-		IntBuffer vaoPtr = mem.ints(vao);
-		glGenVertexArrays(vaoPtr);
-		vao = vaoPtr.get(0);
+		vao = glGenVertexArrays();
 		glBindVertexArray(vao);
 
-		IntBuffer vboPtr = mem.ints(vbo);
-		glGenBuffers(vboPtr);
-		vbo = vboPtr.get(0);
+		vbo = glGenBuffers();
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
 		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 2, GL_FLOAT, false, 2 * Float.BYTES, 0);
+		glVertexAttribPointer(0, 2, GL_FLOAT, false, 0, 0);
 
 
 		shaderProgram = ctx.getResourceManager().GetShader("polyline", "polyline/vertex.glsl","polyline/frag.glsl", null);
@@ -166,9 +168,10 @@ public class Polyline implements RenderedItem {
 		shaderProgram.setVector2f("resolution", window.width, window.height);
 		shaderProgram.setVector4f("lineColor", lineColour);
 
-		glClearColor(0.4f, 0.1f, 0.1f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+		if (clear) {
+			glClearColor(backgroundColour.x, backgroundColour.y, backgroundColour.z, backgroundColour.w);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		}
 
 		glBindVertexArray(vao);
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
