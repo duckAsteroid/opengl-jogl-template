@@ -42,9 +42,11 @@ public class MultiTextureRenderer implements RenderedItem {
 	public MultiTextureRenderer(String textureName) {
 		this(new String[]{textureName});
 	}
+
 	public MultiTextureRenderer(String ... textureNames) {
 		this.textureNames = textureNames;
 	}
+
 	@Override
 	public void init(RenderContext ctx) throws IOException {
 		initShaderProgram(ctx);

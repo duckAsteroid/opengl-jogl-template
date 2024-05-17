@@ -39,10 +39,17 @@ public class PassthruTextureRenderer implements RenderedItem {
 	private Texture texture;
 	private TextureUnit textureUnit;
 	private Triangles renderedShape;
+	private final String shaderName;
 
 	public PassthruTextureRenderer(String name) {
-		this.textureName = name;
+		this(name, "passthru");
 	}
+
+	public PassthruTextureRenderer(String name, String shaderName) {
+		this.textureName = name;
+		this.shaderName = shaderName;
+	}
+
 	@Override
 	public void init(RenderContext ctx) throws IOException {
 		initShaderProgram(ctx);
@@ -52,8 +59,8 @@ public class PassthruTextureRenderer implements RenderedItem {
 
 	private void initShaderProgram(RenderContext ctx) throws IOException {
 		// load the GLSL Shaders
-		this.shaderProgram = ctx.getResourceManager().GetShader("passthru", "passthru/vertex.glsl", "passthru/frag.glsl", null);
-		LOG.info("Using shader program {}", shaderProgram);
+		this.shaderProgram = ctx.getResourceManager().GetShader(shaderName, shaderName+"/vertex.glsl", shaderName+"/frag.glsl", null);
+		LOG.info("Using shader program {}, id={}", shaderName, shaderProgram);
 	}
 
 	private void initTextures(RenderContext ctx) {
