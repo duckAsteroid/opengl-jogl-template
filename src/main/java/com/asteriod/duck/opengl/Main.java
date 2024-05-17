@@ -66,7 +66,7 @@ public class Main extends GLWindow implements RenderContext {
 
 
     public static void main(String[] args) throws Exception {
-        Main main = new Main( "(cShader Playground", 1024, 1024);
+        Main main = new Main( "(cShader Playground", 1024, 800);
         main.setClearScreen(false);
 
         // a multi texture renderer alternating between two textures
@@ -74,16 +74,28 @@ public class Main extends GLWindow implements RenderContext {
         Texture molly = main.getResourceManager().GetTexture("molly", "molly.jpg", false);
         Texture window = main.getResourceManager().GetTexture("window", "window.jpeg", false);
 
+        // a soundwave
+        //Polyline poly = new Polyline();
+
         // create an offscreen texture
         Rectangle screen = main.getWindow();
-        Texture offscreen = new Texture();
-        offscreen.Generate(screen.width, screen.height, 0);
-        main.getResourceManager().PutTexture("offscreen", offscreen);
-        // the multi tex will render to the offscreen texture
-        TextureRenderer textureRenderer = new TextureRenderer(source, offscreen);
 
-        PassthruTextureRenderer passthrough = new PassthruTextureRenderer("offscreen");
+        Texture[] offscreen = new Texture[2];
+        for (int i = 0; i < offscreen.length ; i++) {
+            offscreen[i] = new Texture();
+            offscreen[i].Generate(screen.width, screen.height, 0);
+            main.getResourceManager().PutTexture("offscreen"+i, offscreen[i]);
+        }
 
+        // wrap the multi tex to render to the offscreen texture
+        TextureRenderer textureRenderer = new TextureRenderer(source, offscreen[0]);
+
+        // a passthrough renderer (onto screen) of the "offscreen" texture
+        PassthruTextureRenderer passthrough = new PassthruTextureRenderer("offscreen0", "blur");
+
+
+
+        // A holder to initialise and render the two paths: offscreen and onscreen
         RenderedItem renderItem = new RenderedItem() {
 
             @Override
@@ -96,10 +108,12 @@ public class Main extends GLWindow implements RenderContext {
             public void doRender(RenderContext ctx) {
                 textureRenderer.doRender(ctx);
                 passthrough.doRender(ctx);
+
             }
 
             @Override
             public void dispose() {
+
                 passthrough.dispose();
                 textureRenderer.dispose();
             }
