@@ -7,6 +7,9 @@ import com.asteriod.duck.opengl.util.resources.texture.Texture;
 
 import java.io.IOException;
 
+/**
+ * Wraps another {@link RenderedItem} and renders it to {@link Texture} using a {@link FrameBuffer}.
+ */
 public class TextureRenderer implements RenderedItem {
 	// wrap another rendered item and render it to texture using a FBO
 	private final RenderedItem renderedItem;

@@ -8,6 +8,7 @@ import com.asteriod.duck.opengl.util.resources.shader.vars.Variable;
 import com.asteriod.duck.opengl.util.resources.shader.vars.VariableType;
 import com.asteriod.duck.opengl.util.resources.texture.Texture;
 import com.asteriod.duck.opengl.util.resources.texture.TextureUnit;
+import org.joml.Vector2f;
 import org.lwjgl.system.MemoryStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +18,7 @@ import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_F5;
@@ -40,14 +42,16 @@ public class PassthruTextureRenderer implements RenderedItem {
 	private TextureUnit textureUnit;
 	private Triangles renderedShape;
 	private final String shaderName;
+	private final Consumer<ShaderProgram> shaderCustomiser;
 
 	public PassthruTextureRenderer(String name) {
-		this(name, "passthru");
+		this(name, "passthru", null);
 	}
 
-	public PassthruTextureRenderer(String name, String shaderName) {
+	public PassthruTextureRenderer(String name, String shaderName, Consumer<ShaderProgram> shaderCustomiser) {
 		this.textureName = name;
 		this.shaderName = shaderName;
+		this.shaderCustomiser = shaderCustomiser;
 	}
 
 	@Override
@@ -55,6 +59,10 @@ public class PassthruTextureRenderer implements RenderedItem {
 		initShaderProgram(ctx);
 		initTextures(ctx);
 		initBuffers();
+
+		if (shaderCustomiser != null) {
+			shaderCustomiser.accept(shaderProgram);
+		}
 	}
 
 	private void initShaderProgram(RenderContext ctx) throws IOException {
@@ -66,9 +74,10 @@ public class PassthruTextureRenderer implements RenderedItem {
 	private void initTextures(RenderContext ctx) {
 		shaderProgram.use();
 		this.texture = ctx.getResourceManager().GetTexture(textureName);
-		this.textureUnit = TextureUnit.index(3);
+		this.textureUnit = ctx.getResourceManager().NextTextureUnit();
 		this.textureUnit.bind(texture);
 		this.textureUnit.useInShader(shaderProgram, "tex");
+		shaderProgram.setVector2f("dimensions", new Vector2f(texture.Width, texture.Height));
 	}
 
 

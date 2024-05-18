@@ -6,6 +6,7 @@ import com.asteriod.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteriod.duck.opengl.util.resources.texture.ImageData;
 import com.asteriod.duck.opengl.util.resources.texture.Texture;
 import com.asteriod.duck.opengl.util.resources.texture.TextureLoader;
+import com.asteriod.duck.opengl.util.resources.texture.TextureUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,6 +14,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.stream.Stream;
 
 
 public class ResourceManager {
@@ -21,7 +23,6 @@ public class ResourceManager {
 	private final Path root;
 	private final ShaderLoader shaderLoader;
 	private final TextureLoader textureLoader;
-
 
 	public record ResourceLocator(Class<? extends Resource> type, String name){}
 
@@ -77,6 +78,18 @@ public class ResourceManager {
 			}
 		}
 		return (ShaderProgram) resources.get(locator);
+	}
+
+	public TextureUnit NextTextureUnit() {
+		int index = TextureUnits().mapToInt(TextureUnit::getIndex).max().orElse(-1 ) + 1;
+		TextureUnit unit = TextureUnit.index(index);
+		resources.put(new ResourceLocator(TextureUnit.class, Integer.toHexString(unit.getIndex())), unit);
+		return unit;
+	}
+
+	public Stream<TextureUnit> TextureUnits() {
+		return resources.values().stream()
+						.filter(resource -> resource instanceof TextureUnit).map(resource -> (TextureUnit) resource);
 	}
 
 	public void clear() {

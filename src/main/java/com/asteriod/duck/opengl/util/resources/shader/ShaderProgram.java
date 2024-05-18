@@ -193,6 +193,11 @@ public class ShaderProgram implements Resource {
 		glUniform1f(uniformLocation(name), value);
 	}
 
+	public void setFloatArray(String name, float[] value)
+	{
+		glUniform1fv(uniformLocation(name), value);
+	}
+
 	public void setInteger(String name, int value)
 	{
 		glUniform1i(uniformLocation(name), value);

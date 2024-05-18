@@ -1,6 +1,7 @@
 package com.asteriod.duck.opengl;
 
 
+import com.asteriod.duck.opengl.util.CompositeRenderItem;
 import com.asteriod.duck.opengl.util.GLWindow;
 import com.asteriod.duck.opengl.util.RenderContext;
 import com.asteriod.duck.opengl.util.RenderedItem;
@@ -69,10 +70,12 @@ public class Main extends GLWindow implements RenderContext {
         Main main = new Main( "(cShader Playground", 1024, 800);
         main.setClearScreen(false);
 
+        BlurKernel.DiscreteSampleKernel blurKernel = new BlurKernel(21).getDiscreteSampleKernel();
+
         // a multi texture renderer alternating between two textures
         MultiTextureRenderer source = new MultiTextureRenderer("molly", "window");
         Texture molly = main.getResourceManager().GetTexture("molly", "molly.jpg", false);
-        Texture window = main.getResourceManager().GetTexture("window", "window.jpeg", false);
+        Texture window = main.getResourceManager().GetTexture("window", "test-card.jpeg", false);
 
         // a soundwave
         //Polyline poly = new Polyline();
@@ -89,35 +92,22 @@ public class Main extends GLWindow implements RenderContext {
 
         // wrap the multi tex to render to the offscreen texture
         TextureRenderer textureRenderer = new TextureRenderer(source, offscreen[0]);
+        PassthruTextureRenderer blurX = new PassthruTextureRenderer("offscreen0", "blur-x", shader -> {
+            shader.setFloatArray("offset", blurKernel.floatOffsets());
+            shader.setFloatArray("weight", blurKernel.floatWeights());
+        });
+        TextureRenderer textureRenderer2 = new TextureRenderer(blurX , offscreen[1]);
 
         // a passthrough renderer (onto screen) of the "offscreen" texture
-        PassthruTextureRenderer passthrough = new PassthruTextureRenderer("offscreen0", "blur");
+        PassthruTextureRenderer blurY = new PassthruTextureRenderer("offscreen1", "blur-y", shader -> {
+            shader.setFloatArray("offset", blurKernel.floatOffsets());
+            shader.setFloatArray("weight", blurKernel.floatWeights());
+        });
 
-
+        // set blur kernel
 
         // A holder to initialise and render the two paths: offscreen and onscreen
-        RenderedItem renderItem = new RenderedItem() {
-
-            @Override
-            public void init(RenderContext ctx) throws IOException {
-                textureRenderer.init(ctx);
-                passthrough.init(ctx);
-            }
-
-            @Override
-            public void doRender(RenderContext ctx) {
-                textureRenderer.doRender(ctx);
-                passthrough.doRender(ctx);
-
-            }
-
-            @Override
-            public void dispose() {
-
-                passthrough.dispose();
-                textureRenderer.dispose();
-            }
-        };
+        RenderedItem renderItem = new CompositeRenderItem(textureRenderer, textureRenderer2, blurY);
 
         main.setRenderedItem(renderItem);
 

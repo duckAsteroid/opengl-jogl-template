@@ -66,7 +66,7 @@ public class MultiTextureRenderer implements RenderedItem {
 		shaderProgram.use();
 		for (int i = 0; i < textureNames.length; i++) {
 			this.textures[i] = ctx.getResourceManager().GetTexture(textureNames[i]);
-			this.textureUnits[i] = TextureUnit.index(i);
+			this.textureUnits[i] = ctx.getResourceManager().NextTextureUnit();
 			this.textureUnits[i].bind(textures[i]);
 			this.textureUnits[i].useInShader(shaderProgram, "tex"+i);
 		}
