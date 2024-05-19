@@ -74,8 +74,8 @@ public class Main extends GLWindow implements RenderContext {
 
         // a multi texture renderer alternating between two textures
         MultiTextureRenderer source = new MultiTextureRenderer("molly", "window");
-        Texture molly = main.getResourceManager().GetTexture("molly", "molly.jpg", false);
-        Texture window = main.getResourceManager().GetTexture("window", "test-card.jpeg", false);
+        Texture molly = main.getResourceManager().GetTexture("molly", "molly.jpg", true);
+        Texture window = main.getResourceManager().GetTexture("window", "test-card.jpeg", true);
 
         // a soundwave
         //Polyline poly = new Polyline();
