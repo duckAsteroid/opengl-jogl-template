@@ -13,6 +13,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.SortedSet;
 import java.util.stream.Stream;
@@ -103,7 +105,8 @@ public class ResourceManager {
 	}
 
 	public void clear() {
-		resources.values().forEach(Resource::destroy);
+		Collection<Resource> clone = new ArrayList<>(resources.values());
+		clone.forEach(Resource::destroy);
 		resources.clear();
 	}
 }

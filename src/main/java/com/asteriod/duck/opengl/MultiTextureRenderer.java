@@ -96,5 +96,8 @@ public class MultiTextureRenderer implements RenderedItem {
 	public void dispose() {
 		renderedShape.dispose();
 		shaderProgram.destroy();
+		for (TextureUnit textureUnit : textureUnits) {
+			textureUnit.destroy();
+		}
 	}
 }

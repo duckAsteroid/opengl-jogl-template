@@ -97,5 +97,6 @@ public class PassthruTextureRenderer implements RenderedItem {
 	public void dispose() {
 		renderedShape.dispose();
 		shaderProgram.destroy();
+		textureUnit.destroy();
 	}
 }
