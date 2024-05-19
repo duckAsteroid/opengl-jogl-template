@@ -9,7 +9,7 @@ void main() {
   positionVec4.xy = positionVec4.xy * 2.0 - 1.0;
   // flip the Y because the image runs top to bottom
   // whereas GL coord space is bottom to top
-  positionVec4.y = positionVec4.y * -1.0;
+  //positionVec4.y = positionVec4.y * -1.0;
 
   gl_Position = positionVec4;
 

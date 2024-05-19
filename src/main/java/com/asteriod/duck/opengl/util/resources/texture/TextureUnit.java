@@ -3,29 +3,30 @@ package com.asteriod.duck.opengl.util.resources.texture;
 import com.asteriod.duck.opengl.util.resources.impl.Resource;
 import com.asteriod.duck.opengl.util.resources.shader.ShaderProgram;
 
+import java.util.function.Consumer;
+
 import static org.lwjgl.opengl.GL13.*;
 
 public class TextureUnit implements Resource, Comparable<TextureUnit> {
 	private final int index;
 	private final int shaderUnit;
 	private Texture boundTexture;
+	private final Consumer<TextureUnit> disposalFunction;
 
-	private TextureUnit(int index, int shaderUnit) {
+	private TextureUnit(int index, int shaderUnit, Consumer<TextureUnit> disposalFunction) {
 		this.index = index;
 		this.shaderUnit = shaderUnit;
+		this.disposalFunction = disposalFunction;
 	}
 
-	private static final int[] TEXUNITS = new int[]{
-					GL_TEXTURE0,
-					GL_TEXTURE1,
-					GL_TEXTURE2,
-					GL_TEXTURE3,
-					GL_TEXTURE4,
-	};
+	public static TextureUnit index(int index) {
+		return index(index, null);
+	}
 
-	public static final TextureUnit index(int index) {
+	public static TextureUnit index(int index, Consumer<TextureUnit> disposalFunction) {
 		// FIXME use GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS to restrict?
-		return new TextureUnit(index, TEXUNITS[index]);
+		if (index < 0 || index > 31) throw new IllegalArgumentException("Texture unit index must be between 0 and 31");
+		return new TextureUnit(index, GL_TEXTURE0 + index, disposalFunction);
 	}
 
 	public void bind(Texture texture) {
@@ -48,7 +49,9 @@ public class TextureUnit implements Resource, Comparable<TextureUnit> {
 
 	@Override
 	public void destroy() {
-		// nothing to do
+		if (disposalFunction != null) {
+			disposalFunction.accept(this);
+		}
 	}
 
 	@Override

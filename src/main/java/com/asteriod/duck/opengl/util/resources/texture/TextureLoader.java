@@ -5,6 +5,7 @@ import com.asteriod.duck.opengl.util.resources.impl.AbstractResourceLoader;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.color.ColorSpace;
+import java.awt.geom.AffineTransform;
 import java.awt.image.*;
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,7 +23,7 @@ public class TextureLoader extends AbstractResourceLoader<Texture> {
 		super(root);
 	}
 
-	public static Texture createTexture(int width, int height, ByteBuffer textureData, boolean alpha) throws IOException {
+	public static Texture createTexture(int width, int height, ByteBuffer textureData) throws IOException {
 		Texture tex = new Texture();
 
 		tex.setInternalFormat( GL_RGBA);
@@ -32,12 +33,12 @@ public class TextureLoader extends AbstractResourceLoader<Texture> {
 		return tex;
 	}
 
-	public Texture LoadTexture(String texturePath, boolean alpha) throws IOException {
-			ImageData imageData = loadTextureData(texturePath, alpha);
-			return createTexture(imageData.size().width, imageData.size().height, imageData.buffer(), alpha);
+	public Texture LoadTexture(String texturePath, boolean flipY) throws IOException {
+			ImageData imageData = loadTextureData(texturePath, flipY);
+			return createTexture(imageData.size().width, imageData.size().height, imageData.buffer());
 	}
 
-	public ImageData loadTextureData(String texturePath, boolean alpha) throws IOException {
+	public ImageData loadTextureData(String texturePath, boolean flipY) throws IOException {
 		try(InputStream inputStream = Files.newInputStream(getPath(texturePath))) {
 			BufferedImage bufferedImage = ImageIO.read(inputStream);
 			ColorModel glAlphaColorModel = new ComponentColorModel(ColorSpace
@@ -50,10 +51,15 @@ public class TextureLoader extends AbstractResourceLoader<Texture> {
 							new Hashtable<>());
 
 			// copy the source image into the produced image
-			Graphics g = texImage.getGraphics();
-			g.setColor(new Color(0f, 0f, 0f, 0f));
-			g.fillRect(0, 0, 256, 256);
+			Graphics2D g = (Graphics2D) texImage.getGraphics();
+			g.setColor(new Color(0f, 0f, 0f, 0f)); // transparent
+			g.fillRect(0, 0, bufferedImage.getWidth(), bufferedImage.getHeight());
+			if (flipY) {
+				g.scale(1, -1);
+				g.translate(0, -bufferedImage.getHeight());
+			}
 			g.drawImage(bufferedImage, 0, 0, null);
+
 
 			// build a byte buffer from the temporary image
 			// that be used by OpenGL to produce a texture.

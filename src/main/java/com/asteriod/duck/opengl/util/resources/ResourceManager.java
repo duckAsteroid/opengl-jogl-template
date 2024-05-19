@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.SortedSet;
 import java.util.stream.Stream;
 
 
@@ -27,6 +28,7 @@ public class ResourceManager {
 	public record ResourceLocator(Class<? extends Resource> type, String name){}
 
 	private final HashMap<ResourceLocator, Resource> resources = new HashMap<>();
+	private final SortedSet<Integer> unallocatedTextureUnits = Stream.iterate(0, i -> i + 1).limit(32).collect(java.util.stream.Collectors.toCollection(java.util.TreeSet::new));
 
 	public ResourceManager(String root) {
 		this.root = Paths.get(root);
@@ -47,12 +49,12 @@ public class ResourceManager {
 		resources.put(locator, texture);
 	}
 
-	public Texture GetTexture(String name, String path, boolean alpha) {
+	public Texture GetTexture(String name, String path, boolean flipY) {
 		ResourceLocator locator = new ResourceLocator(Texture.class, name);
 		if (!resources.containsKey(locator)) {
 			Texture tex = null;
 			try {
-				tex = textureLoader.LoadTexture(path, alpha);
+				tex = textureLoader.LoadTexture(path, flipY);
 			} catch (IOException e) {
 				LOG.error("Error loading texture", e);
 			}
@@ -81,10 +83,18 @@ public class ResourceManager {
 	}
 
 	public TextureUnit NextTextureUnit() {
-		int index = TextureUnits().mapToInt(TextureUnit::getIndex).max().orElse(-1 ) + 1;
-		TextureUnit unit = TextureUnit.index(index);
+		int index = unallocatedTextureUnits.first();
+		unallocatedTextureUnits.remove(index);
+		TextureUnit unit = TextureUnit.index(index, this::replaceTextureUnit);
 		resources.put(new ResourceLocator(TextureUnit.class, Integer.toHexString(unit.getIndex())), unit);
 		return unit;
+	}
+
+	private void replaceTextureUnit(TextureUnit textureUnit) {
+		int index = textureUnit.getIndex();
+		ResourceLocator locator = new ResourceLocator(TextureUnit.class, Integer.toHexString(index));
+		resources.remove(locator);
+		unallocatedTextureUnits.add(index);
 	}
 
 	public Stream<TextureUnit> TextureUnits() {
@@ -96,7 +106,4 @@ public class ResourceManager {
 		resources.values().forEach(Resource::destroy);
 		resources.clear();
 	}
-
-
-
 }
