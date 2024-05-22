@@ -13,6 +13,7 @@ import static org.lwjgl.opengl.GL11.*;
 
 public class Texture implements Resource {
 	private static final Logger LOG = LoggerFactory.getLogger(Texture.class);
+	private int type;
 
 	private int ID;
 	public int Width;
@@ -35,6 +36,7 @@ public class Texture implements Resource {
 		this.Wrap_T = GL_REPEAT;
 		this.Filter_Min = GL_LINEAR;
 		this.Filter_Max = GL_LINEAR;
+		this.type = GL_TEXTURE_2D;
 		ID = glGenTextures();
 		LOG.info("Created texture ID: " + ID);
 	}
@@ -44,15 +46,15 @@ public class Texture implements Resource {
 		this.Width = width;
 		this.Height = height;
 		// create texture
-		glBindTexture(GL_TEXTURE_2D, this.ID);
-		glTexImage2D(GL_TEXTURE_2D, 0, this.Internal_Format, width, height, 0, this.Image_Format, GL_UNSIGNED_BYTE, pixels);
+		glBindTexture(type, this.ID);
+		glTexImage2D(type, 0, this.Internal_Format, width, height, 0, this.Image_Format, GL_UNSIGNED_BYTE, pixels);
 		// set Texture wrap and filter modes
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, this.Wrap_S);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, this.Wrap_T);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, this.Filter_Min);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, this.Filter_Max);
+		glTexParameteri(type, GL_TEXTURE_WRAP_S, this.Wrap_S);
+		glTexParameteri(type, GL_TEXTURE_WRAP_T, this.Wrap_T);
+		glTexParameteri(type, GL_TEXTURE_MIN_FILTER, this.Filter_Min);
+		glTexParameteri(type, GL_TEXTURE_MAG_FILTER, this.Filter_Max);
 		// unbind texture
-		glBindTexture(GL_TEXTURE_2D, 0);
+		glBindTexture(type, 0);
 	}
 
 	public void Generate( int width, int height, ByteBuffer data)
@@ -72,17 +74,33 @@ public class Texture implements Resource {
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
+	public void Generate1D( int length, ByteBuffer data)
+	{
+		this.Width = length;
+		this.Height = 1;
+		this.type = GL_TEXTURE_1D;
+
+		// create Texture
+		glBindTexture(GL_TEXTURE_1D, this.ID);
+		glTexImage1D(GL_TEXTURE_1D, 0, this.Internal_Format, Width, 0, this.Image_Format, GL_UNSIGNED_BYTE, data);
+		// set Texture wrap and filter modes
+
+		// unbind texture
+		glBindTexture(GL_TEXTURE_1D, 0);
+	}
+
 	public int id() {
 		return ID;
 	}
 
 	public void Bind()
 	{
-		glBindTexture(GL_TEXTURE_2D, ID);
+		glBindTexture(type, ID);
 	}
+
 	public void UnBind()
 	{
-		glBindTexture(GL_TEXTURE_2D, 0);
+		glBindTexture(type, 0);
 	}
 
 	public void destroy() {

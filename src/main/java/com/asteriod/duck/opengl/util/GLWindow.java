@@ -71,7 +71,7 @@ public abstract class GLWindow implements RenderContext {
 
 		if (icon != null) {
 			try (GLFWImage.Buffer icons = GLFWImage.malloc(1)) {
-				ImageData imgData = resourceManager.LoadTextureData(icon, false);
+				ImageData imgData = resourceManager.LoadTextureData(icon, ResourceManager.ImageOptions.DEFAULT.withNoFlip());
 				icons.position(0)
 								.width(imgData.size().width)
 								.height(imgData.size().height)

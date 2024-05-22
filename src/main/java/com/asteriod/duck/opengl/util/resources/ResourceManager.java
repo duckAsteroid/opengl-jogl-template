@@ -23,6 +23,17 @@ import java.util.stream.Stream;
 public class ResourceManager {
 	private static final Logger LOG = LoggerFactory.getLogger(ResourceManager.class);
 
+	public record ImageOptions(boolean flipY, boolean singleLine) {
+		public static final ImageOptions DEFAULT = new ImageOptions(true, false);
+
+		public ImageOptions withNoFlip() {
+			if (flipY) {
+				return new ImageOptions(false, singleLine);
+			}
+			return this;
+		}
+	}
+
 	private final Path root;
 	private final ShaderLoader shaderLoader;
 	private final TextureLoader textureLoader;
@@ -50,13 +61,16 @@ public class ResourceManager {
 		ResourceLocator locator = new ResourceLocator(Texture.class, name);
 		resources.put(locator, texture);
 	}
+	public Texture GetTexture(String name, String path) {
+		return GetTexture(name, path, ImageOptions.DEFAULT);
+	}
 
-	public Texture GetTexture(String name, String path, boolean flipY) {
+	public Texture GetTexture(String name, String path, ImageOptions options) {
 		ResourceLocator locator = new ResourceLocator(Texture.class, name);
 		if (!resources.containsKey(locator)) {
 			Texture tex = null;
 			try {
-				tex = textureLoader.LoadTexture(path, flipY);
+				tex = textureLoader.LoadTexture(path, options);
 			} catch (IOException e) {
 				LOG.error("Error loading texture", e);
 			}
@@ -65,8 +79,10 @@ public class ResourceManager {
 		return (Texture) resources.get(locator);
 	}
 
-	public ImageData LoadTextureData(String image, boolean b) throws IOException {
-		return textureLoader.loadTextureData(image, b);
+
+
+	public ImageData LoadTextureData(String image, ImageOptions options) throws IOException {
+		return textureLoader.loadTextureData(image, options);
 	}
 
 
