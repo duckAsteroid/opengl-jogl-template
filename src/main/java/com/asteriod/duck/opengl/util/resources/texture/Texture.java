@@ -1,8 +1,6 @@
 package com.asteriod.duck.opengl.util.resources.texture;
 
 import com.asteriod.duck.opengl.util.resources.impl.Resource;
-import org.lwjgl.opengl.GL;
-import org.lwjgl.opengl.GL46;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,7 +11,7 @@ import static org.lwjgl.opengl.GL11.*;
 
 public class Texture implements Resource {
 	private static final Logger LOG = LoggerFactory.getLogger(Texture.class);
-	private int type;
+	int type;
 
 	private int ID;
 	public int Width;
@@ -62,8 +60,10 @@ public class Texture implements Resource {
 		this.Width = width;
 		this.Height = height;
 
+
 		// create Texture
 		glBindTexture(GL_TEXTURE_2D, this.ID);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 		glTexImage2D(GL_TEXTURE_2D, 0, this.Internal_Format, width, height, 0, this.Image_Format, GL_UNSIGNED_BYTE, data);
 		// set Texture wrap and filter modes
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, this.Wrap_S);
@@ -84,7 +84,9 @@ public class Texture implements Resource {
 		glBindTexture(GL_TEXTURE_1D, this.ID);
 		glTexImage1D(GL_TEXTURE_1D, 0, this.Internal_Format, Width, 0, this.Image_Format, GL_UNSIGNED_BYTE, data);
 		// set Texture wrap and filter modes
-
+		glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		// unbind texture
 		glBindTexture(GL_TEXTURE_1D, 0);
 	}
@@ -113,5 +115,9 @@ public class Texture implements Resource {
 
 	public void setImageFormat(int fmt) {
 		this.Image_Format = fmt;
+	}
+
+	public int getWidth() {
+		return Width;
 	}
 }

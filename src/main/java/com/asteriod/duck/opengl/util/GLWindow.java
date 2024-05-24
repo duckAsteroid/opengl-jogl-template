@@ -3,11 +3,10 @@ package com.asteriod.duck.opengl.util;
 import com.asteriod.duck.opengl.util.keys.Key;
 import com.asteriod.duck.opengl.util.keys.KeyCombination;
 import com.asteriod.duck.opengl.util.keys.Keys;
+import com.asteriod.duck.opengl.util.resources.texture.ImageOptions;
 import com.asteriod.duck.opengl.util.resources.texture.ImageData;
 import com.asteriod.duck.opengl.util.resources.ResourceManager;
-import org.joml.Vector3f;
 import org.joml.Vector4f;
-import org.joml.Vector4fc;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.*;
 import org.lwjgl.opengl.GL;
@@ -71,7 +70,7 @@ public abstract class GLWindow implements RenderContext {
 
 		if (icon != null) {
 			try (GLFWImage.Buffer icons = GLFWImage.malloc(1)) {
-				ImageData imgData = resourceManager.LoadTextureData(icon, ResourceManager.ImageOptions.DEFAULT.withNoFlip());
+				ImageData imgData = resourceManager.LoadTextureData(icon, ImageOptions.DEFAULT.withNoFlip());
 				icons.position(0)
 								.width(imgData.size().width)
 								.height(imgData.size().height)

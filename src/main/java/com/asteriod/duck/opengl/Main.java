@@ -5,9 +5,7 @@ import com.asteriod.duck.opengl.util.CompositeRenderItem;
 import com.asteriod.duck.opengl.util.GLWindow;
 import com.asteriod.duck.opengl.util.RenderContext;
 import com.asteriod.duck.opengl.util.RenderedItem;
-import com.asteriod.duck.opengl.util.keys.KeyCombination;
-import com.asteriod.duck.opengl.util.resources.FrameBuffer;
-import com.asteriod.duck.opengl.util.resources.texture.Texture;
+import com.asteriod.duck.opengl.util.resources.texture.*;
 import com.asteriod.duck.opengl.util.timer.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,10 +14,9 @@ import java.awt.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.List;
+import java.nio.ByteBuffer;
 import java.util.Objects;
-import java.util.function.Supplier;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import static org.lwjgl.glfw.GLFW.*;
@@ -70,24 +67,88 @@ public class Main extends GLWindow implements RenderContext {
         Main main = new Main( "(cShader Playground", 1024, 800);
         main.setClearScreen(false);
 
+        main.setRenderedItem(main.paletteTest());
+
+        printInstructions();
+        main.displayLoop();
+    }
+
+    /*
+    TextureLoader.createTexture(ImageOptions.DEFAULT.withType(Type.GRAY),
+                createTestData(new Dimension(1024,800), TestType.HORIZONTAL));
+        getResourceManager().PutTexture("gray", gray);
+     */
+    public RenderedItem paletteTest() throws IOException {
+        Texture gray = getResourceManager().GetTexture("gray", "molly.jpg", ImageOptions.DEFAULT.withType(Type.GRAY));
+        Texture palette = getResourceManager().GetTexture("palette", "palettes/INTRED.MAP.png", ImageOptions.DEFAULT.withSingleLine());
+        return new PaletteRenderer("gray");
+    }
+
+    enum TestType implements BiFunction<Point, Dimension, Byte> {
+        STRIPE {
+            @Override
+            public Byte apply(Point p, Dimension d) {
+                return (byte) (p.x % 2);
+            }
+        },
+        BANDS {
+            @Override
+            public Byte apply(Point p, Dimension d) {
+                return (byte) (p.x % 255);
+            }
+        },
+        HORIZONTAL {
+            @Override
+            public Byte apply(Point p, Dimension d) {
+                double fraction = p.x / d.getWidth();
+                return (byte) (fraction * 255);
+            }
+        },
+        VERTICAL {
+            @Override
+            public Byte apply(Point p, Dimension d) {
+                return (byte) (p.y % 256);
+            }
+        },
+        RANDOM {
+            @Override
+            public Byte apply(Point p, Dimension d) {
+                return (byte) (Math.random() * 256);
+            }
+        };
+    }
+
+    private ImageData createTestData(Dimension size, Main.TestType type) {
+        ByteBuffer imageData = ByteBuffer.allocateDirect(size.width * size.height);
+        for (int y = 0; y < size.height; y++) {
+            for (int x = 0; x < size.width; x++) {
+                Point p = new Point(x,y);
+                imageData.put(type.apply(p,size));
+            }
+        }
+        imageData.flip();
+        return new ImageData(imageData, size);
+    }
+
+    public RenderedItem blurTest() {
         BlurKernel.DiscreteSampleKernel blurKernel = new BlurKernel(21).getDiscreteSampleKernel();
 
         // a multi texture renderer alternating between two textures
         MultiTextureRenderer source = new MultiTextureRenderer("molly", "window");
-        Texture molly = main.getResourceManager().GetTexture("molly", "molly.jpg");
-        Texture window = main.getResourceManager().GetTexture("window", "test-card.jpeg");
+        Texture molly = getResourceManager().GetTexture("molly", "molly.jpg");
+        Texture window = getResourceManager().GetTexture("window", "test-card.jpeg");
 
         // a soundwave
         //Polyline poly = new Polyline();
 
         // create an offscreen texture
-        Rectangle screen = main.getWindow();
+        Rectangle screen = getWindow();
 
         Texture[] offscreen = new Texture[2];
         for (int i = 0; i < offscreen.length ; i++) {
             offscreen[i] = new Texture();
             offscreen[i].Generate(screen.width, screen.height, 0);
-            main.getResourceManager().PutTexture("offscreen"+i, offscreen[i]);
+            getResourceManager().PutTexture("offscreen"+i, offscreen[i]);
         }
 
         // wrap the multi tex to render to the offscreen texture
@@ -107,12 +168,7 @@ public class Main extends GLWindow implements RenderContext {
         // set blur kernel
 
         // A holder to initialise and render the two paths: offscreen and onscreen
-        RenderedItem renderItem = new CompositeRenderItem(textureRenderer, textureRenderer2, blurY);
-
-        main.setRenderedItem(renderItem);
-
-        printInstructions();
-        main.displayLoop();
+        return new CompositeRenderItem(textureRenderer, textureRenderer2, blurY);
     }
 
     public void registerKeys() {

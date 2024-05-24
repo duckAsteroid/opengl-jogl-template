@@ -3,10 +3,7 @@ package com.asteriod.duck.opengl.util.resources;
 import com.asteriod.duck.opengl.util.resources.impl.Resource;
 import com.asteriod.duck.opengl.util.resources.shader.ShaderLoader;
 import com.asteriod.duck.opengl.util.resources.shader.ShaderProgram;
-import com.asteriod.duck.opengl.util.resources.texture.ImageData;
-import com.asteriod.duck.opengl.util.resources.texture.Texture;
-import com.asteriod.duck.opengl.util.resources.texture.TextureLoader;
-import com.asteriod.duck.opengl.util.resources.texture.TextureUnit;
+import com.asteriod.duck.opengl.util.resources.texture.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,17 +20,6 @@ import java.util.stream.Stream;
 public class ResourceManager {
 	private static final Logger LOG = LoggerFactory.getLogger(ResourceManager.class);
 
-	public record ImageOptions(boolean flipY, boolean singleLine) {
-		public static final ImageOptions DEFAULT = new ImageOptions(true, false);
-
-		public ImageOptions withNoFlip() {
-			if (flipY) {
-				return new ImageOptions(false, singleLine);
-			}
-			return this;
-		}
-	}
-
 	private final Path root;
 	private final ShaderLoader shaderLoader;
 	private final TextureLoader textureLoader;
@@ -47,6 +33,10 @@ public class ResourceManager {
 		this.root = Paths.get(root);
 		this.textureLoader = new TextureLoader(this.root.resolve("resources/textures"));
 		this.shaderLoader = new ShaderLoader(this.root.resolve("glsl"));
+	}
+
+	public TextureLoader getTextureLoader() {
+		return textureLoader;
 	}
 
 	public Texture GetTexture(String name) {

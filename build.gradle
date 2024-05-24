@@ -47,9 +47,16 @@ application {
 }
 
 tasks.register("debugRun", JavaExec) {
+  dependsOn deleteCrashLogs
   group = ApplicationPlugin.APPLICATION_GROUP
   classpath = sourceSets.main.runtimeClasspath
   mainClass = application.mainClass
   workingDir = project.rootDir
   jvmArgs = ["-javaagent:src/test/resources/lwjglx-debug-1.0.0.jar=tn;o=open-gl.log"]
+}
+
+tasks.register("deleteCrashLogs", Delete) {
+  group = BasePlugin.BUILD_GROUP
+  description = "Clear out Java crash logs"
+  delete fileTree('.').include('hs_err_pid*.log')
 }

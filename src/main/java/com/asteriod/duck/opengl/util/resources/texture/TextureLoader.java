@@ -1,12 +1,9 @@
 package com.asteriod.duck.opengl.util.resources.texture;
 
-import com.asteriod.duck.opengl.util.resources.ResourceManager;
 import com.asteriod.duck.opengl.util.resources.impl.AbstractResourceLoader;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
-import java.awt.color.ColorSpace;
-import java.awt.geom.AffineTransform;
 import java.awt.image.*;
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,45 +11,62 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Hashtable;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 
 import static org.lwjgl.opengl.GL11.GL_RGBA;
 
 public class TextureLoader extends AbstractResourceLoader<Texture> {
 
+	interface FormatHelper {
+		BufferedImage apply(Dimension dimension);
+		int internalFormat();
+		int imageFormat();
+		void verify(ImageData data) throws IllegalArgumentException;
+	}
+
 	public TextureLoader(Path root) {
 		super(root);
 	}
 
-	public static Texture createTexture(int width, int height, ByteBuffer textureData) throws IOException {
+	public static Texture createTexture(ImageOptions options, ImageData data) throws IOException {
 		Texture tex = new Texture();
 
-		tex.setInternalFormat( GL_RGBA);
-		tex.setImageFormat( GL_RGBA);
+		tex.setInternalFormat( options.type().internalFormat());
+		tex.setImageFormat( options.type().imageFormat());
 
-		tex.Generate(width, height, textureData);
+		options.type().verify(data);
+
+		if (data.size().height == 1) {
+			tex.Generate1D(data.size().width, data.buffer());
+			return tex;
+		}
+		else {
+			tex.Generate(data.size().width, data.size().height, data.buffer());
+		}
 		return tex;
 	}
 
-	public Texture LoadTexture(String texturePath, ResourceManager.ImageOptions options) throws IOException {
+	public Texture LoadTexture(String texturePath, ImageOptions options) throws IOException {
 			ImageData imageData = loadTextureData(texturePath, options);
-			return createTexture(imageData.size().width, imageData.size().height, imageData.buffer());
+			if (!Boolean.getBoolean("nodump")) {
+				Path path = getPath(texturePath + ".bin");
+				try(var channel = Files.newByteChannel(path, StandardOpenOption.WRITE, StandardOpenOption.CREATE)) {
+					channel.write(imageData.buffer());
+				}
+				imageData.buffer().clear();
+			}
+			return createTexture(options, imageData);
 	}
 
-	public ImageData loadTextureData(String texturePath, ResourceManager.ImageOptions options) throws IOException {
+	public ImageData loadTextureData(String texturePath, ImageOptions options) throws IOException {
 		try(InputStream inputStream = Files.newInputStream(getPath(texturePath))) {
 			BufferedImage bufferedImage = ImageIO.read(inputStream);
 			if (options.singleLine()) {
 				bufferedImage = bufferedImage.getSubimage(0, 0, bufferedImage.getWidth(), 1);
 			}
-			ColorModel glAlphaColorModel = new ComponentColorModel(ColorSpace
-							.getInstance(ColorSpace.CS_sRGB), new int[] { 8, 8, 8, 8 },
-							true, false, Transparency.TRANSLUCENT, DataBuffer.TYPE_BYTE);
 
-			WritableRaster raster = Raster.createInterleavedRaster(DataBuffer.TYPE_BYTE,
-							bufferedImage.getWidth(), bufferedImage.getHeight(), 4, null);
-			BufferedImage texImage = new BufferedImage(glAlphaColorModel, raster, true,
-							new Hashtable<>());
+			var texImage = options.type().apply(new Dimension(bufferedImage.getWidth(), bufferedImage.getHeight()));
 
 			// copy the source image into the produced image
 			Graphics2D g = (Graphics2D) texImage.getGraphics();
