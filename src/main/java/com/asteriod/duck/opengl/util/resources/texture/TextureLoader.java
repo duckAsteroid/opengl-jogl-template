@@ -49,7 +49,7 @@ public class TextureLoader extends AbstractResourceLoader<Texture> {
 
 	public Texture LoadTexture(String texturePath, ImageOptions options) throws IOException {
 			ImageData imageData = loadTextureData(texturePath, options);
-			if (!Boolean.getBoolean("nodump")) {
+			if (Boolean.getBoolean("texture.dumpbin")) {
 				Path path = getPath(texturePath + ".bin");
 				try(var channel = Files.newByteChannel(path, StandardOpenOption.WRITE, StandardOpenOption.CREATE)) {
 					channel.write(imageData.buffer());
