@@ -11,6 +11,9 @@ import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL15.GL_STATIC_DRAW;
 import static org.lwjgl.opengl.GL30.*;
 
+/**
+ * Represents a set of triangular vertices and the vao, vbo and ibo that can be used to render them.
+ */
 public class Triangles {
 	private final float[] vertices;
 	private final short[] indices;
@@ -28,10 +31,10 @@ public class Triangles {
 		//
 		// BL    -1      BR
 		float[] vertices = {
-						-1.0f, -1.0f, // bottom left
-						1.0f, -1.0f, // bottom right
-						1.0f, 1.0f, // top right
-						-1.0f, 1.0f // top left
+						-1.0f, -1.0f, // bottom left [0]
+						1.0f, -1.0f, // bottom right [1]
+						1.0f, 1.0f, // top right [2]
+						-1.0f, 1.0f // top left [3]
 		};
 
 		// TL     1      TR
@@ -47,7 +50,9 @@ public class Triangles {
 		// |   /
 		// BL     -1     BR
 		// BL, TR, TL
-		short[] indices = new short[]{0, 1, 2, 0, 2, 3};
+		short[] indices = new short[]{
+						0, 1, 2, // triangle 1
+						0, 2, 3}; // triangle 2
 		return new Triangles(vertices, indices);
 	}
 
@@ -78,7 +83,7 @@ public class Triangles {
 	}
 
 	public void setup(ShaderProgram shaderProgram) {
-		// setup the vertex attribute pointer to tell GL what shape our vertices are
+		// setup the vertex attribute pointer to tell GL what shape our vertices are (2 floats)
 		shaderProgram.setVertexAttribPointer("position", 2, GL_FLOAT, true, 0, 0);
 	}
 
@@ -94,7 +99,6 @@ public class Triangles {
 		glBindVertexArray(vao);
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-
 		glDrawElements(GL_TRIANGLES, vertices(), GL_UNSIGNED_SHORT, 0);
 	}
 

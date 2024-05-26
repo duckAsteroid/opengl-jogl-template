@@ -29,14 +29,15 @@ import static org.lwjgl.opengl.GL30.glBindVertexArray;
 import static org.lwjgl.opengl.GL30.glGenVertexArrays;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
+/**
+ * Takes a texture and renders it using a fullscreen quad (two triangles)
+ */
 public class PassthruTextureRenderer implements RenderedItem {
 
 	private static final Logger LOG = LoggerFactory.getLogger(PassthruTextureRenderer.class);
 
 	private ShaderProgram shaderProgram = null;
 
-	private int vbo;
-	private int vao;
 	private final String textureName;
 	private Texture texture;
 	private TextureUnit textureUnit;

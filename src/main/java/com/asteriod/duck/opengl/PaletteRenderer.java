@@ -15,14 +15,15 @@ import java.util.function.Consumer;
 
 import static org.lwjgl.opengl.GL20.glUseProgram;
 
-
+/**
+ * Basically an indexed colour palette implementation. RGB output colour values are looked up using
+ * the palette index.
+ */
 public class PaletteRenderer implements RenderedItem {
 	private static final Logger LOG = LoggerFactory.getLogger(PaletteRenderer.class);
 
 	private ShaderProgram shaderProgram = null;
 
-	private int vbo;
-	private int vao;
 	private final String textureName;
 
 	private Texture texture;
@@ -33,6 +34,7 @@ public class PaletteRenderer implements RenderedItem {
 
 	private Triangles renderedShape;
 	private final String shaderName;
+
 	private double rate = 50;
 
 	public PaletteRenderer(String name) {

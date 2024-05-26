@@ -64,23 +64,18 @@ public class Main extends GLWindow implements RenderContext {
 
 
     public static void main(String[] args) throws Exception {
-        Main main = new Main( "(cShader Playground", 1024, 800);
+        Main main = new Main( "(cShader Playground", 2048, 1600);
         main.setClearScreen(false);
 
-        main.setRenderedItem(main.paletteTest());
+        main.setRenderedItem(main.blurTest());
 
         printInstructions();
         main.displayLoop();
     }
 
-    /*
-    TextureLoader.createTexture(ImageOptions.DEFAULT.withType(Type.GRAY),
-                createTestData(new Dimension(1024,800), TestType.HORIZONTAL));
-        getResourceManager().PutTexture("gray", gray);
-     */
     public RenderedItem paletteTest() throws IOException {
-        Texture gray = getResourceManager().GetTexture("gray", "molly.jpg", ImageOptions.DEFAULT.withType(Type.GRAY));
-        Texture palette = getResourceManager().GetTexture("palette", "palettes/INTRED.MAP.png", ImageOptions.DEFAULT.withSingleLine());
+        Texture gray = getResourceManager().GetTexture("gray", "window.jpeg", ImageOptions.DEFAULT.withType(Type.GRAY));
+        Texture palette = getResourceManager().GetTexture("palette", "palettes/FIRE2.MAP.png", ImageOptions.DEFAULT.withSingleLine());
         return new PaletteRenderer("gray");
     }
 
@@ -152,12 +147,12 @@ public class Main extends GLWindow implements RenderContext {
         }
 
         // wrap the multi tex to render to the offscreen texture
-        TextureRenderer textureRenderer = new TextureRenderer(source, offscreen[0]);
+        OffscreenTextureRenderer offscreenTextureRenderer = new OffscreenTextureRenderer(source, offscreen[0]);
         PassthruTextureRenderer blurX = new PassthruTextureRenderer("offscreen0", "blur-x", shader -> {
             shader.setFloatArray("offset", blurKernel.floatOffsets());
             shader.setFloatArray("weight", blurKernel.floatWeights());
         });
-        TextureRenderer textureRenderer2 = new TextureRenderer(blurX , offscreen[1]);
+        OffscreenTextureRenderer offscreenTextureRenderer2 = new OffscreenTextureRenderer(blurX , offscreen[1]);
 
         // a passthrough renderer (onto screen) of the "offscreen" texture
         PassthruTextureRenderer blurY = new PassthruTextureRenderer("offscreen1", "blur-y", shader -> {
@@ -168,7 +163,7 @@ public class Main extends GLWindow implements RenderContext {
         // set blur kernel
 
         // A holder to initialise and render the two paths: offscreen and onscreen
-        return new CompositeRenderItem(textureRenderer, textureRenderer2, blurY);
+        return new CompositeRenderItem(offscreenTextureRenderer, offscreenTextureRenderer2, blurY);
     }
 
     public void registerKeys() {

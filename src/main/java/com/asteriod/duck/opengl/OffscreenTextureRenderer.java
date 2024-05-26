@@ -10,15 +10,13 @@ import java.io.IOException;
 /**
  * Wraps another {@link RenderedItem} and renders it to {@link Texture} using a {@link FrameBuffer}.
  */
-public class TextureRenderer implements RenderedItem {
+public class OffscreenTextureRenderer implements RenderedItem {
 	// wrap another rendered item and render it to texture using a FBO
 	private final RenderedItem renderedItem;
-	private final Texture targetTexture;
 	private final FrameBuffer  fbo;
 
-	public TextureRenderer(RenderedItem renderedItem, Texture targetTexture) {
+	public OffscreenTextureRenderer(RenderedItem renderedItem, Texture targetTexture) {
 		this.renderedItem = renderedItem;
-		this.targetTexture = targetTexture;
 		this.fbo = new FrameBuffer(targetTexture);
 	}
 
