@@ -4,6 +4,19 @@ import java.util.stream.DoubleStream;
 import java.util.Arrays;
 import java.util.stream.DoubleStream;
 
+/**
+ * The concept and the maths for this class comes from the article "Efficient Gaussian Blur with Linear Sampling"
+ * by RasterGrid:
+ * https://www.rastergrid.com/blog/2010/09/efficient-gaussian-blur-with-linear-sampling/
+ *
+ * It's essentially a way to implement Gaussian blur in a two pass filter (X/Y) and using as few texture lookups as
+ * possible, by using texel interpolation from GL to do some of the maths for you in hardware.
+ *
+ * The maths is a bit complex, but the idea is that we can use a pascal triangle to get the coefficients for the
+ * kernel, and then we can eliminate the reflection and take half of the coefficients. We then do the maths to
+ * ensure that the sample points (interpolation) do the right amount of texel blending for the weights and distance
+ * required.
+ */
 public class BlurKernel {
 	public final double[] offsets;
 	public final double[] weights;
@@ -14,10 +27,11 @@ public class BlurKernel {
 		if (size % 2 == 0) throw new IllegalArgumentException("Kernel size must be odd");
 
 		this.size  = size;
-		double[] pascal = pascal(size); // we will discard last 2 on each end
+		double[] pascal = pascal(size); // we will discard last 2 on each end as these have little effect
 		double[] coeffs = new double[pascal.length - 4];
 		System.arraycopy(pascal, 2, coeffs, 0, coeffs.length);
 		double sum = Arrays.stream(coeffs).sum();
+		// normalise coefficients (0-1)
 		double[] normalisedCoefficients = new double[coeffs.length];
 		for (int i = 0; i < normalisedCoefficients.length; i++) {
 			normalisedCoefficients[i] = coeffs[i] / sum;

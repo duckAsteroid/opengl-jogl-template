@@ -136,9 +136,8 @@ public class Main extends GLWindow implements RenderContext {
         // a soundwave
         //Polyline poly = new Polyline();
 
-        // create an offscreen texture
+        // create 2 offscreen textures
         Rectangle screen = getWindow();
-
         Texture[] offscreen = new Texture[2];
         for (int i = 0; i < offscreen.length ; i++) {
             offscreen[i] = new Texture();
@@ -146,23 +145,24 @@ public class Main extends GLWindow implements RenderContext {
             getResourceManager().PutTexture("offscreen"+i, offscreen[i]);
         }
 
-        // wrap the multi tex to render to the offscreen texture
+        // wrap the multi tex to render to the offscreen texture 0
         OffscreenTextureRenderer offscreenTextureRenderer = new OffscreenTextureRenderer(source, offscreen[0]);
+        // this passthrough uses the blur shader in X
         PassthruTextureRenderer blurX = new PassthruTextureRenderer("offscreen0", "blur-x", shader -> {
             shader.setFloatArray("offset", blurKernel.floatOffsets());
             shader.setFloatArray("weight", blurKernel.floatWeights());
         });
+        // we wrap the blurX to render to the offscreen texture 1
         OffscreenTextureRenderer offscreenTextureRenderer2 = new OffscreenTextureRenderer(blurX , offscreen[1]);
 
-        // a passthrough renderer (onto screen) of the "offscreen" texture
+        // a passthrough renderer (onto screen) of the "offscreen" texture 1 - which blurs Y on the way through
         PassthruTextureRenderer blurY = new PassthruTextureRenderer("offscreen1", "blur-y", shader -> {
             shader.setFloatArray("offset", blurKernel.floatOffsets());
             shader.setFloatArray("weight", blurKernel.floatWeights());
         });
 
-        // set blur kernel
 
-        // A holder to initialise and render the two paths: offscreen and onscreen
+        // A composite renderer to initialise and render the two paths: offscreen and onscreen
         return new CompositeRenderItem(offscreenTextureRenderer, offscreenTextureRenderer2, blurY);
     }
 

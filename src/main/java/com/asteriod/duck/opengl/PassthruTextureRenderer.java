@@ -43,6 +43,9 @@ public class PassthruTextureRenderer implements RenderedItem {
 	private TextureUnit textureUnit;
 	private Triangles renderedShape;
 	private final String shaderName;
+	/**
+	 * This customiser gives external code a chance to initialise (set parameters) on the shader
+	 */
 	private final Consumer<ShaderProgram> shaderCustomiser;
 
 	public PassthruTextureRenderer(String name) {
@@ -60,7 +63,7 @@ public class PassthruTextureRenderer implements RenderedItem {
 		initShaderProgram(ctx);
 		initTextures(ctx);
 		initBuffers();
-
+		// customise the shader if setup
 		if (shaderCustomiser != null) {
 			shaderCustomiser.accept(shaderProgram);
 		}

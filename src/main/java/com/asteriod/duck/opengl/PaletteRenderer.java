@@ -11,7 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.function.Consumer;
 
 import static org.lwjgl.opengl.GL20.glUseProgram;
 
@@ -25,17 +24,16 @@ public class PaletteRenderer implements RenderedItem {
 	private ShaderProgram shaderProgram = null;
 
 	private final String textureName;
-
+	// the "indexed" texture
 	private Texture texture;
 	private TextureUnit textureUnit;
 
+	// the palette with an RGB value for each index
 	private Texture palette;
 	private TextureUnit paletteUnit;
 
 	private Triangles renderedShape;
 	private final String shaderName;
-
-	private double rate = 50;
 
 	public PaletteRenderer(String name) {
 		this(name, "palette");
@@ -83,8 +81,6 @@ public class PaletteRenderer implements RenderedItem {
 	@Override
 	public void doRender(RenderContext ctx) {
 		shaderProgram.use();
-		int offset = (int) (ctx.getTimer().elapsed() * rate);
-		shaderProgram.setInteger("offset", offset);
 		renderedShape.render();
 		glUseProgram(0);
 	}
@@ -92,7 +88,5 @@ public class PaletteRenderer implements RenderedItem {
 	@Override
 	public void dispose() {
 		renderedShape.dispose();
-		shaderProgram.destroy();
-		textureUnit.destroy();
 	}
 }
