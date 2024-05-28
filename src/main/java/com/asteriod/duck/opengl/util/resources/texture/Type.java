@@ -9,14 +9,11 @@ import java.awt.image.Raster;
 import java.util.Hashtable;
 
 import static org.lwjgl.opengl.GL11.GL_RGBA;
-import static org.lwjgl.opengl.GL11C.GL_RED;
 import static org.lwjgl.opengl.GL11C.GL_RGBA8;
-import static org.lwjgl.opengl.GL30.GL_R8UI;
-import static org.lwjgl.opengl.GL30.GL_RED_INTEGER;
-import static org.lwjgl.opengl.GL30C.GL_R8;
+import static org.lwjgl.opengl.GL30.*;
 
-public enum Type implements TextureLoader.FormatHelper {
-	RGBA(GL_RGBA, GL_RGBA8, 4) {
+public enum Type implements TextureFactory.FormatHelper {
+	RGBA(GL_RGBA, GL_RGBA8, GL_UNSIGNED_BYTE, 4) {
 		public BufferedImage apply(Dimension d) {
 			var glAlphaColorModel = new ComponentColorModel(ColorSpace
 							.getInstance(ColorSpace.CS_sRGB), new int[] { 8, 8, 8, 8 },
@@ -27,20 +24,27 @@ public enum Type implements TextureLoader.FormatHelper {
 							new Hashtable<>());
 		}
 	},
-	GRAY(GL_RED_INTEGER, GL_R8UI, 1) {
+	GRAY(GL_RED_INTEGER, GL_R8UI, GL_UNSIGNED_BYTE, 1) {
 		public BufferedImage apply(Dimension d) {
 			return new BufferedImage(d.width, d.height, BufferedImage.TYPE_BYTE_GRAY);
+		}
+	},
+	TWO_CHANNEL_16_BIT(GL_RG_INTEGER, GL_RG16UI, GL_UNSIGNED_SHORT, 4) {
+		public BufferedImage apply(Dimension d) {
+			throw new UnsupportedOperationException("No image for RG16UI");
 		}
 	};
 
 	private final int imageFormat;
 	private final int internalFormat;
 	private final int bytesPerPixel;
+	private final int dataType;
 
-	Type(int imageFormat, int internalFormat, int bytesPerPixel) {
+	Type(int imageFormat, int internalFormat, int dataType, int bytesPerPixel) {
 		this.imageFormat = imageFormat;
 		this.internalFormat = internalFormat;
 		this.bytesPerPixel = bytesPerPixel;
+		this.dataType = dataType;
 	}
 
 	@Override
@@ -51,6 +55,11 @@ public enum Type implements TextureLoader.FormatHelper {
 	@Override
 	public int internalFormat() {
 		return internalFormat;
+	}
+
+	@Override
+	public int dataType() {
+		return dataType;
 	}
 
 	@Override

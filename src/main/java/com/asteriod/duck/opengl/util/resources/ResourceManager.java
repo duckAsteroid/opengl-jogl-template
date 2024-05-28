@@ -22,7 +22,7 @@ public class ResourceManager {
 
 	private final Path root;
 	private final ShaderLoader shaderLoader;
-	private final TextureLoader textureLoader;
+	private final TextureFactory textureFactory;
 
 	public record ResourceLocator(Class<? extends Resource> type, String name){}
 
@@ -31,12 +31,12 @@ public class ResourceManager {
 
 	public ResourceManager(String root) {
 		this.root = Paths.get(root);
-		this.textureLoader = new TextureLoader(this.root.resolve("resources/textures"));
+		this.textureFactory = new TextureFactory(this.root.resolve("resources/textures"));
 		this.shaderLoader = new ShaderLoader(this.root.resolve("glsl"));
 	}
 
-	public TextureLoader getTextureLoader() {
-		return textureLoader;
+	public TextureFactory getTextureLoader() {
+		return textureFactory;
 	}
 
 	public Texture GetTexture(String name) {
@@ -60,7 +60,7 @@ public class ResourceManager {
 		if (!resources.containsKey(locator)) {
 			Texture tex = null;
 			try {
-				tex = textureLoader.LoadTexture(path, options);
+				tex = textureFactory.LoadTexture(path, options);
 			} catch (IOException e) {
 				LOG.error("Error loading texture", e);
 			}
@@ -72,7 +72,7 @@ public class ResourceManager {
 
 
 	public ImageData LoadTextureData(String image, ImageOptions options) throws IOException {
-		return textureLoader.loadTextureData(image, options);
+		return textureFactory.loadTextureData(image, options);
 	}
 
 

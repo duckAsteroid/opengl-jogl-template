@@ -7,6 +7,7 @@ import com.asteriod.duck.opengl.util.RenderContext;
 import com.asteriod.duck.opengl.util.RenderedItem;
 import com.asteriod.duck.opengl.util.resources.texture.*;
 import com.asteriod.duck.opengl.util.timer.Timer;
+import org.joml.Vector2f;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,13 +65,25 @@ public class Main extends GLWindow implements RenderContext {
 
 
     public static void main(String[] args) throws Exception {
-        Main main = new Main( "(cShader Playground", 2048, 1600);
+        Main main = new Main( "(cShader Playground", 1024, 800);
         main.setClearScreen(false);
 
-        main.setRenderedItem(main.blurTest());
+        main.setRenderedItem(main.translateTest());
 
         printInstructions();
         main.displayLoop();
+    }
+
+    public RenderedItem translateTest() throws IOException {
+        Texture texture = getResourceManager().GetTexture("texture", "test-card.jpeg", ImageOptions.DEFAULT);
+        Texture translateMap = getResourceManager().GetTexture("translateMap", "translate/bighalfwheel.1024x800.tab", ImageOptions.DEFAULT.withType(Type.TWO_CHANNEL_16_BIT).withNoFlip());
+        TextureUnit translateMapUnit = getResourceManager().NextTextureUnit();
+        translateMapUnit.bind(translateMap);
+        PassthruTextureRenderer renderer = new PassthruTextureRenderer("texture", "translate", shader -> {
+            translateMapUnit.useInShader(shader, "map");
+            shader.setVector2f("dimensions", new Vector2f(texture.Width, texture.Height));
+        });
+        return renderer;
     }
 
     public RenderedItem paletteTest() throws IOException {

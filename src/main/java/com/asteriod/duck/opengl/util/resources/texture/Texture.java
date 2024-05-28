@@ -85,7 +85,7 @@ public class Texture implements Resource {
 	public int Height;
 	private int Internal_Format;
 	private int Image_Format;
-
+	private int dataType;
 	private Wrap wrap;
 	private final Filter filter;
 
@@ -102,6 +102,7 @@ public class Texture implements Resource {
 		this.wrap = Wrap.REPEAT;
 		this.filter = Filter.LINEAR;
 		this.type = Type.TWO_DIMENSION;
+		this.dataType = GL_UNSIGNED_BYTE;
 		ID = glGenTextures();
 		LOG.info("Created texture ID: {}", ID);
 	}
@@ -113,7 +114,7 @@ public class Texture implements Resource {
 		if (type != Type.TWO_DIMENSION) throw new IllegalArgumentException("Texture type must be 2D");
 		// create texture
 		glBindTexture(type.openGlCode, this.ID);
-		glTexImage2D(type.openGlCode, 0, this.Internal_Format, width, height, 0, this.Image_Format, GL_UNSIGNED_BYTE, pixels);
+		glTexImage2D(type.openGlCode, 0, this.Internal_Format, width, height, 0, this.Image_Format, this.dataType, pixels);
 		// set Texture wrap and filter modes
 		wrap.openGlParamsStream().forEach(param -> glTexParameteri(type.openGlCode, param, wrap.openGlCode));
 		filter.openGlParamsStream().forEach(param -> glTexParameteri(type.openGlCode, param, filter.openGlCode));
@@ -130,7 +131,7 @@ public class Texture implements Resource {
 		// create Texture
 		Bind();
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-		glTexImage2D(type.openGlCode, 0, this.Internal_Format, width, height, 0, this.Image_Format, GL_UNSIGNED_BYTE, data);
+		glTexImage2D(type.openGlCode, 0, this.Internal_Format, width, height, 0, this.Image_Format, this.dataType, data);
 		// set Texture wrap and filter modes
 		wrap.openGlParamsStream().forEach(param -> glTexParameteri(type.openGlCode, param, wrap.openGlCode));
 		filter.openGlParamsStream().forEach(param -> glTexParameteri(type.openGlCode, param, filter.openGlCode));
@@ -178,6 +179,10 @@ public class Texture implements Resource {
 
 	public void setImageFormat(int fmt) {
 		this.Image_Format = fmt;
+	}
+
+	public void setDataType(int fmt) {
+		this.dataType = fmt;
 	}
 
 	public int getWidth() {
