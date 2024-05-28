@@ -70,6 +70,7 @@ public class PaletteRenderer implements RenderedItem {
 		this.paletteUnit.useInShader(shaderProgram, "palette");
 
 		shaderProgram.setVector2f("dimensions", new Vector2f(texture.Width, texture.Height));
+		shaderProgram.setFloat("paletteWidth", palette.Width);
 	}
 
 

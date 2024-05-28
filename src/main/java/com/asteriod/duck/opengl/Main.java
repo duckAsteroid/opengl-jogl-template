@@ -68,7 +68,7 @@ public class Main extends GLWindow implements RenderContext {
         Main main = new Main( "(cShader Playground", 1024, 800);
         main.setClearScreen(false);
 
-        main.setRenderedItem(main.translateTest());
+        main.setRenderedItem(main.paletteTest());
 
         printInstructions();
         main.displayLoop();
