@@ -1,8 +1,13 @@
 package com.asteriod.duck.opengl.util;
 
 import com.asteriod.duck.opengl.util.resources.shader.ShaderProgram;
+import com.asteriod.duck.opengl.util.timer.Timer;
+import org.joml.Vector3f;
+import org.joml.Vector4f;
+import org.joml.Vector4fc;
 import org.lwjgl.system.MemoryStack;
 
+import java.io.IOException;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
 
@@ -54,6 +59,81 @@ public class Triangles {
 						0, 1, 2, // triangle 1
 						0, 2, 3}; // triangle 2
 		return new Triangles(vertices, indices);
+	}
+
+	public static Triangles singleTriangle() {
+		// Define the vertices of the rectangle
+		// Y
+		// ^
+		// TL     1      TR
+		//
+		// -1     0      1
+		//
+		// BL    -1      BR   -> X
+		float[] vertices = {
+						-1f, -1f, // bottom left [0]
+						1f, -1f, // bottom right [1]
+						0.0f, 1f // top middle [2]
+		};
+
+
+		short[] indices = new short[]{
+						0, 1, 2}; // triangle 1
+		return new Triangles(vertices, indices);
+	}
+
+	public static Triangles centralTriangle() {
+		// Define the vertices of the rectangle
+		// Y
+		// ^
+		// TL     1      TR
+		//
+		// -1     0      1
+		//
+		// BL    -1      BR   -> X
+		float[] vertices = {
+						-.5f, -.5f, // bottom left [0]
+						.5f, -.5f, // bottom right [1]
+						0.0f, .5f // top middle [2]
+		};
+
+
+		short[] indices = new short[]{
+						0, 1, 2}; // triangle 1
+		return new Triangles(vertices, indices);
+	}
+
+	public RenderedItem simpleRenderer(Vector4f color, Vector3f freq) {
+		return new RenderedItem() {
+			private ShaderProgram shaderProgram;
+			@Override
+			public void init(RenderContext ctx) throws IOException {
+				shaderProgram = ctx.getResourceManager().GetShader("simple", "simple/vertex.glsl", "simple/frag.glsl", null);
+				shaderProgram.use();
+				Triangles.this.setup(shaderProgram);
+			}
+
+			@Override
+			public void doRender(RenderContext ctx) {
+				shaderProgram.use();
+				Vector4f tempColor = color;
+				if (freq != null) {
+					Timer timer = ctx.getTimer();
+					tempColor = new Vector4f();
+					tempColor.x = (float)timer.waveFunction(freq.x, color.x);
+					tempColor.y = (float)timer.waveFunction(freq.y, color.y);
+					tempColor.z = (float)timer.waveFunction(freq.z, color.z);
+				}
+				shaderProgram.setVector4f("color", tempColor);
+				Triangles.this.render();
+				shaderProgram.unuse();
+			}
+
+			@Override
+			public void dispose() {
+				Triangles.this.dispose();
+			}
+		};
 	}
 
 	public Triangles(float[] vertices, short[] indices) {

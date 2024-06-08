@@ -82,6 +82,16 @@ public class Timer {
 	}
 
 	/**
+	 * Calculates the value of a wave function between -1 and 1
+	 * @param frequency the frequency in hertz
+	 * @param phase the relative phase in seconds
+	 * @return the wave function value at the current elapsed time
+	 */
+	public double waveFunction(double frequency, double phase) {
+		return Math.sin(2 * Math.PI * frequency * (elapsed + phase));
+	}
+
+	/**
 	 * Called to update the timer with a new elapsed time calculated from {@link #now()}
 	 */
 	public void update() {

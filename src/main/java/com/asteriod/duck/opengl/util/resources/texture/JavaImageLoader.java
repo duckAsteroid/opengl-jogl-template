@@ -39,15 +39,7 @@ public class JavaImageLoader implements TextureDataLoader {
 			g.drawImage(bufferedImage, 0, 0, null);
 
 
-			// build a byte buffer from the temporary image
-			// that be used by OpenGL to produce a texture.
-			byte[] data = ((DataBufferByte) texImage.getRaster().getDataBuffer())
-							.getData();
-
-			ByteBuffer imageBuffer = ByteBuffer.allocateDirect(data.length);
-			imageBuffer.order(ByteOrder.nativeOrder());
-			imageBuffer.put(data, 0, data.length);
-			imageBuffer.flip();
+			ByteBuffer imageBuffer = options.type().pixelData(texImage);
 
 			return new ImageData(imageBuffer, dims);
 		}

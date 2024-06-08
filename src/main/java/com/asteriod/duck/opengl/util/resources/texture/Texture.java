@@ -87,7 +87,7 @@ public class Texture implements Resource {
 	private int Image_Format;
 	private int dataType;
 	private Wrap wrap;
-	private final Filter filter;
+	private Filter filter;
 
 	public Stream<OpenGLCoded> openGlCodedStream() {
 		return Stream.of(wrap, filter);
@@ -183,6 +183,14 @@ public class Texture implements Resource {
 
 	public void setDataType(int fmt) {
 		this.dataType = fmt;
+	}
+
+	public void setWrap(Wrap wrap) {
+		this.wrap = wrap;
+	}
+
+	public void setFilter(Filter filter) {
+		this.filter = filter;
 	}
 
 	public int getWidth() {

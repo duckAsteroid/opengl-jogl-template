@@ -7,11 +7,13 @@ uniform usampler2D map;
 uniform vec2 dimensions;
 
 in vec2 texCoords;
-out vec4 fragColor;
+out float fragColor;
 
 void main() {
-    // copy the texel straight into the pixel
-    uvec2 mappedCoords = texture(map, texCoords).xy;
+    // find the source texel coordinates for the current texel from the map
+    uvec2 mappedCoords = texture(map, texCoords).xy; // point x & y
+    // convert the texel coordinates to normalised form
     vec2 normalizedCoords = vec2(mappedCoords) / dimensions;
-    fragColor = texture(tex, normalizedCoords);
+    // get the color from the source texture at that location
+    fragColor = texture(tex, normalizedCoords).r;
 }

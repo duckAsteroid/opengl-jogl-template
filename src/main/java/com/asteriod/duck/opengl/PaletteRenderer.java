@@ -4,13 +4,20 @@ import com.asteriod.duck.opengl.util.RenderContext;
 import com.asteriod.duck.opengl.util.RenderedItem;
 import com.asteriod.duck.opengl.util.Triangles;
 import com.asteriod.duck.opengl.util.resources.shader.ShaderProgram;
+import com.asteriod.duck.opengl.util.resources.texture.ImageData;
 import com.asteriod.duck.opengl.util.resources.texture.Texture;
 import com.asteriod.duck.opengl.util.resources.texture.TextureUnit;
 import org.joml.Vector2f;
+import org.lwjgl.BufferUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 
 import static org.lwjgl.opengl.GL20.glUseProgram;
 
@@ -44,6 +51,51 @@ public class PaletteRenderer implements RenderedItem {
 		this.shaderName = shaderName;
 	}
 
+	public static ImageData greyScale() {
+		ByteBuffer raw = BufferUtils.createByteBuffer(256 * 4);
+		for (int i = 0; i < 256; i++) {
+			raw.put((byte) i);
+			raw.put((byte) i);
+			raw.put((byte) i);
+			raw.put((byte) 255); // A
+		}
+		raw.flip();
+		return new ImageData(raw, new Dimension(256, 1));
+	}
+
+	public static ImageData rbgTestScale() {
+		ByteBuffer raw = BufferUtils.createByteBuffer(256 * 4);
+		int g = 128;
+		int b = 255;
+		for (int i = 0; i < 256; i++) {
+			raw.put((byte) i); //r
+			raw.put((byte) g);
+			raw.put((byte) b);
+			g += 1;
+			if (g > 255) g = 0;
+			b -= 1;
+			raw.put((byte) 255); // A
+		}
+		raw.flip();
+		return new ImageData(raw, new Dimension(256, 1));
+	}
+
+	public static void main(String[] args) throws IOException {
+		BufferedImage image = new BufferedImage(256, 1, BufferedImage.TYPE_INT_ARGB);
+		ImageData data = rbgTestScale();
+		// Iterate over the byte array, 4 bytes at a time
+		ByteBuffer raw = data.buffer();
+		IntBuffer intBuffer = raw.asIntBuffer();
+		for (int i = 0; i < 256; i ++) {
+			// Convert the RGBA bytes to an integer
+			int pixel = intBuffer.get(i);
+
+			// Set the pixel in the image
+			image.setRGB(i / 4, 0, pixel);
+		}
+		ImageIO.write(image, "png", new java.io.File("test.png"));
+	}
+
 	@Override
 	public void init(RenderContext ctx) throws IOException {
 		initShaderProgram(ctx);
@@ -69,8 +121,6 @@ public class PaletteRenderer implements RenderedItem {
 		this.paletteUnit.bind(palette);
 		this.paletteUnit.useInShader(shaderProgram, "palette");
 
-		shaderProgram.setVector2f("dimensions", new Vector2f(texture.Width, texture.Height));
-		shaderProgram.setFloat("paletteWidth", palette.Width);
 	}
 
 

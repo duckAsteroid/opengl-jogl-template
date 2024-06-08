@@ -5,6 +5,7 @@ import com.asteriod.duck.opengl.util.resources.impl.AbstractResourceLoader;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.Set;
 
@@ -20,6 +21,7 @@ public class TextureFactory extends AbstractResourceLoader<Texture> {
 		int dataType();
 
 		void verify(ImageData data) throws IllegalArgumentException;
+		ByteBuffer pixelData(BufferedImage bufferedImage);
 	}
 
 	public TextureFactory(Path root) {

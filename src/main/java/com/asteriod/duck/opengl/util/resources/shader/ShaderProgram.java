@@ -8,6 +8,7 @@ import org.joml.Matrix4f;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
+import org.lwjgl.opengl.GL20C;
 import org.lwjgl.system.MemoryStack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +31,7 @@ import java.util.stream.Collectors;
 
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL20.glGetProgramiv;
+import static org.lwjgl.opengl.GL30C.glUniform1ui;
 import static org.lwjgl.opengl.GL32.GL_GEOMETRY_SHADER;
 
 public class ShaderProgram implements Resource {
@@ -202,6 +204,12 @@ public class ShaderProgram implements Resource {
 	{
 		glUniform1i(uniformLocation(name), value);
 	}
+
+	public void setUnsignedInteger(String name, int value)
+	{
+		glUniform1ui(uniformLocation(name), value);
+	}
+
 	public void setVector2f(String name, float x, float y)
 	{
 		glUniform2f(uniformLocation(name), x, y);
@@ -224,7 +232,7 @@ public class ShaderProgram implements Resource {
 	}
 	public void setVector4f(String name, Vector4f value)
 	{
-		glUniform4f(uniformLocation(name), value.x, value.y, value.z, value.w);
+		GL20C.glUniform4fv(uniformLocation(name), new float[]{value.x, value.y, value.z, value.w});
 	}
 
 	public void setMatrix4(String name, Matrix4f matrix)

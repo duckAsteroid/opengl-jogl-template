@@ -49,7 +49,7 @@ public class Polyline implements RenderedItem {
 	private int bytesPerSample;
 
 	private float lineWidth = 2.0f;
-	private Vector4f lineColour = new Vector4f(1.0f,1.0f, 1.0f, 1.0f);
+	private short lineColour = 255;
 	private Vector4f backgroundColour = new Vector4f(0.4f, 0.4f, 0.4f, 1.0f);
 	private Random rnd = new Random();
 	private final boolean clear = false;
@@ -90,7 +90,7 @@ public class Polyline implements RenderedItem {
 		int BUFFER_SIZE = 2048;
 		pointBuffer = mem.mallocFloat(BUFFER_SIZE * 2);
 		rollingFloatBuffer = new RollingFloatBuffer(BUFFER_SIZE);
-		rollingFloatBuffer.setMax(500);
+		rollingFloatBuffer.setMax(15000);
 
 		LineAcquirer laq = new LineAcquirer();
 		List<LineAcquirer.MixerLine> mixerLines = laq.allLinesMatching(TargetDataLine.class, IDEAL);
@@ -129,19 +129,12 @@ public class Polyline implements RenderedItem {
 		shaderProgram = ctx.getResourceManager().GetShader("polyline", "polyline/vertex.glsl","polyline/frag.glsl", null);
 
 
-
 		ctx.registerKeyAction(GLFW.GLFW_KEY_UP, () -> rollingFloatBuffer.incMax(100));
 		ctx.registerKeyAction(GLFW.GLFW_KEY_UP, GLFW.GLFW_MOD_SHIFT, () -> rollingFloatBuffer.incMax(1000));
 		ctx.registerKeyAction(GLFW.GLFW_KEY_DOWN, () -> rollingFloatBuffer.decMax(100));
 		ctx.registerKeyAction(GLFW.GLFW_KEY_DOWN, GLFW.GLFW_MOD_SHIFT, () -> rollingFloatBuffer.decMax(1000));
 		ctx.registerKeyAction(GLFW.GLFW_KEY_Q, this::increaseLineWidth);
 		ctx.registerKeyAction(GLFW.GLFW_KEY_A, this::decreaseLineWidth);
-		ctx.registerKeyAction(GLFW.GLFW_KEY_C, this::randomiseLineColor);
-	}
-
-	private void randomiseLineColor() {
-		lineColour = new Vector4f(rnd.nextFloat(), rnd.nextFloat(), rnd.nextFloat(), 1.0f);
-		System.out.println(lineColour);
 	}
 
 
@@ -166,12 +159,7 @@ public class Polyline implements RenderedItem {
 		Rectangle window = ctx.getWindow();
 		shaderProgram.use();
 		shaderProgram.setVector2f("resolution", window.width, window.height);
-		shaderProgram.setVector4f("lineColor", lineColour);
-
-		if (clear) {
-			glClearColor(backgroundColour.x, backgroundColour.y, backgroundColour.z, backgroundColour.w);
-			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		}
+		shaderProgram.setUnsignedInteger("lineColor", lineColour);
 
 		glBindVertexArray(vao);
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -183,7 +171,6 @@ public class Polyline implements RenderedItem {
 
 		glBindVertexArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
-
 	}
 
 	@Override
@@ -191,5 +178,9 @@ public class Polyline implements RenderedItem {
 		shaderProgram.destroy();
 		glDeleteBuffers(vbo);
 		mem.close();
+	}
+
+	public void setLineWidth(float v) {
+		this.lineWidth = v;
 	}
 }
