@@ -5,10 +5,7 @@ import com.asteriod.duck.opengl.PaletteRenderer;
 import com.asteriod.duck.opengl.PassthruTextureRenderer;
 import com.asteriod.duck.opengl.util.CompositeRenderItem;
 import com.asteriod.duck.opengl.util.RenderContext;
-import com.asteriod.duck.opengl.util.resources.texture.ImageOptions;
-import com.asteriod.duck.opengl.util.resources.texture.Texture;
-import com.asteriod.duck.opengl.util.resources.texture.TextureFactory;
-import com.asteriod.duck.opengl.util.resources.texture.Type;
+import com.asteriod.duck.opengl.util.resources.texture.*;
 
 import java.awt.*;
 import java.io.IOException;
@@ -24,26 +21,21 @@ public class TranslateExample extends CompositeRenderItem implements Experiment 
 	@Override
 	public void init(RenderContext ctx) throws IOException {
 		Rectangle screen = ctx.getWindow();
-		// load the test card as a grey scale image (32F per pixel)
-		Texture texture = ctx.getResourceManager().GetTexture("texture", "test-card.jpeg", ImageOptions.DEFAULT.withType(Type.GRAY));
+		// load the test card image
+		Texture texture = ctx.getResourceManager().GetTexture("texture", "test-card.jpeg", ImageOptions.DEFAULT);
+		// load the translation map - it's a matrix (screen sized) of 2 * 16 bit floats
+		Texture translateMap = ctx.getResourceManager().GetTexture("translate", "translate/bighalfwheel.1024x800.tab", ImageOptions.DEFAULT.withType(Type.TWO_CHANNEL_16_BIT));
 
-		PassthruTextureRenderer renderer = new PassthruTextureRenderer("texture", "passthru-mono");
-
-		Texture offscreen =  new Texture();
-		offscreen.setFilter(Texture.Filter.LINEAR);
-		offscreen.setWrap(Texture.Wrap.CLAMP_TO_EDGE);
-		offscreen.setInternalFormat(GL_R32F);
-		offscreen.setImageFormat(GL_RED);
-		offscreen.Generate(screen.width, screen.height, 0);
-		ctx.getResourceManager().PutTexture("offscreen", offscreen);
-
-		OffscreenTextureRenderer translateRenderStage = new OffscreenTextureRenderer(renderer, offscreen);
-
-		Texture palette = TextureFactory.createTexture(ImageOptions.DEFAULT.withSingleLine(), PaletteRenderer.rbgTestScale());
-		ctx.getResourceManager().PutTexture("palette", palette);
-		PaletteRenderer paletteRenderer = new PaletteRenderer("offscreen");
-
-		addItems(translateRenderStage, paletteRenderer);
+		// setup a renderer to use the translate shader
+		PassthruTextureRenderer renderer = new PassthruTextureRenderer("texture", "translate", shaderProgram -> {
+			// let the shader know about the map as a texture
+			shaderProgram.use();
+			Texture map = ctx.getResourceManager().GetTexture("translate");
+			TextureUnit textureUnit = ctx.getResourceManager().NextTextureUnit();
+			textureUnit.bind(map);
+			textureUnit.useInShader(shaderProgram, "map");
+		});
+		addItem(renderer);
 		super.init(ctx);
 	}
 }
