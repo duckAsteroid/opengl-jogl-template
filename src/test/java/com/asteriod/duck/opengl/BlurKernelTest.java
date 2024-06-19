@@ -37,7 +37,7 @@ class BlurKernelTest {
 		BlurKernel kernel = new BlurKernel(13);
 		assertEquals(5, kernel.offsets.length);
 
-		BlurKernel.DiscreteSampleKernel discreteSampleKernel = kernel.getDiscreteSampleKernel();
+		DiscreteSampleKernel discreteSampleKernel = kernel.getDiscreteSampleKernel();
 		assertNotNull(discreteSampleKernel);
 		assertEquals(3, discreteSampleKernel.size());
 

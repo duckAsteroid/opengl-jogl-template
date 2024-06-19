@@ -65,7 +65,7 @@ public class TestRenderer implements RenderedItem {
 	public void doRender(RenderContext ctx) {
 		shaderProgram.use();
 		renderedShape.render();
-		glUseProgram(0);
+		shaderProgram.unuse();
 	}
 
 	@Override

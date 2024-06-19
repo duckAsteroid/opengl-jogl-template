@@ -2,7 +2,6 @@ package com.asteriod.duck.opengl;
 
 import java.util.stream.DoubleStream;
 import java.util.Arrays;
-import java.util.stream.DoubleStream;
 
 /**
  * The concept and the maths for this class comes from the article "Efficient Gaussian Blur with Linear Sampling"
@@ -42,28 +41,6 @@ public class BlurKernel {
 		double[] linearOffsets = DoubleStream.iterate(0, o -> o + 1).limit(half.length).toArray();
 		this.weights = half;
 		this.offsets = linearOffsets;
-	}
-
-	public record DiscreteSampleKernel(double[] offsets, double[] weights) {
-		public int size() {
-			return offsets.length;
-		}
-
-		public float[] floatOffsets() {
-			float[] result = new float[offsets.length];
-			for (int i = 0; i < result.length; i++) {
-				result[i] = (float) offsets[i];
-			}
-			return result;
-		}
-
-		public float[] floatWeights() {
-			float[] result = new float[weights.length];
-			for (int i = 0; i < result.length; i++) {
-				result[i] = (float) weights[i];
-			}
-			return result;
-		}
 	}
 
 	public DiscreteSampleKernel getDiscreteSampleKernel() {

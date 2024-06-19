@@ -9,5 +9,5 @@ out vec4 fragColor;
 
 void main() {
     // copy the texel straight into the pixel
-    fragColor = texture(tex, texCoords);
+    fragColor = vec4(texture(tex, texCoords).rgb, 1.0);
 }
