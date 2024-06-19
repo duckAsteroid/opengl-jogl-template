@@ -36,19 +36,16 @@ public class BlurPictureExample extends CompositeRenderItem implements Experimen
 	public void init(RenderContext ctx) throws IOException {
 		DiscreteSampleKernel blurKernel = createBlurKernel();
 
+		ctx.getResourceManager().GetTexture("molly", "molly.jpg");
+		ctx.getResourceManager().GetTexture("window", "window.jpeg");
 		// a multi texture renderer alternating between two textures
-		RenderedItem source = new TestRenderer();
-		// a soundwave
-		//Polyline poly = new Polyline();
+		RenderedItem source = new MultiTextureRenderer("molly", "window");
 
 		// create 2 offscreen textures
 		Rectangle screen = ctx.getWindow();
 		Texture[] offscreen = new Texture[3];
 		for (int i = 0; i < offscreen.length ; i++) {
-			offscreen[i] = new Texture();
-			offscreen[i].setInternalFormat(GL_R32F);
-			offscreen[i].setImageFormat(GL_RED);
-			offscreen[i].Generate(screen.width, screen.height, 0);
+			offscreen[i] = Utils.createOffscreenTexture(screen, false);
 			ctx.getResourceManager().PutTexture("offscreen"+i, offscreen[i]);
 		}
 
@@ -67,14 +64,9 @@ public class BlurPictureExample extends CompositeRenderItem implements Experimen
 			shader.setFloatArray("offset", blurKernel.floatOffsets());
 			shader.setFloatArray("weight", blurKernel.floatWeights());
 		});
-		OffscreenTextureRenderer blurYStage = new OffscreenTextureRenderer(blurY , offscreen[2]);
-
-		Texture palette = ctx.getResourceManager().GetTexture("palette", "palettes/greyscale2.png", ImageOptions.DEFAULT.withSingleLine());
-		PaletteRenderer paletteRenderer = new PaletteRenderer("offscreen2");
-
 
 		// A composite renderer to initialise and render the two paths: offscreen and onscreen
-		addItems(offscreenTextureRenderer, blurXStage, blurYStage, paletteRenderer);
+		addItems(offscreenTextureRenderer, blurXStage, blurY);
 		super.init(ctx);
 	}
 
