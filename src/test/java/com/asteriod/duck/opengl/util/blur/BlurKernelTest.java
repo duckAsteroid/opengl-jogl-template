@@ -1,10 +1,11 @@
-package com.asteriod.duck.opengl;
+package com.asteriod.duck.opengl.util.blur;
 
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class BlurKernelTest {
+	// pascals triangle for rows 1 ... 15
 	final double[][] expected = new double[][] {
 					{1},
 					{1,1},

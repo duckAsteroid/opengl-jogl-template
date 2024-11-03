@@ -4,7 +4,7 @@ import com.asteriod.duck.opengl.PaletteRenderer;
 import com.asteriod.duck.opengl.util.RenderContext;
 import com.asteriod.duck.opengl.util.resources.texture.ImageOptions;
 import com.asteriod.duck.opengl.util.resources.texture.Texture;
-import com.asteriod.duck.opengl.util.resources.texture.Type;
+import com.asteriod.duck.opengl.util.resources.texture.DataFormat;
 
 import java.io.IOException;
 
@@ -20,8 +20,8 @@ public class PalettePicture extends PaletteRenderer implements Experiment {
 
 	@Override
 	public void init(RenderContext ctx) throws IOException {
-		// this is our grey scale picture
-		Texture gray = ctx.getResourceManager().GetTexture("gray", "window.jpeg", ImageOptions.DEFAULT.withType(Type.GRAY));
+		// this is our one channel grey scale picture
+		Texture gray = ctx.getResourceManager().GetTexture("gray", "window.jpeg", ImageOptions.DEFAULT.withType(DataFormat.GRAY));
 		// this is our palette
 		Texture palette = ctx.getResourceManager().GetTexture("palette", "palettes/FIRE2.MAP.png", ImageOptions.DEFAULT.withSingleLine());
 		super.init(ctx);

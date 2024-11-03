@@ -7,6 +7,9 @@ import java.util.function.Consumer;
 
 import static org.lwjgl.opengl.GL13.*;
 
+/**
+ * Texture units are the slots textures are loaded into that can be bound into shaders
+ */
 public class TextureUnit implements Resource, Comparable<TextureUnit> {
 	private final int index;
 	private final int shaderUnit;

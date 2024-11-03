@@ -1,5 +1,11 @@
-package com.asteriod.duck.opengl;
+package com.asteriod.duck.opengl.util.blur;
 
+/**
+ * This represents a set of sample positions and weights to use in a GLSL Texture (sampler).
+ * It exploits {@link org.lwjgl.opengl.GL#GL_LINEAR}
+ * @param offsets
+ * @param weights
+ */
 public record DiscreteSampleKernel(double[] offsets, double[] weights) {
 	public int size() {
 		return offsets.length;

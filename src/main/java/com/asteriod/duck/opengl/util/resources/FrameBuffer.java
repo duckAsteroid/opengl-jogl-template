@@ -28,7 +28,6 @@ public class FrameBuffer {
 
 	public void bind() {
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
 	}
 
 	public void unbind() {

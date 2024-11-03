@@ -11,7 +11,13 @@ import static org.lwjgl.opengl.GL11.GL_RGBA;
 import static org.lwjgl.opengl.GL11C.GL_RGBA8;
 import static org.lwjgl.opengl.GL30.*;
 
-public enum Type implements TextureFactory.FormatHelper {
+/**
+ * High levels foramts of Texture, used during the texture loading process.
+ * Defines the number of channels and the data type of those channels.
+ * e.g. RGBA etc.
+ */
+public enum DataFormat implements TextureFactory.FormatHelper {
+	/** Red, Green, Blue & Alpha - 4 bytes per pixel */
 	RGBA(GL_RGBA, GL_RGBA8, GL_UNSIGNED_BYTE, 4) {
 		public BufferedImage apply(Dimension d) {
 			var glAlphaColorModel = new ComponentColorModel(ColorSpace
@@ -23,6 +29,7 @@ public enum Type implements TextureFactory.FormatHelper {
 							new Hashtable<>());
 		}
 	},
+	/** 1 channel greyscale using 32bit float per pixel */
 	GRAY(GL_RED, GL_R32F, GL_FLOAT, 4) {
 		public BufferedImage apply(Dimension d) {
 			return new BufferedImage(d.width, d.height, BufferedImage.TYPE_BYTE_GRAY);
@@ -59,6 +66,7 @@ public enum Type implements TextureFactory.FormatHelper {
 		}
 
 	},
+	/** 2 channel RED/GREEN using 2 x 16 bit unsigned ints per pixel */
 	TWO_CHANNEL_16_BIT(GL_RG_INTEGER, GL_RG16UI, GL_UNSIGNED_SHORT, 4) {
 		public BufferedImage apply(Dimension d) {
 			throw new UnsupportedOperationException("No image for RG16UI");
@@ -70,7 +78,7 @@ public enum Type implements TextureFactory.FormatHelper {
 	private final int bytesPerPixel;
 	private final int dataType;
 
-	Type(int imageFormat, int internalFormat, int dataType, int bytesPerPixel) {
+	DataFormat(int imageFormat, int internalFormat, int dataType, int bytesPerPixel) {
 		this.imageFormat = imageFormat;
 		this.internalFormat = internalFormat;
 		this.bytesPerPixel = bytesPerPixel;
@@ -94,8 +102,7 @@ public enum Type implements TextureFactory.FormatHelper {
 
 	@Override
 	public void verify(ImageData data) throws IllegalArgumentException {
-		int totalPixels = data.size().width * data.size().height;
-		int expectedSize = totalPixels * bytesPerPixel;
+		int expectedSize = data.totalPixelCount() * bytesPerPixel;
 		if (expectedSize != data.buffer().remaining()) {
 			throw new IllegalArgumentException("Buffer size was "+ data.buffer().remaining() + ", expected " +expectedSize);
 		}

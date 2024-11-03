@@ -12,7 +12,7 @@ public class ColorPalette {
 	private final String name;
 
 	public ColorPalette(ResourceManager mgr, String file) throws IOException {
-		palette = mgr.getTextureLoader().LoadTexture(file, ImageOptions.DEFAULT.withSingleLine());
+		palette = mgr.getTextureFactory().LoadTexture(file, ImageOptions.DEFAULT.withSingleLine());
 		// TODO figure out a name
 		this.name = Path.of(file).getFileName().toString();
 		mgr.PutTexture(name, palette);

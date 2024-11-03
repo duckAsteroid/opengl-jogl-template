@@ -35,7 +35,7 @@ public class PaletteRenderer implements RenderedItem {
 	private Texture texture;
 	private TextureUnit textureUnit;
 
-	// the palette with an RGB value for each index
+	// the 1D palette with an RGB value for each index
 	private Texture palette;
 	private TextureUnit paletteUnit;
 
@@ -68,9 +68,9 @@ public class PaletteRenderer implements RenderedItem {
 		int g = 128;
 		int b = 255;
 		for (int i = 0; i < 256; i++) {
-			raw.put((byte) i); //r
-			raw.put((byte) g);
-			raw.put((byte) b);
+			raw.put((byte) i); //r 0 - 255
+			raw.put((byte) g); //g 128 - 255 / 0 - 127
+			raw.put((byte) b); //b 255 - 0
 			g += 1;
 			if (g > 255) g = 0;
 			b -= 1;
@@ -80,6 +80,7 @@ public class PaletteRenderer implements RenderedItem {
 		return new ImageData(raw, new Dimension(256, 1));
 	}
 
+	// Dump a PNG with the rgbTestScale in it
 	public static void main(String[] args) throws IOException {
 		BufferedImage image = new BufferedImage(256, 1, BufferedImage.TYPE_INT_ARGB);
 		ImageData data = rbgTestScale();
@@ -93,7 +94,9 @@ public class PaletteRenderer implements RenderedItem {
 			// Set the pixel in the image
 			image.setRGB(i / 4, 0, pixel);
 		}
-		ImageIO.write(image, "png", new java.io.File("test.png"));
+		var file = new java.io.File("test.png");
+		ImageIO.write(image, "png", file);
+		System.out.println(file.getAbsolutePath());
 	}
 
 	@Override

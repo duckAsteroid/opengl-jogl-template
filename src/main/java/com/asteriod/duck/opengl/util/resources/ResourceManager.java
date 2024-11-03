@@ -35,7 +35,7 @@ public class ResourceManager {
 		this.shaderLoader = new ShaderLoader(this.root.resolve("glsl"));
 	}
 
-	public TextureFactory getTextureLoader() {
+	public TextureFactory getTextureFactory() {
 		return textureFactory;
 	}
 
@@ -59,10 +59,15 @@ public class ResourceManager {
 		ResourceLocator locator = new ResourceLocator(Texture.class, name);
 		if (!resources.containsKey(locator)) {
 			Texture tex = null;
-			try {
-				tex = textureFactory.LoadTexture(path, options);
-			} catch (IOException e) {
-				LOG.error("Error loading texture", e);
+			if (path != null) {
+				try {
+					tex = textureFactory.LoadTexture(path, options);
+				} catch (IOException e) {
+					LOG.error("Error loading texture", e);
+				}
+			}
+			else {
+				tex = null;
 			}
 			resources.put(locator, tex);
 		}

@@ -1,4 +1,5 @@
 #version 460
+#define MAX_KERNEL_SIZE 64
 
 precision mediump float;
 
@@ -9,23 +10,26 @@ in vec2 texCoords;
 out vec4 fragColor;
 
 uniform vec2 dimensions; // TODO transpose offsets from pixel distances into normalised distances
-uniform float offset[3] = float[](0.0, 1.3846153846, 3.2307692308);
-uniform float weight[3] = float[](0.2270270270, 0.3162162162, 0.0702702703);
+layout(std140) uniform OffsetWeightData {
+    float offsets[MAX_KERNEL_SIZE];
+    float weights[MAX_KERNEL_SIZE];
+    int size;
+};
 
 void main() {
     // copy the texel straight into the pixel
-    fragColor = texture2D(tex, texCoords) * weight[0];
+    fragColor = texture2D(tex, texCoords) * weights[0];
 
     float ox = 0.0;
-    for (int i=1; i<offset.length; i++) {
-        float oy = offset[i] / dimensions.y;
+    for (int i = 1; i < size; i++) {
+        float oy = offsets[i] / dimensions.y;
         // plus Y
         fragColor +=
             texture2D(tex, (texCoords + vec2(ox, oy)))
-            * weight[i] ;
+            * weights[i] ;
         // minus Y
         fragColor +=
             texture2D(tex, (texCoords - vec2(ox, oy)))
-            * weight[i];
+            * weights[i];
     }
 }

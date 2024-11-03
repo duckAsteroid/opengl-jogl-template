@@ -7,6 +7,8 @@ import com.asteriod.duck.opengl.util.RenderContext;
 import com.asteriod.duck.opengl.util.RenderedItem;
 import com.asteriod.duck.opengl.util.Triangles;
 import com.asteriod.duck.opengl.util.resources.texture.Texture;
+import com.asteriod.duck.opengl.util.resources.texture.TextureFactory;
+import org.joml.Vector3f;
 import org.joml.Vector4f;
 
 import java.awt.*;
@@ -21,7 +23,7 @@ public class Triangle extends CompositeRenderItem implements Experiment {
 	public static RenderedItem basicTriangle() {
 		return Triangles.centralTriangle().simpleRenderer(
 						new Vector4f(1.0f, 0.75f, 0.5f, 1.0f),
-						null);
+						new Vector3f(5, 2, 1));
 	}
 
 	@Override
@@ -31,7 +33,7 @@ public class Triangle extends CompositeRenderItem implements Experiment {
 
 		Texture[] offscreen = new Texture[1];
 		for (int i = 0; i < offscreen.length; i++) {
-			offscreen[i] = Utils.createOffscreenTexture(screen, true);
+			offscreen[i] = TextureFactory.createTexture(screen, false);
 			ctx.getResourceManager().PutTexture("offscreen"+i, offscreen[i]);
 		};
 

@@ -1,15 +1,10 @@
 package com.asteriod.duck.opengl.experiments;
 
-import com.asteriod.duck.opengl.util.resources.texture.ImageData;
-import com.asteriod.duck.opengl.util.resources.texture.Texture;
+import com.asteriod.duck.opengl.util.resources.texture.*;
 
 import java.awt.*;
 import java.nio.ByteBuffer;
 import java.util.function.BiFunction;
-
-import static org.lwjgl.opengl.GL11C.GL_FLOAT;
-import static org.lwjgl.opengl.GL11C.GL_RED;
-import static org.lwjgl.opengl.GL30C.GL_R32F;
 
 public class Utils {
 
@@ -59,18 +54,5 @@ public class Utils {
 		return new ImageData(imageData, size);
 	}
 
-
-	public static Texture createOffscreenTexture(Rectangle screen, boolean is32f) {
-		Texture offscreen = new Texture();
-		if (is32f) {
-			offscreen.setFilter(Texture.Filter.LINEAR);
-			offscreen.setWrap(Texture.Wrap.CLAMP_TO_EDGE);
-			offscreen.setInternalFormat(GL_R32F);
-			offscreen.setImageFormat(GL_RED);
-			offscreen.setDataType(GL_FLOAT);
-		}
-		offscreen.Generate(screen.width, screen.height, 0);
-		return offscreen;
-	}
 
 }

@@ -3,11 +3,9 @@ package com.asteriod.duck.opengl.util.resources.texture;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferByte;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -26,7 +24,7 @@ public class JavaImageLoader implements TextureDataLoader {
 			}
 
 			var dims = new Dimension(bufferedImage.getWidth(), bufferedImage.getHeight());
-			var texImage = options.type().apply(dims);
+			var texImage = options.dataFormat().apply(dims);
 
 			// copy the source image into the produced image
 			Graphics2D g = (Graphics2D) texImage.getGraphics();
@@ -39,7 +37,7 @@ public class JavaImageLoader implements TextureDataLoader {
 			g.drawImage(bufferedImage, 0, 0, null);
 
 
-			ByteBuffer imageBuffer = options.type().pixelData(texImage);
+			ByteBuffer imageBuffer = options.dataFormat().pixelData(texImage);
 
 			return new ImageData(imageBuffer, dims);
 		}

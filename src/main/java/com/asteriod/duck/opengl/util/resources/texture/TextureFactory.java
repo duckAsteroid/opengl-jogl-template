@@ -28,14 +28,42 @@ public class TextureFactory extends AbstractResourceLoader<Texture> {
 		super(root);
 	}
 
+	public static Texture createTexture(Rectangle screen, boolean is32f) {
+		TextureOptions options = null;
+		if (is32f) {
+			options = new TextureOptions(DataFormat.GRAY, Texture.Filter.LINEAR, Texture.Wrap.REPEAT);
+		}
+		else {
+			options = new TextureOptions(DataFormat.RGBA, Texture.Filter.LINEAR, Texture.Wrap.REPEAT);
+		}
+		return createTexture(screen, null, options );
+	}
+
+	public static Texture createTexture(Rectangle screen, Dimension pad, TextureOptions options) {
+		if (pad == null) {
+			pad = new Dimension(0, 0);
+		}
+		Texture offscreen = new Texture();
+		if (options != null) {
+			offscreen.setFilter(options.filter());
+			offscreen.setWrap(options.wrap());
+			offscreen.setInternalFormat(options.dataFormat().internalFormat());
+			offscreen.setImageFormat(options.dataFormat().imageFormat());
+			offscreen.setDataType(options.dataFormat().dataType());
+		}
+		offscreen.Generate(screen.width + pad.width, screen.height + pad.height, 0);
+		return offscreen;
+	}
+
+
 	public static Texture createTexture(ImageOptions options, ImageData data) throws IOException {
 		Texture tex = new Texture();
 
-		tex.setInternalFormat( options.type().internalFormat());
-		tex.setImageFormat( options.type().imageFormat());
-		tex.setDataType( options.type().dataType());
+		tex.setInternalFormat( options.dataFormat().internalFormat());
+		tex.setImageFormat( options.dataFormat().imageFormat());
+		tex.setDataType( options.dataFormat().dataType());
 
-		options.type().verify(data);
+		options.dataFormat().verify(data);
 
 		if (data.size().height == 1) {
 			tex.Generate1D(data.size().width, data.buffer());

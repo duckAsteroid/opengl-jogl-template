@@ -3,10 +3,12 @@ package com.asteriod.duck.opengl.experiments;
 import com.asteriod.duck.opengl.*;
 import com.asteriod.duck.opengl.util.CompositeRenderItem;
 import com.asteriod.duck.opengl.util.RenderContext;
+import com.asteriod.duck.opengl.util.blur.BlurKernel;
+import com.asteriod.duck.opengl.util.blur.DiscreteSampleKernel;
 import com.asteriod.duck.opengl.util.resources.texture.ImageOptions;
 import com.asteriod.duck.opengl.util.resources.texture.Texture;
 import com.asteriod.duck.opengl.util.resources.texture.TextureUnit;
-import com.asteriod.duck.opengl.util.resources.texture.Type;
+import com.asteriod.duck.opengl.util.resources.texture.DataFormat;
 import org.joml.Vector2f;
 
 import java.awt.*;
@@ -34,7 +36,7 @@ public class Cthugha extends CompositeRenderItem implements Experiment {
 			ctx.getResourceManager().PutTexture("offscreen"+i, offscreen[i]);
 		}
 		// translate map
-		Texture translateMap = ctx.getResourceManager().GetTexture("translateMap", "translate/bighalfwheel.1024x800.tab", ImageOptions.DEFAULT.withType(Type.TWO_CHANNEL_16_BIT).withNoFlip());
+		Texture translateMap = ctx.getResourceManager().GetTexture("translateMap", "translate/bighalfwheel.1024x800.tab", ImageOptions.DEFAULT.withType(DataFormat.TWO_CHANNEL_16_BIT).withNoFlip());
 		TextureUnit translateMapUnit = ctx.getResourceManager().NextTextureUnit();
 		translateMapUnit.bind(translateMap);
 		PassthruTextureRenderer renderer = new PassthruTextureRenderer("offscreen2", "translate", shader -> {

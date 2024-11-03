@@ -36,7 +36,7 @@ public class PassthruTextureRenderer implements RenderedItem {
 
 	private static final Logger LOG = LoggerFactory.getLogger(PassthruTextureRenderer.class);
 
-	private ShaderProgram shaderProgram = null;
+	protected ShaderProgram shaderProgram = null;
 
 	private final String textureName;
 	private Texture texture;
@@ -46,20 +46,31 @@ public class PassthruTextureRenderer implements RenderedItem {
 	/**
 	 * This customiser gives external code a chance to initialise (set parameters) on the shader
 	 */
-	private final Consumer<ShaderProgram> shaderCustomiser;
+	private Consumer<ShaderProgram> shaderCustomiser;
+	private boolean customizeOnRender;
 
 	public PassthruTextureRenderer(String name) {
-		this(name, "passthru", null);
+		this(name, "passthru", null, false);
 	}
 
 	public PassthruTextureRenderer(String name, String shaderName) {
-		this(name, shaderName, null);
+		this(name, shaderName, null, false);
 	}
 
-	public PassthruTextureRenderer(String name, String shaderName, Consumer<ShaderProgram> shaderCustomiser) {
-		this.textureName = name;
+	public PassthruTextureRenderer(String textureName, String shaderName, Consumer<ShaderProgram> shaderCustomiser) {
+		this(textureName, shaderName, shaderCustomiser, false);
+	}
+
+	public PassthruTextureRenderer(String textureName, String shaderName, Consumer<ShaderProgram> shaderCustomiser, boolean customizeOnRender) {
+		this.textureName = textureName;
 		this.shaderName = shaderName;
 		this.shaderCustomiser = shaderCustomiser;
+		this.customizeOnRender = customizeOnRender;
+	}
+
+	public void addShaderCustomizer(Consumer<ShaderProgram> customizer, boolean onRender) {
+		this.shaderCustomiser = customizer;
+		this.customizeOnRender = onRender;
 	}
 
 	@Override
@@ -97,8 +108,12 @@ public class PassthruTextureRenderer implements RenderedItem {
 	@Override
 	public void doRender(RenderContext ctx) {
 		shaderProgram.use();
+		// customise the shader if setup
+		if (customizeOnRender && shaderCustomiser != null) {
+			shaderCustomiser.accept(shaderProgram);
+		}
 		renderedShape.render();
-		glUseProgram(0);
+		shaderProgram.unuse();
 	}
 
 	@Override

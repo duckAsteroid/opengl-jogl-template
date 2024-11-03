@@ -34,6 +34,11 @@ import static org.lwjgl.opengl.GL20.glGetProgramiv;
 import static org.lwjgl.opengl.GL30C.glUniform1ui;
 import static org.lwjgl.opengl.GL32.GL_GEOMETRY_SHADER;
 
+/**
+ * A wrapper/utility class for working with shader programs.
+ * Provides easy ways to load & compile shader source.
+ * The utilities to work with uniforms
+ */
 public class ShaderProgram implements Resource {
 	private static final Logger LOG = LoggerFactory.getLogger(ShaderProgram.class);
 	private final int id;
@@ -188,6 +193,10 @@ public class ShaderProgram implements Resource {
 			uniformLocationCache.put(uniformName, uniformLocation);
 		}
 		return uniformLocationCache.get(uniformName);
+	}
+
+	public void setBoolean(String name, boolean value) {
+		glUniform1i(uniformLocation(name), value ? 1 : 0);
 	}
 
 	public void setFloat(String name, float value)
