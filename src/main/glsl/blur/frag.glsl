@@ -12,6 +12,8 @@ out vec4 fragColor;
 uniform bool x;
 // is blur enabled
 uniform bool blur;
+// a multiplier for the final color
+uniform float multiplier = 0.99;
 
 // Kernel size 9
 //uniform float offsets_9[2] = float[](0.0, 1.3333333333333335);
@@ -61,5 +63,6 @@ void main() {
             }
         }
     }
+    fragColor *= multiplier;
 }
 

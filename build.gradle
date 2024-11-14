@@ -43,7 +43,7 @@ test {
 }
 
 application {
-  mainClass = 'com.asteriod.duck.opengl.Main'
+  mainClass = 'com.asteroid.duck.opengl.Main'
 }
 
 tasks.register("debugRun", JavaExec) {
