@@ -3,6 +3,7 @@ package com.asteroid.duck.opengl;
 import com.asteroid.duck.opengl.util.CompositeRenderItem;
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.RenderedItem;
+import com.asteroid.duck.opengl.util.keys.KeyRegistry;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.texture.DataFormat;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
@@ -53,12 +54,17 @@ public class OffscreenBlurTextureRenderer extends CompositeRenderItem {
 		OffscreenTextureRenderer stage2 = new OffscreenTextureRenderer(new PassthruTextureRenderer(TEXTURE_FBO, SHADER_NAME, blur(false), true), target);
 		addItems(stage1, stage2);
 
-		ctx.registerKeyAction(GLFW.GLFW_KEY_W, () -> multiply(1.001f));
-		ctx.registerKeyAction(GLFW.GLFW_KEY_W, GLFW.GLFW_MOD_SHIFT, () -> multiply(1.1f));
-		ctx.registerKeyAction(GLFW.GLFW_KEY_S, () -> multiply(0.999f));
-		ctx.registerKeyAction(GLFW.GLFW_KEY_S, GLFW.GLFW_MOD_SHIFT, () -> multiply(0.9f));
+		registerKeys(ctx.getKeyRegistry());
 
 		super.init(ctx);
+	}
+
+	private void registerKeys(KeyRegistry ctx) {
+		ctx.registerKeyAction(GLFW.GLFW_KEY_W, () -> multiply(1.001f), "Increase blur brightness by 1%");
+		ctx.registerKeyAction(GLFW.GLFW_KEY_W, GLFW.GLFW_MOD_SHIFT, () -> multiply(1.1f), "Increase blur brightness by 10%");
+		ctx.registerKeyAction(GLFW.GLFW_KEY_S, () -> multiply(0.999f), "Decrease blur brightness by 1%");
+		ctx.registerKeyAction(GLFW.GLFW_KEY_S, GLFW.GLFW_MOD_SHIFT, () -> multiply(0.9f), "Decrease blur brightness by 10%");
+
 	}
 
 	private void multiply(float v) {

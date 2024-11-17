@@ -4,6 +4,7 @@ import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.RenderedItem;
 import com.asteroid.duck.opengl.util.audio.LineAcquirer;
 import com.asteroid.duck.opengl.util.audio.RollingFloatBuffer;
+import com.asteroid.duck.opengl.util.keys.KeyRegistry;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import org.joml.Random;
 import org.joml.Vector4f;
@@ -77,6 +78,8 @@ public class Polyline implements RenderedItem {
 
 	@Override
 	public void init(RenderContext ctx) throws IOException {
+		addKeyHandlers(ctx.getKeyRegistry());
+
 		mem = MemoryStack.stackPush();
 		int BUFFER_SIZE = 2048;
 		pointBuffer = mem.mallocFloat(BUFFER_SIZE * 2);
@@ -120,12 +123,16 @@ public class Polyline implements RenderedItem {
 		shaderProgram = ctx.getResourceManager().GetShader("polyline", "polyline/vertex.glsl","polyline/frag.glsl", null);
 
 
-		ctx.registerKeyAction(GLFW.GLFW_KEY_UP, () -> rollingFloatBuffer.incMax(100));
-		ctx.registerKeyAction(GLFW.GLFW_KEY_UP, GLFW.GLFW_MOD_SHIFT, () -> rollingFloatBuffer.incMax(1000));
-		ctx.registerKeyAction(GLFW.GLFW_KEY_DOWN, () -> rollingFloatBuffer.decMax(100));
-		ctx.registerKeyAction(GLFW.GLFW_KEY_DOWN, GLFW.GLFW_MOD_SHIFT, () -> rollingFloatBuffer.decMax(1000));
-		ctx.registerKeyAction(GLFW.GLFW_KEY_Q, this::increaseLineWidth);
-		ctx.registerKeyAction(GLFW.GLFW_KEY_A, this::decreaseLineWidth);
+
+	}
+
+	private void addKeyHandlers(KeyRegistry ctx) {
+		ctx.registerKeyAction(GLFW.GLFW_KEY_UP, () -> rollingFloatBuffer.incMax(100), "Increase max by 100");
+		ctx.registerKeyAction(GLFW.GLFW_KEY_UP, GLFW.GLFW_MOD_SHIFT, () -> rollingFloatBuffer.incMax(1000), "Increase max by 1000");
+		ctx.registerKeyAction(GLFW.GLFW_KEY_DOWN, () -> rollingFloatBuffer.decMax(100), "Decrease max by 100");
+		ctx.registerKeyAction(GLFW.GLFW_KEY_DOWN, GLFW.GLFW_MOD_SHIFT, () -> rollingFloatBuffer.decMax(1000), "Decrease max by 1000");
+		ctx.registerKeyAction(GLFW.GLFW_KEY_Q, this::increaseLineWidth, "Increase line width");
+		ctx.registerKeyAction(GLFW.GLFW_KEY_A, this::decreaseLineWidth, "Decrease line width");
 	}
 
 

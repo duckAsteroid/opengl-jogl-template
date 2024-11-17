@@ -6,12 +6,12 @@ import com.asteroid.duck.opengl.experiments.ExperimentChooser;
 import com.asteroid.duck.opengl.util.GLWindow;
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.RenderedItem;
-import com.asteroid.duck.opengl.util.resources.texture.Texture;
+import com.asteroid.duck.opengl.util.keys.KeyAction;
+import com.asteroid.duck.opengl.util.keys.KeyRegistry;
 import com.asteroid.duck.opengl.util.timer.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.*;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -19,7 +19,6 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static org.lwjgl.glfw.GLFW.*;
-import static org.lwjgl.opengl.GL30C.GL_RGBA;
 
 
 public class Main extends GLWindow implements RenderContext {
@@ -28,14 +27,8 @@ public class Main extends GLWindow implements RenderContext {
     public static final int STEP = 10;
     public static final int LARGE_STEP = 100;
 
-    private static String INSTRUCTIONS;
-
     public static String[] ARGS = {};
 
-    static {
-        INSTRUCTIONS = new BufferedReader(new InputStreamReader(Objects.requireNonNull(Main.class.getResourceAsStream("/instructions.txt"))))
-            .lines().collect(Collectors.joining("\n"));
-    }
 
     private final Timer timer = Timer.glfwGetTimeInstance();
 
@@ -63,7 +56,6 @@ public class Main extends GLWindow implements RenderContext {
         return timer;
     }
 
-
     public static void main(String[] args) throws Exception {
         Main.ARGS = args;
         Main main = new Main( "(cShader Playground", 1024, 800);
@@ -73,19 +65,16 @@ public class Main extends GLWindow implements RenderContext {
         Experiment experiment = chooser.get();
         main.setRenderedItem(experiment);
 
-        printInstructions();
         main.displayLoop();
     }
 
     public void registerKeys() {
-        registerKeyAction(GLFW_KEY_SPACE, timer::togglePaused);
-        registerKeyAction(GLFW_KEY_LEFT, () -> stepBack(false));
-        registerKeyAction (GLFW_KEY_RIGHT, () -> stepForward(false));
-        registerKeyAction(GLFW_KEY_I, Main::printInstructions);
-    }
-
-    public static void printInstructions() {
-        System.out.println(INSTRUCTIONS);
+        KeyRegistry kr = getKeyRegistry();
+        kr.registerKeyAction(GLFW_KEY_SPACE, timer::togglePaused, "Pause and unpause the program timer (the display loop keeps running)");
+        kr.registerKeyAction(GLFW_KEY_LEFT, () -> stepBack(false), "When paused, move the time backwards (<SHIFT> for larger steps)");
+        kr.registerKeyAction(GLFW_KEY_RIGHT, () -> stepForward(false), "When paused, move the time forwards (<SHIFT> for larger steps)");
+        kr.registerKeyAction(GLFW_KEY_I, this::printInstructions, "Print instructions");
+        kr.registerKeyAction(GLFW_KEY_F11, this::toggleFullscreen, "Toggle fullscreen mode");
     }
 
     private void stepBack(boolean largeStep) {
@@ -100,15 +89,6 @@ public class Main extends GLWindow implements RenderContext {
     public void init() throws IOException {
         timer.reset(); // start the clock
         renderedItem.init(this);
-    }
-
-    private void initRenderTexture() {
-        Texture tex = new Texture();
-        tex.setInternalFormat( GL_RGBA);
-        tex.setImageFormat( GL_RGBA);
-        Rectangle window = getWindow();
-        tex.Generate(window.width, window.height, 0);
-        //getResourceManager().PutTexture(TEXTURE, tex);
     }
 
     public void render() throws IOException {

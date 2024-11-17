@@ -1,8 +1,6 @@
 package com.asteroid.duck.opengl.util;
 
-import com.asteroid.duck.opengl.util.keys.Key;
-import com.asteroid.duck.opengl.util.keys.KeyCombination;
-import com.asteroid.duck.opengl.util.keys.Keys;
+import com.asteroid.duck.opengl.util.keys.*;
 import com.asteroid.duck.opengl.util.resources.ResourceManager;
 import com.asteroid.duck.opengl.util.resources.texture.ImageData;
 import com.asteroid.duck.opengl.util.resources.texture.ImageOptions;
@@ -31,10 +29,11 @@ public abstract class GLWindow implements RenderContext {
 	private final long windowHandle;
 	private final String windowTitle;
 
-	private final Map<KeyCombination, Runnable> keyActions = new HashMap<>();
+
 	private final ResourceManager resourceManager = new ResourceManager("src/main/");
 	private final GLFWKeyCallback glfwKeyCallback;
 	private final GLFWFramebufferSizeCallback glfwFramebufferSizeCallback;
+	private final KeyRegistry keyRegistry = new KeyRegistry();
 	private GLFWErrorCallback errorCallback;
 	private Rectangle windowed = null;
 	private Rectangle window;
@@ -57,9 +56,6 @@ public abstract class GLWindow implements RenderContext {
 		windowHandle = glfwCreateWindow(width, height, title, NULL, NULL);
 		// Make the OpenGL context current
 		glfwMakeContextCurrent(windowHandle);
-
-		registerKeyAction (GLFW_KEY_ESCAPE, this::exit);
-		registerKeyAction(GLFW_KEY_F11, this::toggleFullscreen);
 
 		this.glfwKeyCallback = glfwSetKeyCallback(windowHandle, this::keyCallback);
 		this.glfwFramebufferSizeCallback = glfwSetFramebufferSizeCallback(windowHandle, this::frameBufferSizeCallback);
@@ -99,6 +95,11 @@ public abstract class GLWindow implements RenderContext {
 		return resourceManager;
 	}
 
+	@Override
+	public KeyRegistry getKeyRegistry() {
+		return keyRegistry;
+	}
+
 	public Vector4f getBackgroundColor() {
 		return backgroundColor;
 	}
@@ -117,23 +118,16 @@ public abstract class GLWindow implements RenderContext {
 
 	public void registerKeyAction(int key, Runnable runnable) {
 		Key knownKey = Keys.instance().keyFor(key).orElseThrow(() -> new IllegalArgumentException("Unknown key code: " + key));
-		keyActions.put(new KeyCombination(Set.of(knownKey), Collections.emptySet()), runnable);
+		keyRegistry.registerKeyAction(new KeyCombination(Set.of(knownKey), Collections.emptySet()), runnable, null);
 	}
+
 	public void registerKeyAction(int key, int mod, Runnable runnable) {
 		Key knownKey = Keys.instance().keyFor(key).orElseThrow(() -> new IllegalArgumentException("Unknown key code: " + key));
 		Set<Key> knownMods = Keys.instance().modsFor(mod);
-		keyActions.put(new KeyCombination(Set.of(knownKey), knownMods), runnable);
+		keyRegistry.registerKeyAction(new KeyCombination(Set.of(knownKey), knownMods), runnable, null);
 	}
 
-	public void registerKeyAction(KeyCombination combo, Runnable runnable) {
-		keyActions.put(combo, runnable);
-	}
 
-	public void registerKeyAction(Set<KeyCombination> keyCombinations, Runnable runnable) {
-		for(KeyCombination combo : keyCombinations) {
-			keyActions.put(combo, runnable);
-		}
-	}
 
 	public final void keyCallback(long window, int key, int scancode, int actionCode, int mode) {
 		if (actionCode == GLFW_PRESS) {
@@ -141,10 +135,7 @@ public abstract class GLWindow implements RenderContext {
 			if (knownKey.isPresent()) {
 				Set<Key> mods = Keys.instance().modsFor(mode);
 				KeyCombination combo = new KeyCombination(Set.of(knownKey.get()), mods);
-				if (keyActions.containsKey(combo)) {
-					Runnable action = keyActions.get(combo);
-					action.run();
-				}
+				keyRegistry.handleCallback(combo);
 			}
 		}
 	}
@@ -160,6 +151,12 @@ public abstract class GLWindow implements RenderContext {
 		// ---------------
 		init();
 		registerKeys();
+
+		KeyRegistry kr = getKeyRegistry();
+		kr.registerKeyAction (GLFW_KEY_ESCAPE, this::exit, "Exit");
+		kr.registerKeyAction(GLFW_KEY_F11, this::toggleFullscreen, "Toggle fullscreen");
+
+		printInstructions();
 
 		// loop
 		while (!glfwWindowShouldClose(windowHandle))
@@ -198,6 +195,14 @@ public abstract class GLWindow implements RenderContext {
 
 	public abstract void init() throws IOException;
 	public abstract void render() throws IOException;
+
+	public void printInstructions() {
+		System.out.println("Keys:");
+		int maxKeyStrWidth = getKeyRegistry().stream().mapToInt(ka -> ka.getCombination().asSimpleString().length()).max().orElse(0);
+		for(KeyAction ka : getKeyRegistry()) {
+			System.out.printf("\t%-"+maxKeyStrWidth+ "s - %s%n", ka.getCombination().asSimpleString(), ka.getDescription());
+		}
+	}
 
 	public void dispose() {
 		if (glfwKeyCallback != null) glfwKeyCallback.close();
