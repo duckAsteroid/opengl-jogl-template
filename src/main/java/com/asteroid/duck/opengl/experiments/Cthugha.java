@@ -1,19 +1,14 @@
 package com.asteroid.duck.opengl.experiments;
 
-import com.asteroid.duck.opengl.*;
 import com.asteroid.duck.opengl.util.CompositeRenderItem;
+import com.asteroid.duck.opengl.util.OffscreenTextureRenderer;
 import com.asteroid.duck.opengl.util.RenderContext;
-import com.asteroid.duck.opengl.util.blur.BlurKernel;
-import com.asteroid.duck.opengl.util.blur.DiscreteSampleKernel;
+import com.asteroid.duck.opengl.util.audio.Polyline;
+import com.asteroid.duck.opengl.util.palette.PaletteRenderer;
 import com.asteroid.duck.opengl.util.resources.texture.*;
-import org.joml.Vector2f;
 
 import java.awt.*;
 import java.io.IOException;
-
-import static org.lwjgl.opengl.GL11C.GL_UNSIGNED_BYTE;
-import static org.lwjgl.opengl.GL30C.GL_R8UI;
-import static org.lwjgl.opengl.GL30C.GL_RED_INTEGER;
 
 /**
  * An attempt to do 90% of Cthugha:

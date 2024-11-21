@@ -1,7 +1,7 @@
 package com.asteroid.duck.opengl.experiments;
 
-import com.asteroid.duck.opengl.OffscreenTextureRenderer;
-import com.asteroid.duck.opengl.PassthruTextureRenderer;
+import com.asteroid.duck.opengl.util.OffscreenTextureRenderer;
+import com.asteroid.duck.opengl.util.PassthruTextureRenderer;
 import com.asteroid.duck.opengl.util.CompositeRenderItem;
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.RenderedItem;

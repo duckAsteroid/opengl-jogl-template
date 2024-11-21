@@ -15,7 +15,7 @@ import java.util.List;
 public class CompositeRenderItem implements RenderedItem {
 	private static final Logger LOG = LoggerFactory.getLogger(CompositeRenderItem.class);
 
-	private final List<RenderedItem> items;
+	protected final List<RenderedItem> items;
 
 	public CompositeRenderItem() {
 		this.items = new ArrayList<>();

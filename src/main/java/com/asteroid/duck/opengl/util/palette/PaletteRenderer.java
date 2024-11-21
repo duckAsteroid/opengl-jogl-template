@@ -1,8 +1,7 @@
-package com.asteroid.duck.opengl;
+package com.asteroid.duck.opengl.util.palette;
 
+import com.asteroid.duck.opengl.util.AbstractPassthruRenderer;
 import com.asteroid.duck.opengl.util.RenderContext;
-import com.asteroid.duck.opengl.util.RenderedItem;
-import com.asteroid.duck.opengl.util.Triangles;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.texture.ImageData;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
@@ -22,30 +21,24 @@ import java.nio.IntBuffer;
  * Basically an indexed colour palette implementation. RGB output colour values are looked up using
  * the palette index.
  */
-public class PaletteRenderer implements RenderedItem {
+public class PaletteRenderer extends AbstractPassthruRenderer {
 	private static final Logger LOG = LoggerFactory.getLogger(PaletteRenderer.class);
 
-	private ShaderProgram shaderProgram = null;
-
+	// indexed texture
 	private final String textureName;
-	// the "indexed" texture
-	private Texture texture;
-	private TextureUnit textureUnit;
 
 	// the 1D palette with an RGB value for each index
 	private Texture palette;
 	private TextureUnit paletteUnit;
-
-	private Triangles renderedShape;
-	private final String shaderName;
+	private final String paletteName;
 
 	public PaletteRenderer(String name) {
 		this(name, "palette");
 	}
 
-	private PaletteRenderer(String name, String shaderName) {
+	private PaletteRenderer(String name, String paletteName) {
 		this.textureName = name;
-		this.shaderName = shaderName;
+		this.paletteName = paletteName;
 	}
 
 	public static ImageData greyScale() {
@@ -96,48 +89,33 @@ public class PaletteRenderer implements RenderedItem {
 		System.out.println(file.getAbsolutePath());
 	}
 
-	@Override
-	public void init(RenderContext ctx) throws IOException {
-		initShaderProgram(ctx);
-		initTextures(ctx);
-		initBuffers();
-	}
 
-	private void initShaderProgram(RenderContext ctx) throws IOException {
+	protected ShaderProgram initShaderProgram(RenderContext ctx) throws IOException {
 		// load the GLSL Shaders
-		this.shaderProgram = ctx.getResourceManager().GetShader(shaderName, shaderName+"/vertex.glsl", shaderName+"/frag.glsl", null);
-		LOG.info("Using shader program {}, id={}", shaderName, shaderProgram);
+		return ctx.getResourceManager().GetSimpleShader("palette");
 	}
 
-	private void initTextures(RenderContext ctx) {
-		shaderProgram.use();
-		this.texture = ctx.getResourceManager().GetTexture(textureName);
-		this.textureUnit = ctx.getResourceManager().NextTextureUnit();
-		this.textureUnit.bind(texture);
-		this.textureUnit.useInShader(shaderProgram, "tex");
+	protected Texture initTexture(RenderContext ctx) {
 
-		this.palette = ctx.getResourceManager().GetTexture("palette");
+		this.palette = ctx.getResourceManager().GetTexture(paletteName);
 		this.paletteUnit = ctx.getResourceManager().NextTextureUnit();
 		this.paletteUnit.bind(palette);
-		this.paletteUnit.useInShader(shaderProgram, "palette");
 
-	}
-
-
-	private void initBuffers() {
-		renderedShape = Triangles.fullscreen();
-		renderedShape.setup(shaderProgram);
+		return ctx.getResourceManager().GetTexture(textureName);
 	}
 
 	@Override
-	public void doRender(RenderContext ctx) {
+	public void init(RenderContext ctx) throws IOException {
+		super.init(ctx);
 		shaderProgram.use();
-		renderedShape.render();
+		this.paletteUnit.useInShader(shaderProgram, "palette");
 		shaderProgram.unuse();
 	}
 
 	@Override
 	public void dispose() {
-		renderedShape.dispose();
+		paletteUnit.destroy();
+		palette.destroy();
+		super.dispose();
 	}
 }

@@ -4,6 +4,9 @@ import com.asteroid.duck.opengl.Main;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.swing.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.List;
 import java.util.Optional;
 import java.util.ServiceLoader;
@@ -31,7 +34,33 @@ public class ExperimentChooser implements Supplier<Experiment> {
 		return fromArgs(experiments)
 						.or(() -> from(experiments, sysProp("experiment")))
 						.or(() -> from(experiments, env("experiment")))
-						.or(() -> fromConsole(experiments)).orElse(experiments.get(0));
+						.or(() -> fromSwingDialog(experiments))
+						.or(() -> fromConsole(experiments))
+						.orElse(experiments.get(0));
+	}
+
+	private Optional<Experiment> fromSwingDialog(List<Experiment> experiments) {
+		String[] experimentTitles = experiments.stream().map(Experiment::getTitle).toArray(String[]::new);
+		String[] descriptions = experiments.stream().map(Experiment::getDescription).toArray(String[]::new);
+		JPanel message = new JPanel();
+		message.setLayout(new BoxLayout(message, BoxLayout.Y_AXIS));
+		JComboBox<String> comboBox = new JComboBox<>(experimentTitles);
+		message.add(comboBox);
+		JLabel description = new JLabel("Please select above");
+		comboBox.addActionListener(e -> {
+			int index = comboBox.getSelectedIndex();
+			description.setText(descriptions[index]);
+			description.setToolTipText(descriptions[index]);
+			comboBox.setToolTipText(descriptions[index]);
+		});
+		message.add(description);
+		message.setSize(1024, 500);
+		int result = JOptionPane.showConfirmDialog(null, message, "Select an Experiment", JOptionPane.OK_CANCEL_OPTION);
+		if (result == JOptionPane.OK_OPTION) {
+			String selectedTitle = (String) comboBox.getSelectedItem();
+			return experiments.stream().filter(exp -> selectedTitle.equalsIgnoreCase(exp.getTitle())).findAny();
+		}
+		return Optional.empty();
 	}
 
 	private Optional<Experiment> fromArgs(List<Experiment> experiments) {

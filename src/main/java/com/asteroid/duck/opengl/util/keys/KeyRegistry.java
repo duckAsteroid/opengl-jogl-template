@@ -32,6 +32,9 @@ public class KeyRegistry implements Iterable<KeyAction> {
 	}
 
 	public KeyAction registerKeyAction(KeyCombination combo, Runnable runnable, String description) {
+		if (keyActions.containsKey(combo)) {
+			throw new IllegalArgumentException("Action already registered for keys="+combo.asSimpleString());
+		}
 		if (description == null) {
 			description = "Unknown";
 		}

@@ -1,8 +1,5 @@
-package com.asteroid.duck.opengl;
+package com.asteroid.duck.opengl.util;
 
-import com.asteroid.duck.opengl.util.RenderContext;
-import com.asteroid.duck.opengl.util.RenderedItem;
-import com.asteroid.duck.opengl.util.Triangles;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;

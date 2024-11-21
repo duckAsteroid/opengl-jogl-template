@@ -11,6 +11,9 @@ public class ShaderLoader extends AbstractResourceLoader<ShaderProgram> implemen
 		super(root);
 	}
 
+	public ShaderProgram LoadSimpleShaderProgram(String simple) throws IOException {
+		return LoadShaderProgram(getPath(simple+"/vertex.glsl"), getPath(simple+"/frag.glsl"), null);
+	}
 
 	public ShaderProgram LoadShaderProgram(String vertex, String fragment, String geometry) throws IOException {
 		Path geomPath = (geometry == null || geometry.isBlank()) ? null : getPath(geometry);
@@ -34,4 +37,6 @@ public class ShaderLoader extends AbstractResourceLoader<ShaderProgram> implemen
 	public Path find(String inclusion) {
 		return getPath(inclusion);
 	}
+
+
 }

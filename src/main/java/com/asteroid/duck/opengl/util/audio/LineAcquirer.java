@@ -47,7 +47,7 @@ public class LineAcquirer {
       .toList();
   }
 
-  public final static AudioFormat IDEAL = new AudioFormat( 44100f, 16, 2, true, true);
+  public final static AudioFormat IDEAL = new AudioFormat( 44100f, 16, 2, true, false);
 
   public static void main(String[] args) {
     LineAcquirer laq = new LineAcquirer();

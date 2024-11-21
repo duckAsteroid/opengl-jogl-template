@@ -1,12 +1,9 @@
-package com.asteroid.duck.opengl;
+package com.asteroid.duck.opengl.util.audio;
 
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.RenderedItem;
-import com.asteroid.duck.opengl.util.audio.LineAcquirer;
-import com.asteroid.duck.opengl.util.audio.RollingFloatBuffer;
 import com.asteroid.duck.opengl.util.keys.KeyRegistry;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
-import org.joml.Random;
 import org.joml.Vector4f;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.system.MemoryStack;
@@ -97,7 +94,7 @@ public class Polyline implements RenderedItem {
 		this.audioBuffer = ByteBuffer.allocate(bytesPerSample * numSamples);
 		this.audioBuffer.order(IDEAL.isBigEndian() ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
 		try {
-			LineAcquirer.MixerLine mixerLine = mixerLines.get(1);
+			LineAcquirer.MixerLine mixerLine = mixerLines.get(0);
 			System.out.println(mixerLine);
 			this.openLine = mixerLine.getTargetDataLine();
 			this.openLine.open(IDEAL, audioBuffer.limit());
@@ -173,6 +170,8 @@ public class Polyline implements RenderedItem {
 
 	@Override
 	public void dispose() {
+		openLine.stop();
+		openLine.close();
 		shaderProgram.destroy();
 		glDeleteBuffers(vbo);
 		mem.close();

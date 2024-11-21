@@ -70,6 +70,7 @@ public class Main extends GLWindow implements RenderContext {
 
     public void registerKeys() {
         KeyRegistry kr = getKeyRegistry();
+        kr.registerKeyAction (GLFW_KEY_ESCAPE, this::exit, "Exit");
         kr.registerKeyAction(GLFW_KEY_SPACE, timer::togglePaused, "Pause and unpause the program timer (the display loop keeps running)");
         kr.registerKeyAction(GLFW_KEY_LEFT, () -> stepBack(false), "When paused, move the time backwards (<SHIFT> for larger steps)");
         kr.registerKeyAction(GLFW_KEY_RIGHT, () -> stepForward(false), "When paused, move the time forwards (<SHIFT> for larger steps)");

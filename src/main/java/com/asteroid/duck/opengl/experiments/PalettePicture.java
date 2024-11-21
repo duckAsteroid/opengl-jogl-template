@@ -1,6 +1,6 @@
 package com.asteroid.duck.opengl.experiments;
 
-import com.asteroid.duck.opengl.PaletteRenderer;
+import com.asteroid.duck.opengl.util.palette.PaletteRenderer;
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.resources.texture.DataFormat;
 import com.asteroid.duck.opengl.util.resources.texture.ImageOptions;

@@ -39,6 +39,10 @@ public class ResourceManager {
 		return textureFactory;
 	}
 
+	public ShaderLoader getShaderLoader() {
+    return shaderLoader;
+  }
+
 	public Texture GetTexture(String name) {
 		ResourceLocator locator = new ResourceLocator(Texture.class, name);
 		if (!resources.containsKey(locator)) {
@@ -94,6 +98,10 @@ public class ResourceManager {
 		}
 		return (ShaderProgram) resources.get(locator);
 	}
+
+	public ShaderProgram GetSimpleShader(String name) {
+    return GetShader(name, name+"/vertex.glsl", name+"/frag.glsl", null);
+  }
 
 	public TextureUnit NextTextureUnit() {
 		int index = unallocatedTextureUnits.first();

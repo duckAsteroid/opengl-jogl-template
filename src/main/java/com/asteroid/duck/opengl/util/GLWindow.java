@@ -151,11 +151,6 @@ public abstract class GLWindow implements RenderContext {
 		// ---------------
 		init();
 		registerKeys();
-
-		KeyRegistry kr = getKeyRegistry();
-		kr.registerKeyAction (GLFW_KEY_ESCAPE, this::exit, "Exit");
-		kr.registerKeyAction(GLFW_KEY_F11, this::toggleFullscreen, "Toggle fullscreen");
-
 		printInstructions();
 
 		// loop
