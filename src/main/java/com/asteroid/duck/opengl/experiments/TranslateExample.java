@@ -9,29 +9,23 @@ import com.asteroid.duck.opengl.util.resources.texture.*;
 import java.awt.*;
 import java.io.IOException;
 
-public class TranslateExample extends CompositeRenderItem implements Experiment {
+public class TranslateExample extends TranslateTextureRenderer implements Experiment {
 
+	public TranslateExample() {
+		super("testcard", "translate");
+	}
 
 	@Override
 	public String getDescription() {
 		return "Just uses a translate map shader on a picture";
 	}
+
 	@Override
 	public void init(RenderContext ctx) throws IOException {
-		Rectangle screen = ctx.getWindow();
 		// load the test card image
 		Texture texture = ctx.getResourceManager().GetTexture("testcard", "test-card.jpeg", ImageOptions.DEFAULT);
 		// load the translation map - it's a matrix (screen sized) of 2 * 16 bit floats
 		Texture translateMap = ctx.getResourceManager().GetTexture("translate", "translate/bighalfwheel.1024x800.tab", ImageOptions.DEFAULT.withType(DataFormat.TWO_CHANNEL_16_BIT));
-
-		Texture offscreen = TextureFactory.createTexture(screen, false);
-		ctx.getResourceManager().PutTexture("offscreen", offscreen);
-
-		TranslateTextureRenderer translateTextureRenderer = new TranslateTextureRenderer("testcard", "translate");
-		OffscreenTextureRenderer offscreenRenderer = new OffscreenTextureRenderer(translateTextureRenderer, offscreen);
-		addItem(offscreenRenderer);
-
-		addItem(new BlurTextureRenderer("offscreen"));
 
 		super.init(ctx);
 	}

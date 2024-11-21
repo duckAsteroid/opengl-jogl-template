@@ -4,6 +4,7 @@ import com.asteroid.duck.opengl.util.AbstractPassthruRenderer;
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderLoader;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
+import com.asteroid.duck.opengl.util.resources.shader.vars.ShaderVariable;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 
 import java.io.IOException;
@@ -45,19 +46,22 @@ public class BlurTextureRenderer extends AbstractPassthruRenderer {
 
 	@Override
 	protected ShaderProgram initShaderProgram(RenderContext ctx) throws IOException {
+		addVariable(ShaderVariable.booleanVariable("blur", this::isBlur));
+		addVariable(ShaderVariable.booleanVariable("x", this::isXAxis));
 		return ctx.getResourceManager().getShaderLoader().LoadSimpleShaderProgram("blur");
 	}
 
-	@Override
-	public void doRenderWithShader(RenderContext ctx) {
-		shaderProgram.setBoolean("x", axis);
-		shaderProgram.setBoolean("blur", blur);
-		super.doRenderWithShader(ctx);
-	}
+	public boolean isBlur() {
+    return blur;
+  }
 
 	public void setBlur(boolean blur) {
 		this.blur = blur;
 	}
+
+	public boolean isXAxis() {
+    return axis;
+  }
 
 	public void setXAxis(boolean axis) {
     this.axis = axis;
