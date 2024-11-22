@@ -94,7 +94,7 @@ public class Polyline implements RenderedItem {
 		this.audioBuffer = ByteBuffer.allocate(bytesPerSample * numSamples);
 		this.audioBuffer.order(IDEAL.isBigEndian() ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
 		try {
-			LineAcquirer.MixerLine mixerLine = mixerLines.get(0);
+			LineAcquirer.MixerLine mixerLine = mixerLines.get(3);
 			System.out.println(mixerLine);
 			this.openLine = mixerLine.getTargetDataLine();
 			this.openLine.open(IDEAL, audioBuffer.limit());
