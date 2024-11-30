@@ -3,7 +3,6 @@ package com.asteroid.duck.opengl.experiments;
 import com.asteroid.duck.opengl.util.*;
 import com.asteroid.duck.opengl.util.audio.Polyline;
 import com.asteroid.duck.opengl.util.blur.BlurTextureRenderer;
-import com.asteroid.duck.opengl.util.blur.OffscreenBlurTextureRenderer;
 import com.asteroid.duck.opengl.util.keys.KeyCombination;
 import com.asteroid.duck.opengl.util.keys.KeyRegistry;
 import com.asteroid.duck.opengl.util.palette.PaletteRenderer;
@@ -34,6 +33,13 @@ public class SoundWave extends CompositeRenderItem implements Experiment {
 		ctx.getResourceManager().PutTexture("offscreen1", offscreen1);
 		Texture offscreen2 = TextureFactory.createTexture(ctx.getWindow(), null, opts);
 		ctx.getResourceManager().PutTexture("offscreen2", offscreen2);
+		Texture translateMap = ctx.getResourceManager().GetTexture("translate", "translate/bighalfwheel.1024x800.tab", ImageOptions.DEFAULT.withType(DataFormat.TWO_CHANNEL_16_BIT));
+
+
+		// translate
+		TranslateTextureRenderer translationStage = new TranslateTextureRenderer("offscreen2", "translate");
+		OffscreenTextureRenderer offscreenTrans = new OffscreenTextureRenderer(translationStage, offscreen1);
+		//addItem(offscreenTrans);
 
 		// first stage blur to offscreen texture
 		BlurTextureRenderer stage1 = new BlurTextureRenderer("offscreen1", false);

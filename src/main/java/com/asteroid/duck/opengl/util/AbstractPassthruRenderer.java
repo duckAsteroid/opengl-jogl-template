@@ -1,7 +1,6 @@
 package com.asteroid.duck.opengl.util;
 
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
-import com.asteroid.duck.opengl.util.resources.shader.vars.ShaderVariable;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
 import org.joml.Vector2f;
@@ -11,7 +10,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
 /**
  * Takes a texture and renders it using a fullscreen quad (two triangles)
@@ -25,7 +24,7 @@ public abstract class AbstractPassthruRenderer implements RenderedItem {
 	protected Texture texture;
 	private TextureUnit textureUnit;
 	private Triangles renderedShape;
-	private final List<ShaderVariable<?>> variables = new ArrayList<>();
+	private final List<BiConsumer<RenderContext, ShaderProgram>> variables = new ArrayList<>();
 
 	@Override
 	public void init(RenderContext ctx) throws IOException {
@@ -35,11 +34,11 @@ public abstract class AbstractPassthruRenderer implements RenderedItem {
 		this.renderedShape = initBuffers();
 	}
 
-	public void addVariable(ShaderVariable<?> variable) {
+	public void addVariable(BiConsumer<RenderContext, ShaderProgram> variable) {
 		variables.add(variable);
 	}
 
-	public void removeVariable(ShaderVariable<?> variable) {
+	public void removeVariable(BiConsumer<RenderContext, ShaderProgram> variable) {
 		variables.remove(variable);
 	}
 
@@ -53,8 +52,8 @@ public abstract class AbstractPassthruRenderer implements RenderedItem {
 		textureUnit.bind(texture);
 		textureUnit.useInShader(shaderProgram, "tex");
 		shaderProgram.setVector2f("dimensions", new Vector2f(texture.Width, texture.Height));
-		for(ShaderVariable<?> var : variables) {
-			var.accept(shaderProgram);
+		for(BiConsumer<RenderContext, ShaderProgram> var : variables) {
+			var.accept(ctx, shaderProgram);
 		}
 		return textureUnit;
 	}
@@ -68,8 +67,8 @@ public abstract class AbstractPassthruRenderer implements RenderedItem {
 	@Override
 	public void doRender(RenderContext ctx) {
 		shaderProgram.use();
-		for(ShaderVariable<?> var : variables) {
-			var.accept(shaderProgram);
+		for(BiConsumer<RenderContext, ShaderProgram> var : variables) {
+			var.accept(ctx, shaderProgram);
 		}
 		doRenderWithShader(ctx);
 		shaderProgram.unuse();

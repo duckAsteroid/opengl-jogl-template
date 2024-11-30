@@ -4,10 +4,10 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class TimerTest {
+public class TimerImplTest {
 	private Double timestamp = 0.0;
 
-	Timer subject = new Timer(this::getTime);
+	TimerImpl subject = new TimerImpl(this::getTime);
 
 	private Double getTime() {
 		return timestamp;
@@ -17,6 +17,7 @@ public class TimerTest {
 	public void testBasicOperation() {
 		subject.reset();
 		assertEquals(0.0, subject.elapsed());
+		assertFalse(subject.isPaused());
 
 		timestamp = 10.0;
 		subject.update();
@@ -27,6 +28,8 @@ public class TimerTest {
 		assertTrue(subject.isPaused());
 		subject.update();
 		assertEquals(10.0, subject.elapsed());
+
+		timestamp = 30.0;
 		subject.togglePaused();
 		subject.update();
 		assertEquals(20.0, subject.elapsed());
@@ -36,6 +39,6 @@ public class TimerTest {
 
 		timestamp = 40.0;
 		subject.update();
-		assertEquals(20.0, subject.elapsed());
+		assertEquals(10.0, subject.elapsed());
 	}
 }

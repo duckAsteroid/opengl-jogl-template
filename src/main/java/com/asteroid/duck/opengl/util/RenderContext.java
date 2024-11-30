@@ -23,4 +23,10 @@ public interface RenderContext {
 	Rectangle getWindow();
 	Timer getTimer();
 	ResourceManager getResourceManager();
+
+	void setClearScreen(boolean clear);
+	boolean isClearScreen();
+
+	Double getDesiredUpdatePeriod();
+	void setDesiredUpdatePeriod(Double period);
 }

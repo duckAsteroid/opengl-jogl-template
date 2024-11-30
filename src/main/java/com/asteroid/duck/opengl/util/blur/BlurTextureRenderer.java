@@ -2,7 +2,6 @@ package com.asteroid.duck.opengl.util.blur;
 
 import com.asteroid.duck.opengl.util.AbstractPassthruRenderer;
 import com.asteroid.duck.opengl.util.RenderContext;
-import com.asteroid.duck.opengl.util.resources.shader.ShaderLoader;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.shader.vars.ShaderVariable;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;

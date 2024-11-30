@@ -29,7 +29,6 @@ public abstract class GLWindow implements RenderContext {
 	private final long windowHandle;
 	private final String windowTitle;
 
-
 	private final ResourceManager resourceManager = new ResourceManager("src/main/");
 	private final GLFWKeyCallback glfwKeyCallback;
 	private final GLFWFramebufferSizeCallback glfwFramebufferSizeCallback;
@@ -82,7 +81,6 @@ public abstract class GLWindow implements RenderContext {
 
 		// Make the window visible
 		glfwShowWindow(windowHandle);
-
 
 		// kick off GL
 		GL.createCapabilities();

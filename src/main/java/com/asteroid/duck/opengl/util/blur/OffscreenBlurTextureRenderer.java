@@ -2,7 +2,6 @@ package com.asteroid.duck.opengl.util.blur;
 
 import com.asteroid.duck.opengl.util.*;
 import com.asteroid.duck.opengl.util.keys.KeyRegistry;
-import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.shader.vars.ShaderVariable;
 import com.asteroid.duck.opengl.util.resources.texture.DataFormat;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
@@ -13,7 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.function.Consumer;
 
 /**
  * A renderer that takes a texture and blurs it using a blur shader.
