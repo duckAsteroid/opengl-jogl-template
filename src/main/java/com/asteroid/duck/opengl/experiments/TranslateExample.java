@@ -26,7 +26,7 @@ public class TranslateExample extends CompositeRenderItem implements Experiment 
 		// load the translation map - it's a matrix (screen sized) of 2 * 16 bit floats
 		Texture translateMap = ctx.getResourceManager().GetTexture("translate", "translate/bighalfwheel.1024x800.tab", ImageOptions.DEFAULT.withType(DataFormat.TWO_CHANNEL_16_BIT));
 		// offscreen texture
-		TextureOptions opts = new TextureOptions(DataFormat.RGBA, Texture.Filter.LINEAR, Texture.Wrap.REPEAT);
+		TextureOptions opts = new TextureOptions(DataFormat.GRAY, Texture.Filter.LINEAR, Texture.Wrap.REPEAT);
 		Texture offscreen = TextureFactory.createTexture(ctx.getWindow(), null, opts);
 		ctx.getResourceManager().PutTexture("yabadabado", offscreen);
 

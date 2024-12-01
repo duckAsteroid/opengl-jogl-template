@@ -36,16 +36,16 @@ class BlurKernelTest {
 	@Test
 	void getDiscreteSampleKernel() {
 		BlurKernel kernel = new BlurKernel(13);
-		assertEquals(5, kernel.offsets.length);
+		assertEquals(7, kernel.offsets.length);
 
 		DiscreteSampleKernel discreteSampleKernel = kernel.getDiscreteSampleKernel();
 		assertNotNull(discreteSampleKernel);
-		assertEquals(3, discreteSampleKernel.size());
+		assertEquals(4, discreteSampleKernel.size());
 
 		kernel = new BlurKernel(21);
-		assertEquals(9, kernel.offsets.length);
+		assertEquals(11, kernel.offsets.length);
 		discreteSampleKernel = kernel.getDiscreteSampleKernel();
 		assertNotNull(discreteSampleKernel);
-		assertEquals(7, discreteSampleKernel.size());
+		assertEquals(6, discreteSampleKernel.size());
 	}
 }
