@@ -177,6 +177,18 @@ public class Polyline implements RenderedItem {
 		mem.close();
 	}
 
+	public Vector4f getLineColour() {
+		return lineColour;
+	}
+
+	public void setLineColour(Vector4f color) {
+		this.lineColour = color;
+	}
+
+	public float getLineWidth() {
+		return lineWidth;
+	}
+
 	public void setLineWidth(float v) {
 		this.lineWidth = v;
 	}
