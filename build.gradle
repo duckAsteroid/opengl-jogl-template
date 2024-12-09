@@ -1,6 +1,7 @@
 plugins {
   id 'java'
   id 'application'
+  id "com.github.ben-manes.versions" version "0.51.0"
 }
 
 group = 'com.asteroid.duck'
@@ -12,16 +13,51 @@ repositories {
 }
 
 dependencies {
-  // Open GL libraries
-  def joglVersion = '2.3.2'
-  implementation "org.jogamp.gluegen:gluegen-rt-main:$joglVersion"
-  implementation "org.jogamp.jogl:jogl-all-main:$joglVersion"
+  // Logging libraries
+  implementation 'org.slf4j:slf4j-api:2.0.12'
+  runtimeOnly 'ch.qos.logback:logback-classic:1.5.5'
+  //runtimeOnly 'org.slf4j:slf4j-simple:2.0.12'
+
+  // Lightweight Java Game Libraries (LWJGL)
+  implementation platform("org.lwjgl:lwjgl-bom:3.3.3")
+  implementation "org.lwjgl:lwjgl"
+  runtimeOnly "org.lwjgl:lwjgl::natives-windows"
+
+  // glfw for windows
+  implementation "org.lwjgl:lwjgl-glfw"
+  runtimeOnly "org.lwjgl:lwjgl-glfw::natives-windows"
+
+  // open GL
+  implementation "org.lwjgl:lwjgl-opengl"
+  runtimeOnly "org.lwjgl:lwjgl-opengl::natives-windows"
+  // help for GL Vector types
+  implementation "org.joml:joml:1.10.5"
+
+  // JUnit
+  testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0-M1'
+
+}
+
+test {
+  useJUnitPlatform()
 }
 
 application {
-  mainClass = 'com.asteriod.duck.opengl.Main'
+  mainClass = 'com.asteroid.duck.opengl.Main'
 }
 
-run {
+tasks.register("debugRun", JavaExec) {
+  dependsOn deleteCrashLogs
+  group = ApplicationPlugin.APPLICATION_GROUP
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = application.mainClass
   workingDir = project.rootDir
+  jvmArgs = ["-javaagent:src/test/resources/lwjglx-debug-1.0.0.jar=tn;o=open-gl.log"]
+  args = ["BlurPictureExample"] // Cthugha, TranslateExample, Triangle, PalettePicture, BlurPictureExample, BlurTest
+}
+
+tasks.register("deleteCrashLogs", Delete) {
+  group = BasePlugin.BUILD_GROUP
+  description = "Clear out Java crash logs"
+  delete fileTree('.').include('hs_err_pid*.log')
 }

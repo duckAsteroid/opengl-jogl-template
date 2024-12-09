@@ -13,3 +13,12 @@ gradle-app.setting
 
 # # Work around https://youtrack.jetbrains.com/issue/IDEA-116898
 # gradle/wrapper/gradle-wrapper.properties
+
+# Open GL (LWJGL) debug file
+/open-gl.log
+
+# generated bin files for texture verification
+/src/main/resources/**/*.bin
+
+# Java VM crashes
+hs_err_pid*.log
