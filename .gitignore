@@ -22,3 +22,5 @@ gradle-app.setting
 
 # Java VM crashes
 hs_err_pid*.log
+
+/.settings
