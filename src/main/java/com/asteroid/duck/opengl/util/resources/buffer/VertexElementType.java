@@ -72,19 +72,30 @@ public abstract class VertexElementType<T> {
 	}
 
 	public void serializeRaw(Object obj, ByteBuffer buffer) {
+		int pos = buffer.position();
 		try {
 			if (obj == null) {
 				obj = nullReplacementValue();
 			}
 			serialize(javaType.cast(obj), buffer);
+			buffer.position(pos + size);
 		} catch (ClassCastException e) {
 			throw new IllegalArgumentException("Object is not of type " + javaType.getName(), e);
 		}
 	}
 
-	public abstract void serialize(T obj, ByteBuffer buffer);
+	protected abstract void serialize(T obj, ByteBuffer buffer);
 
-	public abstract T deserialize(ByteBuffer buffer);
+	public Object deserializeRaw(ByteBuffer buffer) {
+		int pos = buffer.position();
+    try {
+      return deserialize(buffer);
+    } finally {
+      buffer.position(pos + size);
+    }
+	}
+
+	protected abstract T deserialize(ByteBuffer buffer);
 
 	public Object nullReplacementValue() {
 		throw new IllegalArgumentException("Serialized value of "+javaType.getName()+" cannot be null");
