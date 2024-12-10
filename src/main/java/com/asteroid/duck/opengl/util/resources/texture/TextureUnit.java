@@ -1,6 +1,6 @@
 package com.asteroid.duck.opengl.util.resources.texture;
 
-import com.asteroid.duck.opengl.util.resources.impl.Resource;
+import com.asteroid.duck.opengl.util.resources.Resource;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 
 import java.util.function.Consumer;

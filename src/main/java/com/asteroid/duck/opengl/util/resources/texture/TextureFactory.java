@@ -56,7 +56,7 @@ public class TextureFactory extends AbstractResourceLoader<Texture> {
 	}
 
 
-	public static Texture createTexture(ImageOptions options, ImageData data) throws IOException {
+	public static Texture createTexture(ImageOptions options, ImageData data) {
 		Texture tex = new Texture();
 
 		tex.setInternalFormat( options.dataFormat().internalFormat());

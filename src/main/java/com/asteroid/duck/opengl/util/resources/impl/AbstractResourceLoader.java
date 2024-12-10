@@ -1,5 +1,7 @@
 package com.asteroid.duck.opengl.util.resources.impl;
 
+import com.asteroid.duck.opengl.util.resources.Resource;
+
 import java.nio.file.Path;
 
 public abstract class AbstractResourceLoader<T extends Resource> {

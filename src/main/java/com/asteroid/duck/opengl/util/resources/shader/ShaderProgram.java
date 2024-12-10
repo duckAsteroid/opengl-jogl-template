@@ -1,6 +1,6 @@
 package com.asteroid.duck.opengl.util.resources.shader;
 
-import com.asteroid.duck.opengl.util.resources.impl.Resource;
+import com.asteroid.duck.opengl.util.resources.Resource;
 import com.asteroid.duck.opengl.util.resources.shader.vars.ShaderVariableType;
 import com.asteroid.duck.opengl.util.resources.shader.vars.Variable;
 import com.asteroid.duck.opengl.util.resources.shader.vars.VariableType;
