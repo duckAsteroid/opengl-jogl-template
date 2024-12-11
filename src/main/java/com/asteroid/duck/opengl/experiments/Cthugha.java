@@ -3,6 +3,7 @@ package com.asteroid.duck.opengl.experiments;
 import com.asteroid.duck.opengl.util.*;
 import com.asteroid.duck.opengl.util.audio.Polyline;
 import com.asteroid.duck.opengl.util.blur.OffscreenBlurTextureRenderer;
+import com.asteroid.duck.opengl.util.keys.KeyCombination;
 import com.asteroid.duck.opengl.util.palette.PaletteRenderer;
 import com.asteroid.duck.opengl.util.resources.texture.*;
 import com.asteroid.duck.opengl.util.toggle.Frequency;
@@ -22,6 +23,8 @@ import java.io.IOException;
  */
 public class Cthugha extends CompositeRenderItem implements Experiment {
 
+	private double frequency = 25.0;
+
 	public static final String OFFSCREEN_TEXTURE_NAME = "yabadabado";
 
 	@Override
@@ -31,8 +34,9 @@ public class Cthugha extends CompositeRenderItem implements Experiment {
 	@Override
 	public void init(RenderContext ctx) throws IOException {
 		ctx.setClearScreen(true);
-		double updatePeriod = 1.0 / 25.0; // in seconds
-		ctx.setDesiredUpdatePeriod(updatePeriod);
+
+		ctx.setDesiredUpdatePeriod(1.0 / frequency);
+		ctx.getKeyRegistry().registerKeyAction(KeyCombination.simple('F'), () -> updateFrequency(), "Modify update frequency");
 		// load the test card image
 		Texture texture = ctx.getResourceManager().GetTexture("testcard", "test-card.jpeg", ImageOptions.DEFAULT);
 		// load the translation map - it's a matrix (screen sized) of 2 * 16 bit floats
@@ -66,5 +70,19 @@ public class Cthugha extends CompositeRenderItem implements Experiment {
 		// straight render
 
 		super.init(ctx);
+	}
+
+	private void updateFrequency() {
+		frequency += 1;
+    if (frequency > 100.0) {
+      frequency = 2.0;
+    }
+    System.out.println("Update frequency: " + frequency);
+	}
+
+	@Override
+	public void doRender(RenderContext ctx) {
+		ctx.setDesiredUpdatePeriod(1.0 / frequency);
+		super.doRender(ctx);
 	}
 }
