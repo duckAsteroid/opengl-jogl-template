@@ -6,10 +6,65 @@ import org.joml.Vector3f;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.util.Objects;
-import java.util.function.BiConsumer;
-import java.util.function.Function;
 
+/**
+ * Represents the type of a {@link VertexElement} in a {@link VertexDataStructure}.
+ * @param <T> The Java type of data stored in the element
+ */
 public abstract class VertexElementType<T> {
+
+	protected abstract void serialize(T obj, ByteBuffer buffer);
+
+	public Object deserializeRaw(ByteBuffer buffer) {
+		int pos = buffer.position();
+		try {
+			return deserialize(buffer);
+		} finally {
+			buffer.position(pos + size);
+		}
+	}
+
+	protected abstract T deserialize(ByteBuffer buffer);
+
+	public Object nullReplacementValue() {
+		throw new IllegalArgumentException("Serialized value of "+javaType.getName()+" cannot be null");
+	}
+
+	/**
+	 * How many bytes required to store one value of this type
+	 * @return number of bytes
+	 */
+	public int size() {
+		return size;
+	}
+
+	/**
+	 * The expected Java type of data stored in the element
+	 * @return the class of the Java type
+	 */
+	public Class<T> getJavaType() {
+		return javaType;
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (o == null || getClass() != o.getClass()) return false;
+		VertexElementType<?> that = (VertexElementType<?>) o;
+		return size == that.size && Objects.equals(javaType, that.javaType);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(javaType, size);
+	}
+
+	@Override
+	public String toString() {
+		return "[%s, size=%d]".formatted(javaType.getName(), size);
+	}
+
+
+	/// TYPED SINGLETON INSTANCES --------------------------------------------------------------------
 
 	public static VertexElementType<Float> FLOAT = new VertexElementType<>(Float.class, 4) {
 
@@ -84,45 +139,4 @@ public abstract class VertexElementType<T> {
 		}
 	}
 
-	protected abstract void serialize(T obj, ByteBuffer buffer);
-
-	public Object deserializeRaw(ByteBuffer buffer) {
-		int pos = buffer.position();
-    try {
-      return deserialize(buffer);
-    } finally {
-      buffer.position(pos + size);
-    }
-	}
-
-	protected abstract T deserialize(ByteBuffer buffer);
-
-	public Object nullReplacementValue() {
-		throw new IllegalArgumentException("Serialized value of "+javaType.getName()+" cannot be null");
-	}
-
-	public int size() {
-		return size;
-	}
-
-	public Class<T> getJavaType() {
-		return javaType;
-	}
-
-	@Override
-	public boolean equals(Object o) {
-		if (o == null || getClass() != o.getClass()) return false;
-		VertexElementType<?> that = (VertexElementType<?>) o;
-		return size == that.size && Objects.equals(javaType, that.javaType);
-	}
-
-	@Override
-	public int hashCode() {
-		return Objects.hash(javaType, size);
-	}
-
-	@Override
-	public String toString() {
-		return "[%s, size=%d]".formatted(javaType.getName(), size);
-	}
 }

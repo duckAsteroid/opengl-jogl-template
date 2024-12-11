@@ -2,6 +2,7 @@ package com.asteroid.duck.opengl.util.resources.buffer;
 
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.resources.Stateful;
+import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
@@ -38,6 +39,7 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 	public void init(RenderContext ctx) {
 		if (!initialised) {
 			// set up the VAO and VBO
+
 			// create a buffer of the initial size
 			this.memBuffer = MemoryUtil.memAlloc(initialSize * vertexDataStructure.size());
 		}
@@ -47,6 +49,10 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 	@Override
 	public boolean isInitialised() {
 		return initialised;
+	}
+
+	public void setup(ShaderProgram shader) {
+		
 	}
 
 	@Override
@@ -101,9 +107,5 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 		initialised = null;
 		MemoryUtil.memFree(memBuffer);
 		memBuffer = null;
-	}
-
-	public ByteBuffer byteBuffer() {
-		return memBuffer.duplicate();
 	}
 }
