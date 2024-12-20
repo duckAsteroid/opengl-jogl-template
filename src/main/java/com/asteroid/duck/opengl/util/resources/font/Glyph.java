@@ -1,4 +1,4 @@
-package com.asteroid.duck.opengl.util.text;
+package com.asteroid.duck.opengl.util.resources.font;
 
 /**
  * A Font Glyph
