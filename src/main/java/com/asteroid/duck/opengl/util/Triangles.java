@@ -97,7 +97,7 @@ public class Triangles {
 
 
 		short[] indices = new short[]{
-						0, 1, 2}; // triangle 1
+						0, 2, 1}; // triangle 1
 		return new Triangles(vertices, indices);
 	}
 
@@ -162,7 +162,7 @@ public class Triangles {
 
 	public void setup(ShaderProgram shaderProgram) {
 		// setup the vertex attribute pointer to tell GL what shape our vertices are (2 floats)
-		shaderProgram.setVertexAttribPointer("position", 2, GL_FLOAT, true, 0, 0);
+		shaderProgram.setVertexAttribPointer("position", 2, GL_FLOAT, false, 0, 0);
 	}
 
 	public int triangleCount() {
