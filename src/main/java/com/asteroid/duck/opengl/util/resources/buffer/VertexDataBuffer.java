@@ -52,7 +52,15 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 	}
 
 	public void setup(ShaderProgram shader) {
-		
+		for(VertexElement element : vertexDataStructure) {
+			shader.setVertexAttribPointer(
+							element.name(),
+							element.type().dimensions(),
+							element.type().glType(),
+							false,
+							vertexDataStructure.size(),
+							vertexDataStructure.getOffset(element));
+		}
 	}
 
 	@Override

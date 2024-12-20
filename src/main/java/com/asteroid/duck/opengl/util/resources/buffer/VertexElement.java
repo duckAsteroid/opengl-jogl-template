@@ -5,10 +5,12 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Represents a single "element" of data assigned to each vertex in a {@link VertexDataBuffer}.
+ * @param type The type of data held in each element
+ * @param name The name of the variable used in the vertex shader
+ */
 public record VertexElement(VertexElementType<?> type, String name) {
-	public int size() {
-    return type.size();
-  }
 
 	public void checkInstanceOf(Object value) throws IllegalArgumentException {
 		if (value != null) {
@@ -34,4 +36,5 @@ public record VertexElement(VertexElementType<?> type, String name) {
 		}
 		return map;
 	}
+
 }
