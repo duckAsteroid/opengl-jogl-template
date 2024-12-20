@@ -44,6 +44,7 @@ public class OffscreenBlurTextureRenderer extends CompositeRenderItem {
 		// first stage blur to offscreen texture
 		this.stage1 = new BlurTextureRenderer(sourceTextureName, false);
 		stage1.setXAxis(true);
+		stage1.addVariable(ShaderVariable.floatVariable("multiplier", this::multiplier));
 
 		Texture offscreen = TextureFactory.createTexture(ctx.getWindow(), null, opts);
 		ctx.getResourceManager().PutTexture(TEXTURE_FBO, offscreen);
