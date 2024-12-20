@@ -286,8 +286,8 @@ public class ShaderProgram implements Resource {
 
 	public void setVertexAttribPointer(String name, int size, int type, boolean normalized, int stride, long pointer) {
 		int positionAttribute = glGetAttribLocation(id, name);
-		glEnableVertexAttribArray(positionAttribute);
 		glVertexAttribPointer(positionAttribute, size, type, normalized, stride, pointer);
+		glEnableVertexAttribArray(positionAttribute);
 	}
 
 	public void destroy() {
