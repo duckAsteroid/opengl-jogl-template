@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 
 import static com.asteroid.duck.opengl.util.resources.buffer.VertexElementType.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.lwjgl.opengl.GL11.GL_INT;
 
 class VertexDataStructureTest {
 
@@ -89,7 +90,7 @@ class VertexDataStructureTest {
 
 	@Test
 	public void shouldAcceptIfValueIsSubclassOfExpected() {
-		VertexElementType<Number> NUMBER = new VertexElementType<>(Number.class, 8) {
+		VertexElementType<Number> NUMBER = new VertexElementType<>(Number.class, 1, GL_INT) {
 			@Override
 			public void serialize(Number obj, ByteBuffer buffer) {
 				buffer.asDoubleBuffer().put(obj.doubleValue());

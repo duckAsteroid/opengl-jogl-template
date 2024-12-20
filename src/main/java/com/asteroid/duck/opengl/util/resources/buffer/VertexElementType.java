@@ -7,35 +7,54 @@ import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.util.Objects;
 
+import static org.lwjgl.opengl.GL11.GL_FLOAT;
+
 /**
  * Represents the type of a {@link VertexElement} in a {@link VertexDataStructure}.
  * @param <T> The Java type of data stored in the element
  */
 public abstract class VertexElementType<T> {
 
-	protected abstract void serialize(T obj, ByteBuffer buffer);
+	private final Class<T> javaType;
+	private final int dimensions;
+	private final int glType;
 
-	public Object deserializeRaw(ByteBuffer buffer) {
+	VertexElementType(Class<T> t, int s, int glType) {
+		this.javaType = t;
+		this.dimensions = s;
+		this.glType = glType;
+	}
+
+	public void serializeRaw(Object obj, ByteBuffer buffer) {
 		int pos = buffer.position();
 		try {
-			return deserialize(buffer);
-		} finally {
-			buffer.position(pos + size);
+			if (obj == null) {
+				obj = nullReplacementValue();
+			}
+			serialize(javaType.cast(obj), buffer);
+			buffer.position(pos + dimensions);
+		} catch (ClassCastException e) {
+			throw new IllegalArgumentException("Object is not of type " + javaType.getName(), e);
 		}
 	}
 
-	protected abstract T deserialize(ByteBuffer buffer);
-
-	public Object nullReplacementValue() {
-		throw new IllegalArgumentException("Serialized value of "+javaType.getName()+" cannot be null");
+	/**
+	 * The open GL type of the data in the element
+	 */
+	public int glType() {
+		return glType;
 	}
 
 	/**
-	 * How many bytes required to store one value of this type
-	 * @return number of bytes
+	 * How many dimensions to this element (e.g. 1 for FLOAT, 2 for Vec2 etc.)
 	 */
-	public int size() {
-		return size;
+	public int dimensions() {
+		return dimensions;
+	}
+
+	public int byteSize() {
+		// FIXME what to do for non FLOAT elements
+		return dimensions * 4;
 	}
 
 	/**
@@ -46,27 +65,44 @@ public abstract class VertexElementType<T> {
 		return javaType;
 	}
 
+	protected abstract void serialize(T obj, ByteBuffer buffer);
+
+	public Object deserializeRaw(ByteBuffer buffer) {
+		int pos = buffer.position();
+		try {
+			return deserialize(buffer);
+		} finally {
+			buffer.position(pos + dimensions);
+		}
+	}
+
+	protected abstract T deserialize(ByteBuffer buffer);
+
+	public Object nullReplacementValue() {
+		throw new IllegalArgumentException("Serialized value of "+javaType.getName()+" cannot be null");
+	}
+
 	@Override
 	public boolean equals(Object o) {
 		if (o == null || getClass() != o.getClass()) return false;
 		VertexElementType<?> that = (VertexElementType<?>) o;
-		return size == that.size && Objects.equals(javaType, that.javaType);
+		return dimensions == that.dimensions && Objects.equals(javaType, that.javaType);
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(javaType, size);
+		return Objects.hash(javaType, dimensions);
 	}
 
 	@Override
 	public String toString() {
-		return "[%s, size=%d]".formatted(javaType.getName(), size);
+		return "[%s, size=%d]".formatted(javaType.getName(), dimensions);
 	}
 
 
 	/// TYPED SINGLETON INSTANCES --------------------------------------------------------------------
 
-	public static VertexElementType<Float> FLOAT = new VertexElementType<>(Float.class, 4) {
+	public static VertexElementType<Float> FLOAT = new VertexElementType<>(Float.class, 1, GL_FLOAT) {
 
 		public Float deserialize(ByteBuffer byteBuffer) {
 			return byteBuffer.asFloatBuffer().get();
@@ -82,7 +118,7 @@ public abstract class VertexElementType<T> {
 		}
 	};
 
-	public static VertexElementType<Vector2f> VEC_2F = new VertexElementType<>(Vector2f.class,  8) {
+	public static VertexElementType<Vector2f> VEC_2F = new VertexElementType<>(Vector2f.class,  2, GL_FLOAT) {
 
 		public Vector2f deserialize(ByteBuffer byteBuffer) {
 			FloatBuffer fb = byteBuffer.asFloatBuffer();
@@ -100,7 +136,7 @@ public abstract class VertexElementType<T> {
 		}
 	};
 
-	public static VertexElementType<Vector3f> VEC_3F = new VertexElementType<>(Vector3f.class, 12) {
+	public static VertexElementType<Vector3f> VEC_3F = new VertexElementType<>(Vector3f.class, 3, GL_FLOAT) {
 
 		public Vector3f deserialize(ByteBuffer byteBuffer) {
 			FloatBuffer fb = byteBuffer.asFloatBuffer();
@@ -118,25 +154,5 @@ public abstract class VertexElementType<T> {
 		}
 	};
 
-	private final Class<T> javaType;
-	private final int size;
-
-	VertexElementType(Class<T> t, int s) {
-		this.javaType = t;
-		this.size = s;
-	}
-
-	public void serializeRaw(Object obj, ByteBuffer buffer) {
-		int pos = buffer.position();
-		try {
-			if (obj == null) {
-				obj = nullReplacementValue();
-			}
-			serialize(javaType.cast(obj), buffer);
-			buffer.position(pos + size);
-		} catch (ClassCastException e) {
-			throw new IllegalArgumentException("Object is not of type " + javaType.getName(), e);
-		}
-	}
 
 }

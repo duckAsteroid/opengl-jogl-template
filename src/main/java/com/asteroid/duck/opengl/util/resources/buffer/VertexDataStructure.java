@@ -10,6 +10,7 @@ import java.util.stream.Stream;
 public class VertexDataStructure implements Iterable<VertexElement> {
 	private final List<VertexElement> structure;
 	private final Map<String, VertexElement> namedElementCache;
+	private final Map<String, Long> namedOffsets;
 	private final int size;
 	/**
 	 * {@link #asMap(List)} accepts fewer values than there are elements
@@ -41,15 +42,20 @@ public class VertexDataStructure implements Iterable<VertexElement> {
 		if (elements.isEmpty()) {
 			throw new IllegalArgumentException("Vertex elements list must not be empty");
 		}
+		namedOffsets = new HashMap<>(elements.size());
 		namedElementCache = new HashMap<>(elements.size());
+		long offset = 0;
 		for(VertexElement element : elements) {
 			if (namedElementCache.containsKey(element.name())) {
 				throw new IllegalArgumentException("Duplicate vertex element name: " + element.name());
 			}
 			namedElementCache.put(element.name(), element);
+			// calculate and store offsets
+			namedOffsets.put(element.name(), offset);
+			offset += element.type().byteSize();
 		}
 		this.structure = elements;
-		this.size = elements.stream().mapToInt(VertexElement::size).sum();
+		this.size = elements.stream().map(VertexElement::type).mapToInt(VertexElementType::byteSize).sum();
 	}
 
 	public Map<VertexElement, Object> asMap(Object ... values) {
@@ -101,5 +107,13 @@ public class VertexDataStructure implements Iterable<VertexElement> {
 
 	public VertexElement get(String name) {
 		return namedElementCache.get(name);
+	}
+
+	public long getOffset(String name) {
+    return Optional.ofNullable(namedOffsets.get(name)).orElseThrow();
+  }
+
+	public long getOffset(VertexElement element) {
+		return getOffset(element.name());
 	}
 }
