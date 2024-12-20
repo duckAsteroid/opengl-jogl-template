@@ -1,4 +1,4 @@
-package com.asteroid.duck.opengl.util.text;
+package com.asteroid.duck.opengl.util.resources.font;
 
 import com.asteroid.duck.opengl.util.resources.texture.*;
 
@@ -6,9 +6,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -28,6 +26,7 @@ public class FontTextureFactory {
 
 	public FontTexture createFontTexture() {
 		FontMetrics metrics = getFontMetrics();
+		// create a map of each character as an image containing it
 		Map<Character, BufferedImage> glyphImages = new HashMap<>();
 		int maxHeight = 0;
 		int totalWidth = 0;
@@ -42,7 +41,7 @@ public class FontTextureFactory {
 				totalWidth += charImage.getWidth();
 			}
 		}
-		// now we know which characters to process
+		// now create a single image out of the characters and glyph data
 		Map<Character, Glyph> glyphData = new HashMap<>(glyphImages.size());
 		Dimension imageDims = new Dimension(totalWidth, maxHeight);
 		BufferedImage image = newImage(imageDims);

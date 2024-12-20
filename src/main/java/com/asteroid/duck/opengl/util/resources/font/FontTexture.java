@@ -1,4 +1,4 @@
-package com.asteroid.duck.opengl.util.text;
+package com.asteroid.duck.opengl.util.resources.font;
 import java.awt.*;
 import java.nio.FloatBuffer;
 import java.util.Collections;
