@@ -51,6 +51,8 @@ public abstract class GLWindow implements RenderContext {
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 		glfwWindowHint(GLFW_CONTEXT_DEBUG, GLFW_TRUE);
 		glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+		//glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
+
 
 		windowHandle = glfwCreateWindow(width, height, title, NULL, NULL);
 		// Make the OpenGL context current
@@ -85,6 +87,7 @@ public abstract class GLWindow implements RenderContext {
 		// kick off GL
 		GL.createCapabilities();
 		glEnable(GL_BLEND);
+		glDisable(GL_DEPTH_TEST);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	}
 
@@ -139,6 +142,10 @@ public abstract class GLWindow implements RenderContext {
 	}
 
 	public void frameBufferSizeCallback(long window, int width, int height) {
+		int[] wwidth={0};
+		int[] wheight={0};
+		glfwGetFramebufferSize(window, wwidth, wheight);
+
 		glViewport(0, 0, width, height);
 		this.window = readWindow();
 		updateTitle();
