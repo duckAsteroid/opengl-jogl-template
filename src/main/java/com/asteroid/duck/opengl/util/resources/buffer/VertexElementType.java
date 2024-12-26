@@ -2,6 +2,7 @@ package com.asteroid.duck.opengl.util.resources.buffer;
 
 import org.joml.Vector2f;
 import org.joml.Vector3f;
+import org.joml.Vector4f;
 
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
@@ -14,6 +15,7 @@ import static org.lwjgl.opengl.GL11.GL_FLOAT;
  * @param <T> The Java type of data stored in the element
  */
 public abstract class VertexElementType<T> {
+
 
 	private final Class<T> javaType;
 	private final int dimensions;
@@ -122,7 +124,9 @@ public abstract class VertexElementType<T> {
 
 		public Vector2f deserialize(ByteBuffer byteBuffer) {
 			FloatBuffer fb = byteBuffer.asFloatBuffer();
-			return new Vector2f(fb.get(), fb.get());
+			float x = fb.get();
+			float y = fb.get();
+			return new Vector2f(x, y);
 		}
 
 		public void serialize(Vector2f vec, ByteBuffer byteBuffer) {
@@ -140,17 +144,41 @@ public abstract class VertexElementType<T> {
 
 		public Vector3f deserialize(ByteBuffer byteBuffer) {
 			FloatBuffer fb = byteBuffer.asFloatBuffer();
-			return new Vector3f(fb.get(), fb.get(), fb.get());
+			float x = fb.get();
+			float y = fb.get();
+			float z = fb.get();
+			return new Vector3f(x,y,z);
 		}
 
 		public void serialize(Vector3f vec, ByteBuffer byteBuffer) {
 			FloatBuffer floatBuffer = byteBuffer.asFloatBuffer();
-			floatBuffer.put(vec.x).put(vec.y).put(vec.y);
+			floatBuffer.put(vec.x).put(vec.y).put(vec.z);
 		}
 
 		@Override
 		public Object nullReplacementValue() {
 			return new Vector3f(0f);
+		}
+	};
+
+	public static final VertexElementType<Vector4f> VEC_4F = new VertexElementType<>(Vector4f.class,4,GL_FLOAT) {
+		public Vector4f deserialize(ByteBuffer byteBuffer) {
+			FloatBuffer fb = byteBuffer.asFloatBuffer();
+			float x = fb.get();
+			float y = fb.get();
+			float z = fb.get();
+			float w = fb.get();
+			return new Vector4f(x,y,z,w);
+		}
+
+		public void serialize(Vector4f vec, ByteBuffer byteBuffer) {
+			FloatBuffer floatBuffer = byteBuffer.asFloatBuffer();
+			floatBuffer.put(vec.x).put(vec.y).put(vec.z).put(vec.w);
+		}
+
+		@Override
+		public Object nullReplacementValue() {
+			return new Vector4f(0f);
 		}
 	};
 

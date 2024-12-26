@@ -1,19 +1,21 @@
 package com.asteroid.duck.opengl.util.resources.font;
 import java.awt.*;
 import java.nio.FloatBuffer;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Map;
 
 import com.asteroid.duck.opengl.util.resources.Resource;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
+import org.joml.Matrix3x2f;
+import org.joml.Vector2f;
+import org.joml.Vector4f;
 
 
 /**
- * A wrapper around a glyph-image based font. When initialised it creates an in memory image (RGBA)
- * and renders every ASCII letter into that image. The image is then transferred to the GPU as a
- * texture. This texture can then be used in a shader to render letters on screen.
- *
- * The offsets for each letter (glyph) are also stored so we can use this to render strings in future
+ * A wrapper around a glyph-image based font. The glyphs (character images) are stored in a GPU
+ * texture, and the various locations + sizes of each letter are described in a map of {@link Glyph}
+ * objects.
  *
  * Based on (but different to)
  * https://github.com/SilverTiger/lwjgl3-tutorial/blob/master/src/silvertiger/tutorial/lwjgl/text/Font.java
@@ -22,14 +24,16 @@ import com.asteroid.duck.opengl.util.resources.texture.Texture;
 public class FontTexture implements Resource {
 
 	/**
-	 * Contains the glyphs for each char.
+	 * Contains the glyph data for each char.
 	 */
 	private final Map<Character, Glyph> glyphs;
 	/**
-	 * Contains the font texture.
+	 * Contains the complete font texture.
 	 */
 	private final Texture texture;
-
+	/**
+	 * Pixel height of the font (i.e. tallest glyph)
+	 */
 	private final int fontHeight;
 
 	public FontTexture(Map<Character, Glyph> glyphs, Texture texture) {
@@ -38,8 +42,28 @@ public class FontTexture implements Resource {
 		this.fontHeight = glyphs.values().stream().mapToInt(Glyph::height).max().orElseThrow();
 	}
 
+	public Glyph getGlyph(char c) {
+		return glyphs.get(c);
+	}
+
+	public Vector4f getGlyphTextureExtent(char c) {
+		return getGlyphTextureExtent(glyphs.get(c));
+	}
+
 	/**
-	 * Gets the width of the specified text.
+	 * Creates an extent vector (top left, bottom right coordinates) normalised to the
+	 * font texture coordinates
+	 * @param g the glyph to compute extent for
+	 * @return the normalised extent vector
+	 */
+	public Vector4f getGlyphTextureExtent(Glyph g) {
+		Vector2f dimensions = texture.dimensions();
+		Vector4f extent = g.extent();
+		return new Vector4f(extent.x / dimensions.x, extent.y / dimensions.y, extent.z / dimensions.x, extent.w / dimensions.y);
+	}
+
+	/**
+	 * Gets the width in pixels of the specified text.
 	 *
 	 * @param text The text
 	 *
@@ -139,20 +163,14 @@ public class FontTexture implements Resource {
 */
 	}
 
-	/**
-	 * Draw text at the specified position.
-	 *
-	 * @param renderer The renderer to use
-	 * @param text     Text to draw
-	 * @param x        X coordinate of the text position
-	 * @param y        Y coordinate of the text position
-	 */
-	public void drawText(CharSequence text, float x, float y) {
-		//drawText(renderer, text, x, y, Color.WHITE);
-	}
 
 	@Override
 	public void destroy() {
 		texture.destroy();
+	}
+
+
+	public Texture getTexture() {
+		return texture;
 	}
 }

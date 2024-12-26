@@ -116,4 +116,8 @@ public class VertexDataStructure implements Iterable<VertexElement> {
 	public long getOffset(VertexElement element) {
 		return getOffset(element.name());
 	}
+
+	public VertexElement getIndex(int i) {
+		return structure.get(i);
+	}
 }
