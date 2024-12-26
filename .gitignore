@@ -24,3 +24,9 @@ gradle-app.setting
 hs_err_pid*.log
 
 /.settings
+
+# temp file created when run to record last experiment
+/last.experiment
+
+# can run to generate font glyph images to check
+/font-images/

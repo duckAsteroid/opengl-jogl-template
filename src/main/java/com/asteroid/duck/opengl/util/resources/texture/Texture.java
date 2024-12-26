@@ -1,6 +1,8 @@
 package com.asteroid.duck.opengl.util.resources.texture;
 
 import com.asteroid.duck.opengl.util.resources.Resource;
+import org.joml.Matrix3x2f;
+import org.joml.Vector2f;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -111,6 +113,7 @@ public class Texture implements Resource {
 		}
 	}
 
+	// e.g. 2D or 1D
 	Dimensions dimensions;
 
 	private final int ID;
@@ -153,6 +156,20 @@ public class Texture implements Resource {
 		this.dataType = GL_UNSIGNED_BYTE;
 		ID = glGenTextures();
 		LOG.info("Created texture ID: {}", ID);
+	}
+
+	/**
+	 * The width and height dimensions as a 2d vector
+	 */
+	public Vector2f dimensions() {
+		return new Vector2f(Width, Height);
+	}
+
+	/**
+	 * A matrix that can be used to normalise pixel coordinates
+	 */
+	public Matrix3x2f normalisationMatrix() {
+		return new Matrix3x2f().scale(dimensions());
 	}
 
 	// generate an empty texture (e.g. for rendering)

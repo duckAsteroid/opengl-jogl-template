@@ -40,9 +40,10 @@ public class Polyline implements RenderedItem {
 	private TargetDataLine openLine;
 	private int bytesPerSample;
 
-	private float lineWidth = 2.0f;
+	private float lineWidth = 4.0f;
 	private Vector4f lineColour = new Vector4f(1.0f,0.0f,0.0f,1.0f);
 	private Vector4f backgroundColour = new Vector4f(0.4f, 0.4f, 0.4f, 1.0f);
+	private boolean clear = false;
 
 	private int fillPoints(FloatBuffer pointBuffer) {
 		// how many samples are available?
@@ -54,7 +55,6 @@ public class Polyline implements RenderedItem {
 		if (read > 0) {
 			audioBuffer.position(read);
 			audioBuffer.flip();
-
 			rollingFloatBuffer.write(audioBuffer.asShortBuffer());
 		}
 
@@ -76,9 +76,10 @@ public class Polyline implements RenderedItem {
 	@Override
 	public void init(RenderContext ctx) throws IOException {
 		addKeyHandlers(ctx.getKeyRegistry());
+		ctx.setDesiredUpdateFrequency(30.0);
 
 		mem = MemoryStack.stackPush();
-		int BUFFER_SIZE = 2048;
+		int BUFFER_SIZE = ctx.getWindow().width;
 		pointBuffer = mem.mallocFloat(BUFFER_SIZE * 2);
 		rollingFloatBuffer = new RollingFloatBuffer(BUFFER_SIZE);
 		rollingFloatBuffer.setMax(15000);
@@ -89,8 +90,8 @@ public class Polyline implements RenderedItem {
 			System.out.println(i +"="+mixerLines.get(i));
 		}
 		this.bytesPerSample = IDEAL.getChannels() * (IDEAL.getSampleSizeInBits() / 8);
-		double seconds = 200 / 1000.0d; // 200 ms
-		int numSamples =  (int)Math.round(seconds * IDEAL.getSampleRate());
+		//double seconds = 200 / 1000.0d; // 200 ms
+		int numSamples =  ctx.getWindow().width + 100;
 		this.audioBuffer = ByteBuffer.allocate(bytesPerSample * numSamples);
 		this.audioBuffer.order(IDEAL.isBigEndian() ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
 		try {
@@ -119,8 +120,6 @@ public class Polyline implements RenderedItem {
 
 		shaderProgram = ctx.getResourceManager().GetShader("polyline", "polyline/vertex.glsl","polyline/frag.glsl", null);
 
-
-
 	}
 
 	private void addKeyHandlers(KeyRegistry ctx) {
@@ -130,6 +129,7 @@ public class Polyline implements RenderedItem {
 		ctx.registerKeyAction(GLFW.GLFW_KEY_DOWN, GLFW.GLFW_MOD_SHIFT, () -> rollingFloatBuffer.decMax(1000), "Decrease max by 1000");
 		ctx.registerKeyAction(GLFW.GLFW_KEY_Q, this::increaseLineWidth, "Increase line width");
 		ctx.registerKeyAction(GLFW.GLFW_KEY_A, this::decreaseLineWidth, "Decrease line width");
+		ctx.registerKeyAction(GLFW.GLFW_KEY_C, this::toggleClear, "Toggle clear screen on render");
 	}
 
 
@@ -151,13 +151,21 @@ public class Polyline implements RenderedItem {
 	@Override
 	public void doRender(RenderContext ctx) {
 		int points = fillPoints(pointBuffer);
+
+		if (clear) {
+			glClearColor(backgroundColour.x, backgroundColour.y, backgroundColour.z, backgroundColour.w);
+			glClear(GL_COLOR_BUFFER_BIT);
+		}
+
 		Rectangle window = ctx.getWindow();
 		shaderProgram.use();
 		shaderProgram.setVector2f("resolution", window.width, window.height);
 		shaderProgram.setVector4f("lineColor", lineColour);
 
+
+
 		glBindVertexArray(vao);
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		//glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
 		glBufferData(GL_ARRAY_BUFFER, pointBuffer, GL_DYNAMIC_DRAW);
 		glLineWidth(lineWidth);
@@ -165,7 +173,7 @@ public class Polyline implements RenderedItem {
 		glDrawArrays(GL_LINE_STRIP, 0, points);
 
 		glBindVertexArray(0);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		//glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
 
 	@Override
@@ -191,5 +199,17 @@ public class Polyline implements RenderedItem {
 
 	public void setLineWidth(float v) {
 		this.lineWidth = v;
+	}
+
+	public void toggleClear() {
+		this.clear = !this.clear;
+	}
+
+	public boolean isClear() {
+		return clear;
+	}
+
+	public void setClear(boolean clear) {
+		this.clear = clear;
 	}
 }

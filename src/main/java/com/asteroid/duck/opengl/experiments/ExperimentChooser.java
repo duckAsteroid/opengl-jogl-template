@@ -5,8 +5,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.Optional;
 import java.util.ServiceLoader;
@@ -14,7 +20,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
- * Provides arg and sys property way to select an experiment.
+ * Provides various ways to select an experiment.
  * Experiments are located via ServiceLoader, so they must be registered in
  * <code>META-INF/services/com.asteriod.duck.opengl.experiments.Experiment</code>
  */
@@ -54,13 +60,63 @@ public class ExperimentChooser implements Supplier<Experiment> {
 			comboBox.setToolTipText(descriptions[index]);
 		});
 		message.add(description);
+		Optional<String> lastExperiment = readLastExperiment();
+		if (lastExperiment.isPresent()) {
+			// select the default
+			Optional<Experiment> first = experiments.stream().filter(exp -> lastExperiment.get().equalsIgnoreCase(exp.getClass().getName())).findFirst();
+			if (first.isPresent()) {
+				comboBox.setSelectedItem(first.get().getTitle());
+				JLabel countdown = new JLabel();
+				Timer timer = new Timer(1000, new ActionListener() {
+					int secondsRemaining = 6;
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						if (secondsRemaining <= 0) {
+							Frame rootFrame = JOptionPane.getRootFrame();
+							rootFrame.dispose();
+						} else {
+							secondsRemaining--;
+							countdown.setText(String.format("%d seconds remaining...", secondsRemaining));
+						}
+					}
+				});
+				message.add(countdown);
+				timer.setRepeats(true);
+				timer.setInitialDelay(0);
+				timer.start();
+			}
+		}
 		message.setSize(1024, 500);
 		int result = JOptionPane.showConfirmDialog(null, message, "Select an Experiment", JOptionPane.OK_CANCEL_OPTION);
-		if (result == JOptionPane.OK_OPTION) {
+		if (result == JOptionPane.OK_OPTION || (lastExperiment.isPresent() && result == JOptionPane.CLOSED_OPTION)) {
 			String selectedTitle = (String) comboBox.getSelectedItem();
-			return experiments.stream().filter(exp -> selectedTitle.equalsIgnoreCase(exp.getTitle())).findAny();
+			Optional<Experiment> selection = experiments.stream().filter(exp -> selectedTitle.equalsIgnoreCase(exp.getTitle())).findAny();
+			if (selection.isPresent()) {
+				writeLastExperiment(selection.get());
+				return selection;
+			}
 		}
 		return Optional.empty();
+	}
+
+	private static Optional<String> readLastExperiment() {
+		try {
+			return Optional.of(Files.readString(Path.of("last.experiment"), StandardCharsets.UTF_8));
+		} catch (IOException ex) {
+			System.err.println(ex.getMessage());
+			ex.printStackTrace();
+		}
+		return Optional.empty();
+	}
+
+	private static void writeLastExperiment(Experiment e) {
+		try {
+			Files.writeString(Path.of("last.experiment"), e.getClass().getName(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+		} catch (IOException ex) {
+			System.err.println(ex.getMessage());
+			ex.printStackTrace();
+		}
 	}
 
 	private Optional<Experiment> fromArgs(List<Experiment> experiments) {

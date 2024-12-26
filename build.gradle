@@ -53,7 +53,7 @@ tasks.register("debugRun", JavaExec) {
   mainClass = application.mainClass
   workingDir = project.rootDir
   jvmArgs = ["-javaagent:src/test/resources/lwjglx-debug-1.0.0.jar=tn;o=open-gl.log"]
-  args = ["BlurPictureExample"] // Cthugha, TranslateExample, Triangle, PalettePicture, BlurPictureExample, BlurTest
+  args = ["TextExperiment"] // Cthugha, TranslateExample, Triangle, PalettePicture, BlurPictureExample, BlurTest
 }
 
 tasks.register("deleteCrashLogs", Delete) {

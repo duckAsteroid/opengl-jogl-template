@@ -2,9 +2,14 @@ package com.asteroid.duck.opengl.util.resources.font;
 
 import com.asteroid.duck.opengl.util.resources.texture.*;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.IntStream;
@@ -14,10 +19,15 @@ public class FontTextureFactory {
 	private final java.awt.Font font;
 	private final boolean antialias;
 	private FontMetrics fontMetrics;
+	private Path imageDumpPath;
 
 	public FontTextureFactory(java.awt.Font font, boolean antialias) {
 		this.font = font;
 		this.antialias = antialias;
+	}
+
+	void setImageDumpPath(Path p) {
+		this.imageDumpPath = p;
 	}
 
 	public Stream<Character> completeCharacterSet() {
@@ -49,10 +59,23 @@ public class FontTextureFactory {
 		int x = 0;
 		for(Character c : glyphImages.keySet()) {
       BufferedImage charImage = glyphImages.get(c);
-			glyphData.put(c, new Glyph(charImage.getWidth(), charImage.getHeight(), x, image.getHeight() - charImage.getHeight(), 0f));
+			Glyph glyph = new Glyph(charImage.getWidth(), charImage.getHeight(), x, image.getHeight() - charImage.getHeight(), 0f);
+			glyphData.put(c, glyph);
+			System.out.println(c +"("+((int)c)+"):" +glyph);
       g.drawImage(charImage, x, 0, null);
       x += charImage.getWidth();
     }
+		// dump the image for debug
+		if(imageDumpPath != null) {
+			try {
+				Files.createDirectories(imageDumpPath);
+        ImageIO.write(image, "png", Files.newOutputStream(imageDumpPath.resolve("font.png")));
+      } catch (IOException e) {
+        System.err.println("Failed to dump image: " + e.getMessage());
+      }
+			return null;
+		}
+
 		ByteBuffer rawBuffer = DataFormat.RGBA.pixelData(image);
 		ImageData data = new ImageData(rawBuffer, imageDims);
 		return new FontTexture(glyphData, TextureFactory.createTexture(ImageOptions.DEFAULT, data));
