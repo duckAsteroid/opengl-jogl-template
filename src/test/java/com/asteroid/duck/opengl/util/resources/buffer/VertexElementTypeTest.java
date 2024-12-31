@@ -28,8 +28,20 @@ class VertexElementTypeTest {
 	@MethodSource("elementTypeAndValueProvider")
 	public <T> void testRoundtrip(VertexElementType<T> subject, T testValue) {
 		ByteBuffer buffer = ByteBuffer.allocate(subject.byteSize());
+		assertEquals(subject.byteSize(), buffer.remaining());
+		assertEquals(0, buffer.position());
+
 		subject.serialize(testValue, buffer);
+		assertEquals(0, buffer.remaining());
+		assertEquals(subject.byteSize(), buffer.position());
+
+		buffer.rewind();
+		assertEquals(subject.byteSize(), buffer.remaining());
+		assertEquals(0, buffer.position());
+
 		T result = subject.deserialize(buffer);
 		assertEquals(testValue, result);
+		assertEquals(0, buffer.remaining());
+		assertEquals(subject.byteSize(), buffer.position());
 	}
 }

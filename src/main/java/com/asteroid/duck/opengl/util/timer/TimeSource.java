@@ -12,4 +12,8 @@ public class TimeSource {
 	public static Callable<Double> systemCurrentTimeMillisInstance() {
 		return ()->System.currentTimeMillis() / 1000.0;
 	}
+
+	public static Callable<Double> systemNanoTimeInstance() {
+		return () -> System.nanoTime() / 1000000.0;
+	}
 }

@@ -103,20 +103,7 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 	}
 
 	public Map<VertexElement, ?> set(int index, Object ... data) {
-		return set(index, createMap(data));
-	}
-
-	public Map<VertexElement, ?> createMap(Object ... data) {
-		Objects.requireNonNull(data);
-		if (data.length == 0) {
-			return Collections.emptyMap();
-		}
-		Map<VertexElement, Object> result = new HashMap<>(data.length);
-		for (int i = 0; i < data.length; i++) {
-			VertexElement e = vertexDataStructure.getIndex(i);
-			result.put(e, data[i]);
-		}
-		return result;
+		return set(index, vertexDataStructure.asMap(data));
 	}
 
 	@Override

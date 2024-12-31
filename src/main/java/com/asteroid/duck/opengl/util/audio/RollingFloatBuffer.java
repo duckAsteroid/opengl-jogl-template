@@ -25,13 +25,22 @@ public class RollingFloatBuffer {
 		this.max = (short) max;
 	}
 
+	/**
+	 * Write to this buffer by reading from the audio buffer.
+	 * Each pair of short values is L/R channel from one sample
+	 * The audio values are averaged into a single value for storage.
+	 * They are also normalised based on an arbitrary MAX.
+	 * @param audio
+	 */
 	public void write(ShortBuffer audio) {
 		// take 2 samples at a time from the buffer (L + R)
 		while(audio.remaining() > 2) {
+			// each get is actually a short, cast to float
+			// get L and R channels
 			float l = audio.get();
 			float r = audio.get();
-			// get L and R channels and average them
-			// normalise according to current MAX
+			// and average them
+			// while normalising according to current MAX
 			float sample = ( l + r) / (2.0f * max);
 			if (writePos >= buffer.length) {
 				// loop around end of buffer if required
@@ -41,6 +50,13 @@ public class RollingFloatBuffer {
 		}
 	}
 
+	/**
+	 * Read from this buffer into the float (display) buffer.
+	 * The values are read out in pairs:
+	 * an X value - normalised 0-1, based on how far through the read
+	 * a Y value - normalised audio amplitude
+	 * @param floatBuffer
+	 */
 	public void read(FloatBuffer floatBuffer) {
 		// what is the most we can read?
 		int readExtent = Math.min(floatBuffer.limit(), buffer.length);

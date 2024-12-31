@@ -12,6 +12,8 @@ import com.asteroid.duck.opengl.util.resources.font.FontTextureFactory;
 import com.asteroid.duck.opengl.util.resources.font.Glyph;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
+import org.joml.Matrix2f;
+import org.joml.Matrix3f;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
 
@@ -25,7 +27,7 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 	private FontTexture fontTexture;
 	private VertexDataBuffer fontDataBuffer;
 	private ShaderProgram shader;
-	private final Vector4f color = new Vector4f(0,1,0,1);
+	private final Vector4f color = new Vector4f(0,1,0,1); // green!
 
 	@Override
 	public String getDescription() {
@@ -81,25 +83,32 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 	public void doRender(RenderContext ctx) {
 		createStringData(ctx);
 		shader.use();
+		shader.setVector4f("spriteColor", new Vector4f(color));
 		fontDataBuffer.render(0, 6);
 		shader.unuse();
 	}
 
 	private void createStringData(RenderContext ctx) {
-		Glyph glyph = fontTexture.getGlyph(source.charAt(index));
-		Vector4f e = fontTexture.getGlyphTextureExtent(glyph);
+		char c = source.charAt(index);
+		Glyph glyph = fontTexture.getGlyph(c);
+		Matrix2f transform = fontTexture.getTexture().normalisationMatrix();
+		Vector2f tex_pos = transform.transform(glyph.position());
+		Vector2f tex_size = transform.transform(glyph.dimension());
+
 		Vector2f dims = ctx.getWindowDimensions();
-		Vector2f g = glyph.dimension().div(dims);
+		Vector2f screen_pos = new Vector2f(0.0f, 0.0f);
+		Vector2f screen_size = new Vector2f(0.5f,0.5f);
 
 		fontDataBuffer.clear();
-		// screen position of coord
-		fontDataBuffer.set(0, new Vector2f(0,0), new Vector2f(0,0), color);
-		fontDataBuffer.set(1, new Vector2f(0,g.y), new Vector2f(0,e.y), color);
-		fontDataBuffer.set(2, new Vector2f(g.x,0), new Vector2f(e.x,0), color);
 
-		fontDataBuffer.set(3, new Vector2f(g.x,0), new Vector2f(e.x,0), color);
-		fontDataBuffer.set(4, new Vector2f(0,g.y), new Vector2f(0,e.y), color);
-		fontDataBuffer.set(5, new Vector2f(g.x,g.y), new Vector2f(e.x,e.y), color);
+		// two triangles
+		fontDataBuffer.set(0, screen_pos, tex_pos, color);
+		fontDataBuffer.set(1, new Vector2f(screen_pos.x,screen_size.y), new Vector2f(tex_pos.x,tex_size.y), color);
+		fontDataBuffer.set(2, new Vector2f(screen_size.x,screen_pos.y), new Vector2f(tex_size.x,tex_pos.y), color);
+
+		fontDataBuffer.set(3, new Vector2f(screen_pos.x,screen_size.y), new Vector2f(tex_pos.x,tex_size.y), color);
+		fontDataBuffer.set(4, new Vector2f(screen_size.x,screen_pos.y), new Vector2f(tex_size.x,tex_pos.y), color);
+		fontDataBuffer.set(5, screen_size, tex_size, color);
 	}
 
 	@Override

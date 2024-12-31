@@ -1,6 +1,5 @@
 package com.asteroid.duck.opengl.util.resources.font;
 
-import org.joml.Matrix3x2f;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
 

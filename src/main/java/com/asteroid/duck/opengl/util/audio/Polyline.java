@@ -37,7 +37,7 @@ public class Polyline implements RenderedItem {
 	private FloatBuffer pointBuffer;
 	private ByteBuffer audioBuffer;
 	private RollingFloatBuffer rollingFloatBuffer;
-	private TargetDataLine openLine;
+	private AudioDataSource openLine;
 	private int bytesPerSample;
 
 	private float lineWidth = 4.0f;
@@ -85,19 +85,14 @@ public class Polyline implements RenderedItem {
 		rollingFloatBuffer.setMax(15000);
 
 		LineAcquirer laq = new LineAcquirer();
-		List<LineAcquirer.MixerLine> mixerLines = laq.allLinesMatching(TargetDataLine.class, IDEAL);
-		for (int i = 0; i < mixerLines.size(); i++) {
-			System.out.println(i +"="+mixerLines.get(i));
-		}
 		this.bytesPerSample = IDEAL.getChannels() * (IDEAL.getSampleSizeInBits() / 8);
 		//double seconds = 200 / 1000.0d; // 200 ms
 		int numSamples =  ctx.getWindow().width + 100;
 		this.audioBuffer = ByteBuffer.allocate(bytesPerSample * numSamples);
 		this.audioBuffer.order(IDEAL.isBigEndian() ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
 		try {
-			LineAcquirer.MixerLine mixerLine = mixerLines.get(1);
-			System.out.println(mixerLine);
-			this.openLine = mixerLine.getTargetDataLine();
+			this.openLine = laq.acquire(ctx, IDEAL);
+			System.out.println(openLine);
 			this.openLine.open(IDEAL, audioBuffer.limit());
 			this.openLine.start();
 		} catch (LineUnavailableException e) {
@@ -108,17 +103,15 @@ public class Polyline implements RenderedItem {
 		glEnable(GL_LINE_SMOOTH);
 		glHint(GL_LINE_SMOOTH_HINT, GL_FASTEST);
 
+		shaderProgram = ctx.getResourceManager().GetShader("polyline", "polyline/vertex.glsl","polyline/frag.glsl", null);
+
 		vao = glGenVertexArrays();
 		glBindVertexArray(vao);
 
 		vbo = glGenBuffers();
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 2, GL_FLOAT, false, 0, 0);
-
-
-		shaderProgram = ctx.getResourceManager().GetShader("polyline", "polyline/vertex.glsl","polyline/frag.glsl", null);
+		shaderProgram.setVertexAttribPointer("vertex", 2, GL_FLOAT, false, 0, 0);
 
 	}
 
