@@ -84,14 +84,15 @@ public class ShaderProgram implements Resource {
 				final String included = line.substring(10).trim();
 				Path pathIncluded = includes.find(included);
 				// does it exist?
-				if (Files.exists(pathIncluded)) {
-					// recursively load and include...
-					result.append("// BEGIN included from ").append(included).append('\n');
-					result.append(loadFrom(pathIncluded, includes)).append('\n');
-					result.append("// END   included from ").append(included).append('\n');
-				}
-				else {
-					throw new IOException("Included file not found: " + included);
+				if (pathIncluded != null) {
+					if (Files.exists(pathIncluded)) {
+						// recursively load and include...
+						result.append("// BEGIN included from ").append(included).append('\n');
+						result.append(loadFrom(pathIncluded, includes)).append('\n');
+						result.append("// END   included from ").append(included).append('\n');
+					} else {
+						throw new IOException("Included file not found: " + included);
+					}
 				}
 			} else {
 				result.append(line).append('\n');

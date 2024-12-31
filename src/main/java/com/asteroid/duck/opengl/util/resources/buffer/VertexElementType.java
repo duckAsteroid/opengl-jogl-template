@@ -28,13 +28,11 @@ public abstract class VertexElementType<T> {
 	}
 
 	public void serializeRaw(Object obj, ByteBuffer buffer) {
-		int pos = buffer.position();
 		try {
 			if (obj == null) {
 				obj = nullReplacementValue();
 			}
 			serialize(javaType.cast(obj), buffer);
-			buffer.position(pos + dimensions);
 		} catch (ClassCastException e) {
 			throw new IllegalArgumentException("Object is not of type " + javaType.getName(), e);
 		}
@@ -70,12 +68,7 @@ public abstract class VertexElementType<T> {
 	protected abstract void serialize(T obj, ByteBuffer buffer);
 
 	public Object deserializeRaw(ByteBuffer buffer) {
-		int pos = buffer.position();
-		try {
 			return deserialize(buffer);
-		} finally {
-			buffer.position(pos + dimensions);
-		}
 	}
 
 	protected abstract T deserialize(ByteBuffer buffer);
@@ -107,11 +100,11 @@ public abstract class VertexElementType<T> {
 	public static VertexElementType<Float> FLOAT = new VertexElementType<>(Float.class, 1, GL_FLOAT) {
 
 		public Float deserialize(ByteBuffer byteBuffer) {
-			return byteBuffer.asFloatBuffer().get();
+			return byteBuffer.getFloat();
 		}
 
 		public void serialize(Float f, ByteBuffer target) {
-			target.asFloatBuffer().put(f);
+			target.putFloat(f);
 		}
 
 		@Override
@@ -123,15 +116,13 @@ public abstract class VertexElementType<T> {
 	public static VertexElementType<Vector2f> VEC_2F = new VertexElementType<>(Vector2f.class,  2, GL_FLOAT) {
 
 		public Vector2f deserialize(ByteBuffer byteBuffer) {
-			FloatBuffer fb = byteBuffer.asFloatBuffer();
-			float x = fb.get();
-			float y = fb.get();
+			float x = byteBuffer.getFloat();
+			float y = byteBuffer.getFloat();
 			return new Vector2f(x, y);
 		}
 
 		public void serialize(Vector2f vec, ByteBuffer byteBuffer) {
-			FloatBuffer floatBuffer = byteBuffer.asFloatBuffer();
-			floatBuffer.put(vec.x).put(vec.y);
+			byteBuffer.putFloat(vec.x).putFloat(vec.y);
 		}
 
 		@Override
@@ -143,16 +134,14 @@ public abstract class VertexElementType<T> {
 	public static VertexElementType<Vector3f> VEC_3F = new VertexElementType<>(Vector3f.class, 3, GL_FLOAT) {
 
 		public Vector3f deserialize(ByteBuffer byteBuffer) {
-			FloatBuffer fb = byteBuffer.asFloatBuffer();
-			float x = fb.get();
-			float y = fb.get();
-			float z = fb.get();
+			float x = byteBuffer.getFloat();
+			float y = byteBuffer.getFloat();
+			float z = byteBuffer.getFloat();
 			return new Vector3f(x,y,z);
 		}
 
 		public void serialize(Vector3f vec, ByteBuffer byteBuffer) {
-			FloatBuffer floatBuffer = byteBuffer.asFloatBuffer();
-			floatBuffer.put(vec.x).put(vec.y).put(vec.z);
+			byteBuffer.putFloat(vec.x).putFloat(vec.y).putFloat(vec.z);
 		}
 
 		@Override
@@ -163,17 +152,15 @@ public abstract class VertexElementType<T> {
 
 	public static final VertexElementType<Vector4f> VEC_4F = new VertexElementType<>(Vector4f.class,4,GL_FLOAT) {
 		public Vector4f deserialize(ByteBuffer byteBuffer) {
-			FloatBuffer fb = byteBuffer.asFloatBuffer();
-			float x = fb.get();
-			float y = fb.get();
-			float z = fb.get();
-			float w = fb.get();
+			float x = byteBuffer.getFloat();
+			float y = byteBuffer.getFloat();
+			float z = byteBuffer.getFloat();
+			float w = byteBuffer.getFloat();
 			return new Vector4f(x,y,z,w);
 		}
 
 		public void serialize(Vector4f vec, ByteBuffer byteBuffer) {
-			FloatBuffer floatBuffer = byteBuffer.asFloatBuffer();
-			floatBuffer.put(vec.x).put(vec.y).put(vec.z).put(vec.w);
+			byteBuffer.putFloat(vec.x).putFloat(vec.y).putFloat(vec.z).putFloat(vec.w);
 		}
 
 		@Override

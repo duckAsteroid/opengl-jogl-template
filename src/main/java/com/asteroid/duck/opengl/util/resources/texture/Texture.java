@@ -1,6 +1,8 @@
 package com.asteroid.duck.opengl.util.resources.texture;
 
 import com.asteroid.duck.opengl.util.resources.Resource;
+import org.joml.Matrix2f;
+import org.joml.Matrix3f;
 import org.joml.Matrix3x2f;
 import org.joml.Vector2f;
 import org.slf4j.Logger;
@@ -166,10 +168,13 @@ public class Texture implements Resource {
 	}
 
 	/**
-	 * A matrix that can be used to normalise pixel coordinates
+	 * A matrix that can be used to normalise texture pixel coordinates
 	 */
-	public Matrix3x2f normalisationMatrix() {
-		return new Matrix3x2f().scale(dimensions());
+	public Matrix2f normalisationMatrix() {
+		return new Matrix2f(
+						1f / Width, 0f,
+						0f, 1f / Height
+		);
 	}
 
 	// generate an empty texture (e.g. for rendering)
@@ -260,5 +265,12 @@ public class Texture implements Resource {
 
 	public int getWidth() {
 		return Width;
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("Texture ID: ").append(ID).append("; w=").append(Width).append("; h=").append(Height);
+		return sb.toString();
 	}
 }

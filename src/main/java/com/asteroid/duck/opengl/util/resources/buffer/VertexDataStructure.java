@@ -59,6 +59,7 @@ public class VertexDataStructure implements Iterable<VertexElement> {
 	}
 
 	public Map<VertexElement, Object> asMap(Object ... values) {
+		Objects.requireNonNull(values, "values");
 		return asMap(Arrays.asList(values));
 	}
 

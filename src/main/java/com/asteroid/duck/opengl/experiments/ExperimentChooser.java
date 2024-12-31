@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.ServiceLoader;
@@ -37,75 +38,83 @@ public class ExperimentChooser implements Supplier<Experiment> {
 
 	@Override
 	public Experiment get() {
-		return fromArgs(experiments)
+		final Experiment experiment = fromArgs(experiments)
 						.or(() -> from(experiments, sysProp("experiment")))
 						.or(() -> from(experiments, env("experiment")))
 						.or(() -> fromSwingDialog(experiments))
 						.or(() -> fromConsole(experiments))
+						.or(() -> fromLastExperiment(experiments))
+						.or(() -> experiments.stream().min(Comparator.comparingInt(Experiment::getPriority)))
 						.orElse(experiments.get(0));
+		return experiment;
 	}
 
 	private Optional<Experiment> fromSwingDialog(List<Experiment> experiments) {
-		String[] experimentTitles = experiments.stream().map(Experiment::getTitle).toArray(String[]::new);
-		String[] descriptions = experiments.stream().map(Experiment::getDescription).toArray(String[]::new);
-		JPanel message = new JPanel();
-		message.setLayout(new BoxLayout(message, BoxLayout.Y_AXIS));
-		JComboBox<String> comboBox = new JComboBox<>(experimentTitles);
-		message.add(comboBox);
-		JLabel description = new JLabel("Please select above");
-		comboBox.addActionListener(e -> {
-			int index = comboBox.getSelectedIndex();
-			description.setText(descriptions[index]);
-			description.setToolTipText(descriptions[index]);
-			comboBox.setToolTipText(descriptions[index]);
-		});
-		message.add(description);
-		Optional<String> lastExperiment = readLastExperiment();
-		if (lastExperiment.isPresent()) {
-			// select the default
-			Optional<Experiment> first = experiments.stream().filter(exp -> lastExperiment.get().equalsIgnoreCase(exp.getClass().getName())).findFirst();
-			if (first.isPresent()) {
-				comboBox.setSelectedItem(first.get().getTitle());
-				JLabel countdown = new JLabel();
-				Timer timer = new Timer(1000, new ActionListener() {
-					int secondsRemaining = 6;
+		if (isInteractive()) {
+			String[] experimentTitles = experiments.stream().map(Experiment::getTitle).toArray(String[]::new);
+			String[] descriptions = experiments.stream().map(Experiment::getDescription).toArray(String[]::new);
+			JPanel message = new JPanel();
+			message.setLayout(new BoxLayout(message, BoxLayout.Y_AXIS));
+			JComboBox<String> comboBox = new JComboBox<>(experimentTitles);
+			message.add(comboBox);
+			JLabel description = new JLabel("Please select above");
+			comboBox.addActionListener(e -> {
+				int index = comboBox.getSelectedIndex();
+				description.setText(descriptions[index]);
+				description.setToolTipText(descriptions[index]);
+				comboBox.setToolTipText(descriptions[index]);
+			});
+			message.add(description);
+			Optional<String> lastExperiment = readLastExperiment();
+			if (lastExperiment.isPresent()) {
+				// select the default
+				Optional<Experiment> first = experiments.stream().filter(exp -> lastExperiment.get().equalsIgnoreCase(exp.getClass().getName())).findFirst();
+				if (first.isPresent()) {
+					comboBox.setSelectedItem(first.get().getTitle());
+					JLabel countdown = new JLabel();
+					Timer timer = new Timer(1000, new ActionListener() {
+						int secondsRemaining = 6;
 
-					@Override
-					public void actionPerformed(ActionEvent e) {
-						if (secondsRemaining <= 0) {
-							Frame rootFrame = JOptionPane.getRootFrame();
-							rootFrame.dispose();
-						} else {
-							secondsRemaining--;
-							countdown.setText(String.format("%d seconds remaining...", secondsRemaining));
+						@Override
+						public void actionPerformed(ActionEvent e) {
+							if (secondsRemaining <= 0) {
+								Frame rootFrame = JOptionPane.getRootFrame();
+								rootFrame.dispose();
+							} else {
+								secondsRemaining--;
+								countdown.setText(String.format("%d seconds remaining...", secondsRemaining));
+							}
 						}
-					}
-				});
-				message.add(countdown);
-				timer.setRepeats(true);
-				timer.setInitialDelay(0);
-				timer.start();
+					});
+					message.add(countdown);
+					timer.setRepeats(true);
+					timer.setInitialDelay(0);
+					timer.start();
+				}
 			}
-		}
-		message.setSize(1024, 500);
-		int result = JOptionPane.showConfirmDialog(null, message, "Select an Experiment", JOptionPane.OK_CANCEL_OPTION);
-		if (result == JOptionPane.OK_OPTION || (lastExperiment.isPresent() && result == JOptionPane.CLOSED_OPTION)) {
-			String selectedTitle = (String) comboBox.getSelectedItem();
-			Optional<Experiment> selection = experiments.stream().filter(exp -> selectedTitle.equalsIgnoreCase(exp.getTitle())).findAny();
-			if (selection.isPresent()) {
-				writeLastExperiment(selection.get());
-				return selection;
+			message.setSize(1024, 500);
+			int result = JOptionPane.showConfirmDialog(null, message, "Select an Experiment", JOptionPane.OK_CANCEL_OPTION);
+			if (result == JOptionPane.OK_OPTION || (lastExperiment.isPresent() && result == JOptionPane.CLOSED_OPTION)) {
+				String selectedTitle = (String) comboBox.getSelectedItem();
+				Optional<Experiment> selection = experiments.stream().filter(exp -> selectedTitle.equalsIgnoreCase(exp.getTitle())).findAny();
+				if (selection.isPresent()) {
+					writeLastExperiment(selection.get());
+					return selection;
+				}
 			}
 		}
 		return Optional.empty();
+	}
+
+	private static Optional<Experiment> fromLastExperiment(List<Experiment> experiments) {
+		return readLastExperiment().flatMap(name -> experiments.stream().filter(exp -> exp.getClass().getName().equalsIgnoreCase(name)).findFirst());
 	}
 
 	private static Optional<String> readLastExperiment() {
 		try {
 			return Optional.of(Files.readString(Path.of("last.experiment"), StandardCharsets.UTF_8));
 		} catch (IOException ex) {
-			System.err.println(ex.getMessage());
-			ex.printStackTrace();
+			LOG.warn("Unable to read last run experiment", ex);
 		}
 		return Optional.empty();
 	}
@@ -114,8 +123,7 @@ public class ExperimentChooser implements Supplier<Experiment> {
 		try {
 			Files.writeString(Path.of("last.experiment"), e.getClass().getName(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 		} catch (IOException ex) {
-			System.err.println(ex.getMessage());
-			ex.printStackTrace();
+			LOG.error("Unable to write last run experiment", ex);
 		}
 	}
 
@@ -154,25 +162,33 @@ public class ExperimentChooser implements Supplier<Experiment> {
 	}
 
 	public static Optional<Experiment> fromConsole(List<Experiment> experiments) {
-		if (System.console() == null) {
-			System.out.println("No console, cannot choose experiment");
-			return Optional.empty();
+		if (isInteractive()) {
+			if (System.console() == null) {
+				System.out.println("No console, cannot choose experiment");
+				return Optional.empty();
+			}
+			int number = -1;
+			do {
+				System.out.println("Please choose an experiment:");
+				for (int i = 0; i < experiments.size(); i++) {
+					Experiment experiment = experiments.get(i);
+					System.out.println("[" + i + "] " + experiment.getTitle() + ": " + experiment.getDescription());
+				}
+				String line = System.console().readLine();
+				try {
+					number = Integer.parseInt(line);
+				} catch (NumberFormatException e) {
+					System.err.println("Invalid number, try again...");
+				}
+			} while (number < 0 || number > experiments.size());
+			Experiment selected = experiments.get(number);
+			writeLastExperiment(selected);
+			return Optional.of(selected);
 		}
-		int number = -1;
-		do {
-			System.out.println("Please choose an experiment:");
-			for (int i = 0; i < experiments.size(); i++) {
-				Experiment experiment = experiments.get(i);
-				System.out.println("[" + i + "] " + experiment.getTitle() + ": " + experiment.getDescription());
-			}
-			String line = System.console().readLine();
-			try {
-				number = Integer.parseInt(line);
-			}
-			catch(NumberFormatException e) {
-				System.err.println("Invalid number, try again...");
-			}
-		} while (number < 1 || number > experiments.size());
-		return Optional.of(experiments.get(number));
+		return Optional.empty();
+	}
+
+	private static boolean isInteractive() {
+		return Main.args().anyMatch((arg) -> arg.equals("--interactive=false"));
 	}
 }

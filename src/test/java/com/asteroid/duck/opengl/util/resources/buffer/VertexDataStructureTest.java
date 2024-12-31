@@ -45,7 +45,7 @@ class VertexDataStructureTest {
 	}
 
 	@Test
-	public void shouldReturnMapWithNullValuesWhenValuesListIsSmallerThanStructureSize() {
+	public void shouldReturnMapWithNullReplacementValuesWhenValuesListIsSmallerThanStructureSize() {
 		VertexElement element1 = new VertexElement(FLOAT, "element1");
 		VertexElement element2 = new VertexElement(VEC_2F, "element2");
 		VertexElement element3 = new VertexElement(VEC_3F, "element3");
@@ -56,12 +56,12 @@ class VertexDataStructureTest {
 		assertNotNull(result);
 		assertEquals(3, result.size());
 		assertEquals(1f, result.get(element1));
-		assertNull(result.get(element2));
-		assertNull(result.get(element3));
+		assertEquals(element2.type().nullReplacementValue(), result.get(element2));
+		assertEquals(element3.type().nullReplacementValue(), result.get(element3));
 	}
 
 	@Test
-	public void shouldHandleEmptyValuesListAndReturnMapWithAllElementsMappedToNull() {
+	public void shouldHandleEmptyValuesListAndReturnMapWithAllElementsMappedToNullReplacements() {
 		VertexElement element1 = new VertexElement(FLOAT, "element1");
 		VertexElement element2 = new VertexElement(VEC_2F, "element2");
 		VertexElement element3 = new VertexElement(VEC_3F, "element3");
@@ -71,9 +71,9 @@ class VertexDataStructureTest {
 
 		assertNotNull(result);
 		assertEquals(3, result.size());
-		assertNull(result.get(element1));
-		assertNull(result.get(element2));
-		assertNull(result.get(element3));
+		assertEquals(element1.type().nullReplacementValue(), result.get(element1));
+		assertEquals(element2.type().nullReplacementValue(), result.get(element2));
+		assertEquals(element3.type().nullReplacementValue(), result.get(element3));
 	}
 
 	@Test

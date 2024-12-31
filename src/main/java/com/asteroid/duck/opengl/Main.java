@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.stream.Stream;
 
 import static org.lwjgl.glfw.GLFW.*;
 
@@ -25,6 +26,10 @@ public class Main extends GLWindow implements RenderContext {
     public static final int LARGE_STEP = 100;
 
     public static String[] ARGS = {};
+
+    public static Stream<String> args() {
+        return Stream.of(ARGS);
+    }
 
     private final TimerImpl timer = new TimerImpl(TimeSource.glfwGetTimeInstance());
 

@@ -10,6 +10,6 @@ public interface Experiment extends RenderedItem {
 	default String getTitle() {
 		return getClass().getSimpleName();
 	}
-
+	default int getPriority() { return 0; }
 	String getDescription();
 }

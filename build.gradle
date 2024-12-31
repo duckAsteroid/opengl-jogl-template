@@ -30,15 +30,20 @@ dependencies {
   // open GL
   implementation "org.lwjgl:lwjgl-opengl"
   runtimeOnly "org.lwjgl:lwjgl-opengl::natives-windows"
+
   // help for GL Vector types
   implementation "org.joml:joml:1.10.5"
 
   // JUnit
   testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0-M1'
+  // Mocking in tests
+  testImplementation 'org.mockito:mockito-inline:3.12.4'
 
 }
 
 test {
+  // Mockito creates warning if we use CDS, so disable for tests
+  jvmArgs = ["-Xshare:off"]
   useJUnitPlatform()
 }
 
@@ -53,7 +58,9 @@ tasks.register("debugRun", JavaExec) {
   mainClass = application.mainClass
   workingDir = project.rootDir
   jvmArgs = ["-javaagent:src/test/resources/lwjglx-debug-1.0.0.jar=tn;o=open-gl.log"]
-  args = ["TextExperiment"] // Cthugha, TranslateExample, Triangle, PalettePicture, BlurPictureExample, BlurTest
+  def myProps = ["simulate.audio": "TRUE"]
+  systemProperties myProps
+  args = ["--interactive=false"] // Cthugha, TranslateExample, Triangle, PalettePicture, BlurPictureExample, BlurTest
 }
 
 tasks.register("deleteCrashLogs", Delete) {

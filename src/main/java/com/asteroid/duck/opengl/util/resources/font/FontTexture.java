@@ -46,22 +46,6 @@ public class FontTexture implements Resource {
 		return glyphs.get(c);
 	}
 
-	public Vector4f getGlyphTextureExtent(char c) {
-		return getGlyphTextureExtent(glyphs.get(c));
-	}
-
-	/**
-	 * Creates an extent vector (top left, bottom right coordinates) normalised to the
-	 * font texture coordinates
-	 * @param g the glyph to compute extent for
-	 * @return the normalised extent vector
-	 */
-	public Vector4f getGlyphTextureExtent(Glyph g) {
-		Vector2f dimensions = texture.dimensions();
-		Vector4f extent = g.extent();
-		return new Vector4f(extent.x / dimensions.x, extent.y / dimensions.y, extent.z / dimensions.x, extent.w / dimensions.y);
-	}
-
 	/**
 	 * Gets the width in pixels of the specified text.
 	 *
