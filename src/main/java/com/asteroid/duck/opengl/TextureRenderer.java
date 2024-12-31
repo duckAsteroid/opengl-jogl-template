@@ -141,16 +141,19 @@ public class TextureRenderer {
 		updateBufferData(1.0f);
 
 		// Position attribute
-		glVertexAttribPointer(0, 3, GL_FLOAT, false, 8 * Float.BYTES, 0);
-		glEnableVertexAttribArray(0);
+		int attribLocation = glGetAttribLocation(shaderProgram, "aPos");
+		glVertexAttribPointer(attribLocation, 3, GL_FLOAT, false, 8 * Float.BYTES, 0);
+		glEnableVertexAttribArray(attribLocation);
 
 		// Color attribute
-		glVertexAttribPointer(1, 3, GL_FLOAT, false, 8 * Float.BYTES, 3 * Float.BYTES);
-		glEnableVertexAttribArray(1);
+		attribLocation = glGetAttribLocation(shaderProgram, "aColor");
+		glVertexAttribPointer(attribLocation, 3, GL_FLOAT, false, 8 * Float.BYTES, 3 * Float.BYTES);
+		glEnableVertexAttribArray(attribLocation);
 
 		// Texture coord attribute
-		glVertexAttribPointer(2, 2, GL_FLOAT, false, 8 * Float.BYTES, 6 * Float.BYTES);
-		glEnableVertexAttribArray(2);
+		attribLocation = glGetAttribLocation(shaderProgram, "aTexCoord");
+		glVertexAttribPointer(attribLocation, 2, GL_FLOAT, false, 8 * Float.BYTES, 6 * Float.BYTES);
+		glEnableVertexAttribArray(attribLocation);
 
 		texture = loadTexture("src/main/resources/textures/molly.jpg"); // texture
 
