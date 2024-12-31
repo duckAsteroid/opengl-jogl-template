@@ -9,6 +9,7 @@ import org.joml.Matrix4f;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.glfw.*;
 import org.lwjgl.opengl.*;
+import org.lwjgl.system.MemoryUtil;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -65,6 +66,8 @@ public class TextureRenderer {
 									"void main() {\n" +
 									"    FragColor = vec4(ourColor, 1.0) * texture(ourTexture, TexCoord);\n" +
 									"}\n";
+
+	private ByteBuffer memBuffer;
 
 	public void run() throws IOException {
 		init();
@@ -138,6 +141,8 @@ public class TextureRenderer {
 		vbo = glGenBuffers();
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
+		this.memBuffer = MemoryUtil.memAlloc(vertices.length * Float.BYTES);
+		memBuffer.asFloatBuffer().put(vertices);
 		updateBufferData(1.0f);
 
 		// Position attribute
@@ -161,13 +166,12 @@ public class TextureRenderer {
 
 	private void updateBufferData(float scaleFactor) {
 		// Modify texture coordinates in the vertex data
+		FloatBuffer floatBuffer = memBuffer.asFloatBuffer();
 		for (int i = 0; i < updateLocations.length; i++) {
-			vertices[updateLocations[i]] = scaleFactor;
+			floatBuffer.put(updateLocations[i], scaleFactor);
 		}
-		FloatBuffer vertexBuffer = BufferUtils.createFloatBuffer(vertices.length);
-		vertexBuffer.put(vertices).flip();
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glBufferData(GL_ARRAY_BUFFER, vertexBuffer, GL_DYNAMIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, memBuffer, GL_DYNAMIC_DRAW);
 	}
 
 	private void loop() {
@@ -215,6 +219,7 @@ public class TextureRenderer {
 		glDeleteProgram(shaderProgram);
 		glfwDestroyWindow(window);
 		glfwTerminate();
+		MemoryUtil.memFree(memBuffer);
 		glfwSetErrorCallback(null).free();
 	}
 
