@@ -1,11 +1,17 @@
 package com.asteroid.duck.opengl;
 
+import com.asteroid.duck.opengl.util.resources.buffer.VertexDataBuffer;
+import com.asteroid.duck.opengl.util.resources.buffer.VertexDataStructure;
+import com.asteroid.duck.opengl.util.resources.buffer.VertexElement;
+import com.asteroid.duck.opengl.util.resources.buffer.VertexElementType;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderLoader;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.texture.ImageOptions;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import com.asteroid.duck.opengl.util.resources.texture.TextureFactory;
 import org.joml.Matrix4f;
+import org.joml.Vector2f;
+import org.joml.Vector3f;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.glfw.*;
 import org.lwjgl.opengl.*;
@@ -30,18 +36,18 @@ public class TextureRenderer {
 
 	private long window;
 	private int shaderProgram;
-	private int vao, vbo, texture;
+	private int texture;
+	private VertexDataBuffer vertexDataBuffer;
 
-	private final int[] updateLocations = new int[]{6,7,14,30,31,47};
-	private final float[] vertices = {
+	private final Object[][] vertices = {
 					// screen positions           // colors            // texture coords
-					0.5f,  0.5f, 0.0f,     1.0f, 0.0f, 0.0f,    1.0f, 1.0f,  // top right
-					0.5f, -0.5f, 0.0f,     0.0f, 1.0f, 0.0f,    1.0f, 0.0f,  // bottom right
-					-0.5f, -0.5f, 0.0f,    0.0f, 0.0f, 1.0f,    0.0f, 0.0f,  // bottom left
+					{ new Vector3f(0.5f,  0.5f, 0.0f),     new Vector3f(1.0f, 0.0f, 0.0f),    new Vector2f(1.0f, 1.0f) },  // top right
+					{ new Vector3f(0.5f, -0.5f, 0.0f),     new Vector3f(0.0f, 1.0f, 0.0f),    new Vector2f(1.0f, 0.0f) },  // bottom right
+					{ new Vector3f(-0.5f, -0.5f, 0.0f),    new Vector3f(0.0f, 0.0f, 1.0f),    new Vector2f(0.0f, 0.0f) },  // bottom left
 
-					0.5f,  0.5f, 0.0f,     1.0f, 0.0f, 0.0f,    1.0f, 1.0f,  // top right
-					-0.5f, -0.5f, 0.0f,    0.0f, 0.0f, 1.0f,    0.0f, 0.0f,  // bottom left
-					-0.5f,  0.5f, 0.0f,    1.0f, 1.0f, 0.0f,    0.0f, 1.0f   // top left
+					{ new Vector3f(0.5f,  0.5f, 0.0f),     new Vector3f(1.0f, 0.0f, 0.0f),    new Vector2f(1.0f, 1.0f) },  // top right
+					{ new Vector3f(-0.5f, -0.5f, 0.0f),    new Vector3f(0.0f, 0.0f, 1.0f),    new Vector2f(0.0f, 0.0f) },  // bottom left
+					{ new Vector3f(-0.5f,  0.5f, 0.0f),    new Vector3f(1.0f, 1.0f, 0.0f),    new Vector2f(0.0f, 1.0f) } // top left
 	};
 
 	private final String vertexShaderSource =
@@ -68,6 +74,11 @@ public class TextureRenderer {
 									"}\n";
 
 	private ByteBuffer memBuffer;
+	private final VertexDataStructure structure = new VertexDataStructure(
+					new VertexElement(VertexElementType.VEC_3F, "aPos"),
+					new VertexElement(VertexElementType.VEC_3F, "aColor"),
+					new VertexElement(VertexElementType.VEC_2F, "aTexCoord")
+	);
 
 	public void run() throws IOException {
 		init();
@@ -76,9 +87,6 @@ public class TextureRenderer {
 	}
 
 	private void init() throws IOException {
-		for (int i = 0; i < updateLocations.length; i++) {
-			System.out.println(vertices[updateLocations[i]]);
-		}
 		GLFWErrorCallback.createPrint(System.err).set();
 		if (!glfwInit()) {
 			throw new IllegalStateException("Unable to initialize GLFW");
@@ -135,30 +143,15 @@ public class TextureRenderer {
 		ShaderProgram prog = ShaderProgram.compile(vertexShaderSource, fragmentShaderSource, null);
 		shaderProgram = prog.id();
 
-		vao = glGenVertexArrays();
-		glBindVertexArray(vao);
-
-		vbo = glGenBuffers();
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-		this.memBuffer = MemoryUtil.memAlloc(vertices.length * Float.BYTES);
-		memBuffer.asFloatBuffer().put(vertices);
+		vertexDataBuffer = new VertexDataBuffer(structure, 6);
+		vertexDataBuffer.init(null);
+		for (int i = 0; i < vertices.length; i++) {
+			vertexDataBuffer.set(i, vertices[i]);
+		}
 		updateBufferData(1.0f);
 
-		// Position attribute
-		int attribLocation = glGetAttribLocation(shaderProgram, "aPos");
-		glVertexAttribPointer(attribLocation, 3, GL_FLOAT, false, 8 * Float.BYTES, 0);
-		glEnableVertexAttribArray(attribLocation);
-
-		// Color attribute
-		attribLocation = glGetAttribLocation(shaderProgram, "aColor");
-		glVertexAttribPointer(attribLocation, 3, GL_FLOAT, false, 8 * Float.BYTES, 3 * Float.BYTES);
-		glEnableVertexAttribArray(attribLocation);
-
-		// Texture coord attribute
-		attribLocation = glGetAttribLocation(shaderProgram, "aTexCoord");
-		glVertexAttribPointer(attribLocation, 2, GL_FLOAT, false, 8 * Float.BYTES, 6 * Float.BYTES);
-		glEnableVertexAttribArray(attribLocation);
+		prog.use();
+		vertexDataBuffer.setup(prog);
 
 		texture = loadTexture("src/main/resources/textures/molly.jpg"); // texture
 
@@ -166,12 +159,12 @@ public class TextureRenderer {
 
 	private void updateBufferData(float scaleFactor) {
 		// Modify texture coordinates in the vertex data
-		FloatBuffer floatBuffer = memBuffer.asFloatBuffer();
-		for (int i = 0; i < updateLocations.length; i++) {
-			floatBuffer.put(updateLocations[i], scaleFactor);
+		for (int i = 0; i < 6; i++) {
+			Vector2f old = (Vector2f) vertices[i][2];
+			Vector2f updated = old.mul(scaleFactor);
+			vertexDataBuffer.setElement(i, structure.get("aTexCoord"), updated);
 		}
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glBufferData(GL_ARRAY_BUFFER, memBuffer, GL_DYNAMIC_DRAW);
+		vertexDataBuffer.update();
 	}
 
 	private void loop() {
@@ -183,6 +176,7 @@ public class TextureRenderer {
 			double elapsedTime = GLFW.glfwGetTime() - startTime;
 
 			final double frequency = 0.5;
+			vertexDataBuffer.use();
 			updateBufferData((float)Math.abs(Math.sin(frequency * (2 * Math.PI * elapsedTime))));
 
 			glUseProgram(shaderProgram);
@@ -190,8 +184,9 @@ public class TextureRenderer {
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, texture);
 
-			glBindVertexArray(vao);
-			glDrawArrays(GL_TRIANGLES, 0, 6);
+			vertexDataBuffer.use();
+			vertexDataBuffer.render(0, 6);
+			//glDrawArrays(GL_TRIANGLES, 0, 6);
 
 			glfwSwapBuffers(window);
 			glfwPollEvents();
@@ -214,8 +209,7 @@ public class TextureRenderer {
 	}
 
 	private void cleanup() {
-		glDeleteVertexArrays(vao);
-		glDeleteBuffers(vbo);
+		vertexDataBuffer.destroy();
 		glDeleteProgram(shaderProgram);
 		glfwDestroyWindow(window);
 		glfwTerminate();

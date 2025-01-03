@@ -56,6 +56,8 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 			glBindBuffer(GL_ARRAY_BUFFER, vbo);
 			// create a buffer of the initial size
 			this.memBuffer = MemoryUtil.memAlloc(initialSize * vertexDataStructure.size());
+			// FIXME optimise the data hint...
+			glBufferData(GL_ARRAY_BUFFER, memBuffer, GL_STREAM_DRAW);
 		}
 		// do nothing - already initialised
 	}
@@ -90,6 +92,13 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 		return Collections.unmodifiableMap(result);
 	}
 
+	public Object getElement(int index, VertexElement element) {
+		ByteBuffer readCopy = memBuffer.duplicate();
+		long elementOffset = vertexDataStructure.getOffset(element);
+		readCopy.position((int) ((index * vertexDataStructure.size()) + elementOffset));
+		return element.type().deserializeRaw(readCopy);
+	}
+
 	@Override
 	public Map<VertexElement, ?> set(int index, Map<VertexElement, ?> vertexData) {
 		ByteBuffer writeCopy = memBuffer.duplicate();
@@ -104,6 +113,14 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 
 	public Map<VertexElement, ?> set(int index, Object ... data) {
 		return set(index, vertexDataStructure.asMap(data));
+	}
+
+	public void setElement(int index, VertexElement element, Object data) {
+		ByteBuffer writeCopy = memBuffer.duplicate();
+		long elementOffset = vertexDataStructure.getOffset(element);
+		writeCopy.position((int) ((index * vertexDataStructure.size()) + elementOffset));
+		VertexElementType<?> type = element.type();
+		type.serializeRaw(data, writeCopy);
 	}
 
 	@Override
@@ -135,9 +152,12 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 		glBindVertexArray(vao);
 	}
 
+	public void update() {
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glBufferData(GL_ARRAY_BUFFER, memBuffer, GL_STREAM_DRAW);
+	}
+
 	public void render(int start, int count) {
-		use();
-		glBufferData(GL_ARRAY_BUFFER, memBuffer, GL_DYNAMIC_DRAW);
 		glDrawArrays(GL_TRIANGLES, start, count);
 	}
 
@@ -157,6 +177,7 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 		MemoryUtil.memFree(memBuffer);
 		memBuffer = null;
 	}
+
 
 
 }

@@ -51,6 +51,18 @@ application {
   mainClass = 'com.asteroid.duck.opengl.Main'
 }
 
+tasks.register("runTextureRenderer", JavaExec) {
+  dependsOn deleteCrashLogs
+  group = ApplicationPlugin.APPLICATION_GROUP
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.asteroid.duck.opengl.TextureRenderer'
+  workingDir = project.rootDir
+  jvmArgs = ["-javaagent:src/test/resources/lwjglx-debug-1.0.0.jar=tn;o=open-gl.log"]
+  def myProps = ["simulate.audio": "TRUE"]
+  systemProperties myProps
+  args = ["--interactive=false"] // Cthugha, TranslateExample, Triangle, PalettePicture, BlurPictureExample, BlurTest
+}
+
 tasks.register("debugRun", JavaExec) {
   dependsOn deleteCrashLogs
   group = ApplicationPlugin.APPLICATION_GROUP
