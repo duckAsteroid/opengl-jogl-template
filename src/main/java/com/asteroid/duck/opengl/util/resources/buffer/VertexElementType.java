@@ -94,7 +94,22 @@ public abstract class VertexElementType<T> {
 		return "[%s, size=%d]".formatted(javaType.getName(), dimensions);
 	}
 
+	public String dataStringRaw(Object obj) {
+		try {
+			if (obj == null) {
+				obj = nullReplacementValue();
+			}
+			return dataString(javaType.cast(obj));
+		} catch (ClassCastException e) {
+			throw new IllegalArgumentException("Object is not of type " + javaType.getName(), e);
+		}
+	}
 
+	public abstract String dataString(T dataValue);
+
+	public static String floatToString(float f) {
+		return String.format("%.4f", f);
+	}
 	/// TYPED SINGLETON INSTANCES --------------------------------------------------------------------
 
 	public static VertexElementType<Float> FLOAT = new VertexElementType<>(Float.class, 1, GL_FLOAT) {
@@ -110,6 +125,11 @@ public abstract class VertexElementType<T> {
 		@Override
 		public Object nullReplacementValue() {
 			return 0f;
+		}
+
+		@Override
+		public String dataString(Float dataValue) {
+			return floatToString(dataValue);
 		}
 	};
 
@@ -128,6 +148,11 @@ public abstract class VertexElementType<T> {
 		@Override
 		public Object nullReplacementValue() {
 			return new Vector2f(0f);
+		}
+
+		@Override
+		public String dataString(Vector2f dataValue) {
+			return "["+floatToString(dataValue.x)+","+floatToString(dataValue.y)+"]";
 		}
 	};
 
@@ -148,6 +173,11 @@ public abstract class VertexElementType<T> {
 		public Object nullReplacementValue() {
 			return new Vector3f(0f);
 		}
+
+		@Override
+		public String dataString(Vector3f dataValue) {
+			return "["+floatToString(dataValue.x)+","+floatToString(dataValue.y)+","+floatToString(dataValue.z)+"]";
+		}
 	};
 
 	public static final VertexElementType<Vector4f> VEC_4F = new VertexElementType<>(Vector4f.class,4,GL_FLOAT) {
@@ -166,6 +196,11 @@ public abstract class VertexElementType<T> {
 		@Override
 		public Object nullReplacementValue() {
 			return new Vector4f(0f);
+		}
+
+		@Override
+		public String dataString(Vector4f dataValue) {
+			return "["+floatToString(dataValue.x)+","+floatToString(dataValue.y)+","+floatToString(dataValue.z)+","+floatToString(dataValue.w)+"]";
 		}
 	};
 

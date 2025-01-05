@@ -1,6 +1,7 @@
 package com.asteroid.duck.opengl.util.resources.buffer;
 
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -120,5 +121,9 @@ public class VertexDataStructure implements Iterable<VertexElement> {
 
 	public VertexElement getIndex(int i) {
 		return structure.get(i);
+	}
+
+	public String headerString() {
+		return stream().map(VertexElement::headerString).collect(Collectors.joining(" "));
 	}
 }

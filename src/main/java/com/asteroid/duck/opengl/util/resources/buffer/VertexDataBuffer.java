@@ -8,6 +8,10 @@ import org.lwjgl.system.MemoryUtil;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static org.lwjgl.opengl.GL11.GL_TRIANGLES;
 import static org.lwjgl.opengl.GL11.glDrawArrays;
@@ -43,6 +47,65 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 		this.initialSize = initialSize;
 	}
 
+	public void createBuffer() {
+		// create a buffer of the initial size
+		this.memBuffer = MemoryUtil.memAlloc(initialSize * vertexDataStructure.size());
+	}
+
+
+	ByteBuffer memBuffer() {
+		return memBuffer;
+	}
+
+	public Iterable<Byte> bytes() {
+		return () -> new Iterator<>() {
+			private final ByteBuffer copy = duplicate(memBuffer);
+
+			@Override
+			public boolean hasNext() {
+				return memBuffer.hasRemaining();
+			}
+
+			@Override
+			public Byte next() {
+				return memBuffer.get();
+			}
+		};
+	}
+
+	public Stream<Byte> byteStream() {
+		return StreamSupport.stream(bytes().spliterator(), false);
+	}
+
+	public String byteString() {
+		return byteStream()
+						.map((b) -> Integer.toHexString(b & 0xFF).toUpperCase())
+						.map((s) -> s.length() == 1 ? "0" + s : s)
+						.collect(Collectors.joining(","));
+	}
+
+	public String dataString() {
+		StringBuilder result = new StringBuilder();
+		for (int i = 0; i < size(); i++) {
+			Map<VertexElement, ?> data = get(i);
+			for(VertexElement ve : vertexDataStructure) {
+				Object value = data.get(ve);
+				String text = "^" + ve.type().dataStringRaw(value);
+				text = truncateAndPad(text, ve.type().byteSize() * 3);
+				text = text.substring(0, text.length() - 2) + "^";
+				result.append(text).append(' ');
+			}
+		}
+		return result.toString();
+	}
+
+	private static String truncateAndPad(String text, int maxLength) {
+		if (text.length() > maxLength) {
+			return text.substring(0, maxLength);
+		} else {
+			return String.format("%-" + maxLength + "s", text).replace(' ', '-');
+		}
+	}
 
 	@Override
 	public void init(RenderContext ctx) {
@@ -54,8 +117,7 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 			// Create a VBO and bind it
 			vbo = glGenBuffers();
 			glBindBuffer(GL_ARRAY_BUFFER, vbo);
-			// create a buffer of the initial size
-			this.memBuffer = MemoryUtil.memAlloc(initialSize * vertexDataStructure.size());
+			createBuffer();
 			// FIXME optimise the data hint...
 			glBufferData(GL_ARRAY_BUFFER, memBuffer, GL_STREAM_DRAW);
 		}
@@ -82,7 +144,7 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 
 	@Override
 	public Map<VertexElement, ?> get(int index) {
-		ByteBuffer readCopy = memBuffer.duplicate();
+		ByteBuffer readCopy = duplicate(memBuffer);
 		readCopy.position(index * vertexDataStructure.size());
 		Map<VertexElement, Object> result = new HashMap<>();
 		for(VertexElement element : vertexDataStructure) {
@@ -93,7 +155,7 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 	}
 
 	public Object getElement(int index, VertexElement element) {
-		ByteBuffer readCopy = memBuffer.duplicate();
+		ByteBuffer readCopy = duplicate(memBuffer);
 		long elementOffset = vertexDataStructure.getOffset(element);
 		readCopy.position((int) ((index * vertexDataStructure.size()) + elementOffset));
 		return element.type().deserializeRaw(readCopy);
@@ -101,7 +163,7 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 
 	@Override
 	public Map<VertexElement, ?> set(int index, Map<VertexElement, ?> vertexData) {
-		ByteBuffer writeCopy = memBuffer.duplicate();
+		ByteBuffer writeCopy = duplicate(memBuffer);
 		writeCopy.position(index * vertexDataStructure.size());
 		for(VertexElement element : vertexDataStructure) {
 			Object object = vertexData.get(element);
@@ -116,7 +178,7 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 	}
 
 	public void setElement(int index, VertexElement element, Object data) {
-		ByteBuffer writeCopy = memBuffer.duplicate();
+		ByteBuffer writeCopy = duplicate(memBuffer);
 		long elementOffset = vertexDataStructure.getOffset(element);
 		writeCopy.position((int) ((index * vertexDataStructure.size()) + elementOffset));
 		VertexElementType<?> type = element.type();
@@ -126,12 +188,23 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 	@Override
 	public Map<VertexElement, ?> remove(int index) {
 		Map<VertexElement, ?> current = get(index);
-		ByteBuffer writeCopy = memBuffer.duplicate();
+		ByteBuffer writeCopy = duplicate(memBuffer);
 		writeCopy.position(index * vertexDataStructure.size());
 		for (int i = 0; i < vertexDataStructure.size(); i++) {
 			writeCopy.put(ZERO_BYTE);
 		}
 		return current;
+	}
+
+	/**
+	 * Like {@link ByteBuffer#duplicate()} but keeps the byte order
+	 * @param original the byte buffer to copy
+	 * @return the copy
+	 */
+	private static ByteBuffer duplicate(ByteBuffer original) {
+		ByteBuffer copy = original.duplicate();
+		copy.order(original.order());
+		return copy;
 	}
 
 	@Override
@@ -179,5 +252,13 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 	}
 
 
+	public VertexDataStructure getStructure() {
+		return vertexDataStructure;
+	}
 
+	public String headerString() {
+		return IntStream.range(0, size())
+						.mapToObj((i) -> vertexDataStructure.headerString())
+						.collect(Collectors.joining(" "));
+	}
 }

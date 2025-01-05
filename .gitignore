@@ -15,7 +15,7 @@ gradle-app.setting
 # gradle/wrapper/gradle-wrapper.properties
 
 # Open GL (LWJGL) debug file
-/open-gl.log
+/*.gl.log
 
 # generated bin files for texture verification
 /src/main/resources/**/*.bin

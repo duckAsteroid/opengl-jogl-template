@@ -1,61 +1,60 @@
 package com.asteroid.duck.opengl;
 
-import com.asteroid.duck.opengl.util.resources.shader.ShaderLoader;
+import com.asteroid.duck.opengl.util.resources.buffer.VertexDataBuffer;
+import com.asteroid.duck.opengl.util.resources.buffer.VertexDataStructure;
+import com.asteroid.duck.opengl.util.resources.buffer.VertexElement;
+import com.asteroid.duck.opengl.util.resources.buffer.VertexElementType;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.texture.ImageOptions;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import com.asteroid.duck.opengl.util.resources.texture.TextureFactory;
-import org.joml.Matrix4f;
-import org.lwjgl.BufferUtils;
+import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
+import org.joml.Vector2f;
+import org.joml.Vector3f;
+import org.joml.Vector4f;
 import org.lwjgl.glfw.*;
 import org.lwjgl.opengl.*;
 import org.lwjgl.system.MemoryUtil;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
 import java.nio.file.Path;
 
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
-import static org.lwjgl.opengl.GL13.GL_TEXTURE0;
-import static org.lwjgl.opengl.GL13.glActiveTexture;
-import static org.lwjgl.opengl.GL15.*;
-import static org.lwjgl.opengl.GL20.*;
-import static org.lwjgl.opengl.GL30.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
-public class TextureRenderer {
+public class TextureRenderer2 {
 
 	private long window;
-	private int shaderProgram;
-	private int vao, vbo, texture;
+	private ShaderProgram shaderProgram;
+	private Texture texture;
+	private VertexDataBuffer vertexDataBuffer;
+	private Vector4f clearColor = new Vector4f(0.0f, 0.0f, 0.0f, 1.0f);
 
-	private final int[] updateLocations = new int[]{6,7,14,30,31,47};
-	private final float[] vertices = {
+	private final Object[][] vertices = {
 					// screen positions           // colors            // texture coords
-					0.5f,  0.5f, 0.0f,     1.0f, 0.0f, 0.0f,    1.0f, 1.0f,  // top right
-					0.5f, -0.5f, 0.0f,     0.0f, 1.0f, 0.0f,    1.0f, 0.0f,  // bottom right
-					-0.5f, -0.5f, 0.0f,    0.0f, 0.0f, 1.0f,    0.0f, 0.0f,  // bottom left
+					{ new Vector3f(1.0f,  1.0f, 0.0f),     new Vector3f(1.0f, 0.0f, 0.0f),    new Vector2f(1.0f, 1.0f) },  // top right
+					{ new Vector3f(1.0f, -1.0f, 0.0f),     new Vector3f(0.0f, 1.0f, 0.0f),    new Vector2f(1.0f, 0.0f) },  // bottom right
+					{ new Vector3f(-1.0f, -1.0f, 0.0f),    new Vector3f(0.0f, 0.0f, 1.0f),    new Vector2f(0.0f, 0.0f) },  // bottom left
 
-					0.5f,  0.5f, 0.0f,     1.0f, 0.0f, 0.0f,    1.0f, 1.0f,  // top right
-					-0.5f, -0.5f, 0.0f,    0.0f, 0.0f, 1.0f,    0.0f, 0.0f,  // bottom left
-					-0.5f,  0.5f, 0.0f,    1.0f, 1.0f, 0.0f,    0.0f, 1.0f   // top left
+					{ new Vector3f(1.0f,  1.0f, 0.0f),     new Vector3f(1.0f, 0.0f, 0.0f),    new Vector2f(1.0f, 1.0f) },  // top right
+					{ new Vector3f(-1.0f, -1.0f, 0.0f),    new Vector3f(0.0f, 0.0f, 1.0f),    new Vector2f(0.0f, 0.0f) },  // bottom left
+					{ new Vector3f(-1.0f,  1.0f, 0.0f),    new Vector3f(1.0f, 1.0f, 0.0f),    new Vector2f(0.0f, 1.0f) } // top left
 	};
 
 	private final String vertexShaderSource =
 					"#version 330 core\n" +
-									"in vec3 aPos;\n" +
-									"in vec3 aColor;\n" +
-									"in vec2 aTexCoord;\n" +
-									"out vec3 ourColor;\n" +
-									"out vec2 TexCoord;\n" +
-									"void main() {\n" +
-									"    gl_Position = vec4(aPos, 1.0);\n" + // Directly use the position
-									"    ourColor = aColor;\n" +
-									"    TexCoord = aTexCoord;\n" +
-									"}\n";
+					"in vec3 aPos;\n" +
+					"in vec3 aColor;\n" +
+					"in vec2 aTexCoord;\n" +
+					"out vec3 ourColor;\n" +
+					"out vec2 TexCoord;\n" +
+					"void main() {\n" +
+					"    gl_Position = vec4(aPos, 1.0);\n" + // Directly use the position
+					"    ourColor = aColor;\n" +
+					"    TexCoord = aTexCoord;\n" +
+					"}\n";
 
 	private final String fragmentShaderSource =
 					"#version 330 core\n" +
@@ -68,6 +67,12 @@ public class TextureRenderer {
 									"}\n";
 
 	private ByteBuffer memBuffer;
+	private final VertexDataStructure structure = new VertexDataStructure(
+					new VertexElement(VertexElementType.VEC_3F, "aPos"),
+					new VertexElement(VertexElementType.VEC_3F, "aColor"),
+					new VertexElement(VertexElementType.VEC_2F, "aTexCoord")
+	);
+	private TextureUnit textureUnit;
 
 	public void run() throws IOException {
 		init();
@@ -76,9 +81,6 @@ public class TextureRenderer {
 	}
 
 	private void init() throws IOException {
-		for (int i = 0; i < updateLocations.length; i++) {
-			System.out.println(vertices[updateLocations[i]]);
-		}
 		GLFWErrorCallback.createPrint(System.err).set();
 		if (!glfwInit()) {
 			throw new IllegalStateException("Unable to initialize GLFW");
@@ -132,50 +134,40 @@ public class TextureRenderer {
 
 		GL.createCapabilities();
 
-		ShaderProgram prog = ShaderProgram.compile(vertexShaderSource, fragmentShaderSource, null);
-		shaderProgram = prog.id();
+		this.shaderProgram = ShaderProgram.compile(vertexShaderSource, fragmentShaderSource, null);
 
-		vao = glGenVertexArrays();
-		glBindVertexArray(vao);
-
-		vbo = glGenBuffers();
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-		this.memBuffer = MemoryUtil.memAlloc(vertices.length * Float.BYTES);
-		memBuffer.asFloatBuffer().put(vertices);
+		vertexDataBuffer = new VertexDataBuffer(structure, 6);
+		vertexDataBuffer.init(null);
+		for (int i = 0; i < vertices.length; i++) {
+			vertexDataBuffer.set(i, vertices[i]);
+		}
 		updateBufferData(1.0f);
 
-		// Position attribute
-		int attribLocation = glGetAttribLocation(shaderProgram, "aPos");
-		glVertexAttribPointer(attribLocation, 3, GL_FLOAT, false, 8 * Float.BYTES, 0);
-		glEnableVertexAttribArray(attribLocation);
-
-		// Color attribute
-		attribLocation = glGetAttribLocation(shaderProgram, "aColor");
-		glVertexAttribPointer(attribLocation, 3, GL_FLOAT, false, 8 * Float.BYTES, 3 * Float.BYTES);
-		glEnableVertexAttribArray(attribLocation);
-
-		// Texture coord attribute
-		attribLocation = glGetAttribLocation(shaderProgram, "aTexCoord");
-		glVertexAttribPointer(attribLocation, 2, GL_FLOAT, false, 8 * Float.BYTES, 6 * Float.BYTES);
-		glEnableVertexAttribArray(attribLocation);
+		shaderProgram.use();
+		vertexDataBuffer.setup(shaderProgram);
 
 		texture = loadTexture("src/main/resources/textures/molly.jpg"); // texture
 
+		this.textureUnit = TextureUnit.index(0);
 	}
 
 	private void updateBufferData(float scaleFactor) {
 		// Modify texture coordinates in the vertex data
-		FloatBuffer floatBuffer = memBuffer.asFloatBuffer();
-		for (int i = 0; i < updateLocations.length; i++) {
-			floatBuffer.put(updateLocations[i], scaleFactor);
+		for (int i = 0; i < 6; i++) {
+			Vector2f old = (Vector2f) vertices[i][2];
+			Vector2f updated = new Vector2f(old.x * scaleFactor, old.y * scaleFactor);
+			//System.out.println(i+"= old: " + render(old) + "\tupdated: " + render(updated) +"              \r");
+			vertexDataBuffer.setElement(i, structure.get("aTexCoord"), updated);
 		}
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glBufferData(GL_ARRAY_BUFFER, memBuffer, GL_DYNAMIC_DRAW);
+		vertexDataBuffer.update();
+	}
+
+	private static String render(Vector2f vec) {
+		return String.format("[%.4f,%.4f]", vec.x, vec.y);
 	}
 
 	private void loop() {
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		glClearColor(clearColor.x, clearColor.y, clearColor.z, clearColor.w);
 		final double startTime = GLFW.glfwGetTime();
 		while (!glfwWindowShouldClose(window)) {
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -183,15 +175,17 @@ public class TextureRenderer {
 			double elapsedTime = GLFW.glfwGetTime() - startTime;
 
 			final double frequency = 0.5;
+			vertexDataBuffer.use();
 			updateBufferData((float)Math.abs(Math.sin(frequency * (2 * Math.PI * elapsedTime))));
 
-			glUseProgram(shaderProgram);
+			shaderProgram.use();
 
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, texture);
+			textureUnit.bind(texture);
+			//textureUnit.useInShader(shaderProgram, "ourTexture");
 
-			glBindVertexArray(vao);
-			glDrawArrays(GL_TRIANGLES, 0, 6);
+			vertexDataBuffer.use();
+			vertexDataBuffer.render(0, 6);
+			//glDrawArrays(GL_TRIANGLES, 0, 6);
 
 			glfwSwapBuffers(window);
 			glfwPollEvents();
@@ -200,7 +194,7 @@ public class TextureRenderer {
 		}
 	}
 
-	private int loadTexture(String sPath) throws IOException {
+	private Texture loadTexture(String sPath) throws IOException {
 		Path path = Path.of(sPath);
 		Path dir = path.getParent();
 
@@ -208,15 +202,13 @@ public class TextureRenderer {
 
 		Texture loaded = texFac.LoadTexture(path.getFileName().toString(), ImageOptions.DEFAULT);
 		System.out.println("Loaded texture: " + loaded);
-		this.texture = loaded.id();
 
-		return texture;
+		return loaded;
 	}
 
 	private void cleanup() {
-		glDeleteVertexArrays(vao);
-		glDeleteBuffers(vbo);
-		glDeleteProgram(shaderProgram);
+		vertexDataBuffer.destroy();
+		shaderProgram.destroy();
 		glfwDestroyWindow(window);
 		glfwTerminate();
 		MemoryUtil.memFree(memBuffer);
@@ -224,6 +216,6 @@ public class TextureRenderer {
 	}
 
 	public static void main(String[] args) throws IOException {
-		new TextureRenderer().run();
+		new TextureRenderer2().run();
 	}
 }

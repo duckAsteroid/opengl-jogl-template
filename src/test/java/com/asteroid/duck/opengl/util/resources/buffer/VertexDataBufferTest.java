@@ -5,13 +5,20 @@ import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
 import org.lwjgl.opengl.GL15;
 import org.lwjgl.opengl.GL30;
+import org.lwjgl.system.MemoryUtil;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
+import java.nio.ByteBuffer;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.lwjgl.opengl.GL15.GL_ARRAY_BUFFER;
 
 class VertexDataBufferTest {
@@ -91,4 +98,52 @@ class VertexDataBufferTest {
 			}
 		}
 	}
+
+	@Test
+	public void myTextureRendererExample() {
+		final Object[][] vertices = {
+						// screen positions           // colors            // texture coords
+						{ new Vector3f(0.5f,  0.5f, 0.0f),     new Vector3f(1.0f, 0.0f, 0.0f),    new Vector2f(1.0f, 1.0f) },  // top right
+						{ new Vector3f(0.5f, -0.5f, 0.0f),     new Vector3f(0.0f, 1.0f, 0.0f),    new Vector2f(1.0f, 0.0f) },  // bottom right
+						{ new Vector3f(-0.5f, -0.5f, 0.0f),    new Vector3f(0.0f, 0.0f, 1.0f),    new Vector2f(0.0f, 0.0f) },  // bottom left
+
+						{ new Vector3f(0.5f,  0.5f, 0.0f),     new Vector3f(1.0f, 0.0f, 0.0f),    new Vector2f(1.0f, 1.0f) },  // top right
+						{ new Vector3f(-0.5f, -0.5f, 0.0f),    new Vector3f(0.0f, 0.0f, 1.0f),    new Vector2f(0.0f, 0.0f) },  // bottom left
+						{ new Vector3f(-0.5f,  0.5f, 0.0f),    new Vector3f(1.0f, 1.0f, 0.0f),    new Vector2f(0.0f, 1.0f) } // top left
+		};
+
+		final VertexDataStructure structure = new VertexDataStructure(
+						new VertexElement(VertexElementType.VEC_3F, "aPos"),
+						new VertexElement(VertexElementType.VEC_3F, "aColor"),
+						new VertexElement(VertexElementType.VEC_2F, "aTexCoord")
+		);
+
+		VertexDataBuffer vertexDataBuffer = new VertexDataBuffer(structure, 6);
+		vertexDataBuffer.createBuffer();
+		for (int i = 0; i < vertices.length; i++) {
+			vertexDataBuffer.set(i, vertices[i]);
+		}
+
+
+		// old style
+
+		float[] oldVertices = {
+						// screen positions           // colors            // texture coords
+						0.5f,  0.5f, 0.0f,     1.0f, 0.0f, 0.0f,    1.0f, 1.0f,  // top right
+						0.5f, -0.5f, 0.0f,     0.0f, 1.0f, 0.0f,    1.0f, 0.0f,  // bottom right
+						-0.5f, -0.5f, 0.0f,    0.0f, 0.0f, 1.0f,    0.0f, 0.0f,  // bottom left
+
+						0.5f,  0.5f, 0.0f,     1.0f, 0.0f, 0.0f,    1.0f, 1.0f,  // top right
+						-0.5f, -0.5f, 0.0f,    0.0f, 0.0f, 1.0f,    0.0f, 0.0f,  // bottom left
+						-0.5f,  0.5f, 0.0f,    1.0f, 1.0f, 0.0f,    0.0f, 1.0f   // top left
+		};
+		ByteBuffer memBuffer = MemoryUtil.memAlloc(oldVertices.length * Float.BYTES);
+		memBuffer.asFloatBuffer().put(oldVertices);
+		//System.out.println("Original:\n"+asString(memBuffer));
+		System.out.println("VertexDataBuffer:\n"+vertexDataBuffer.byteString());
+
+		MemoryUtil.memFree(memBuffer);
+		MemoryUtil.memFree(vertexDataBuffer.memBuffer());
+	}
+
 }
