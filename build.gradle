@@ -57,7 +57,19 @@ tasks.register("runTextureRenderer", JavaExec) {
   classpath = sourceSets.main.runtimeClasspath
   mainClass = 'com.asteroid.duck.opengl.TextureRenderer'
   workingDir = project.rootDir
-  jvmArgs = ["-javaagent:src/test/resources/lwjglx-debug-1.0.0.jar=tn;o=open-gl.log"]
+  jvmArgs = ["-javaagent:src/test/resources/lwjglx-debug-1.0.0.jar=tn;o=texture_renderer.gl.log"]
+  def myProps = ["simulate.audio": "TRUE"]
+  systemProperties myProps
+  args = ["--interactive=false"] // Cthugha, TranslateExample, Triangle, PalettePicture, BlurPictureExample, BlurTest
+}
+
+tasks.register("runTextureRenderer2", JavaExec) {
+  dependsOn deleteCrashLogs
+  group = ApplicationPlugin.APPLICATION_GROUP
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.asteroid.duck.opengl.TextureRenderer2'
+  workingDir = project.rootDir
+  jvmArgs = ["-javaagent:src/test/resources/lwjglx-debug-1.0.0.jar=tn;o=texture_renderer2.gl.log"]
   def myProps = ["simulate.audio": "TRUE"]
   systemProperties myProps
   args = ["--interactive=false"] // Cthugha, TranslateExample, Triangle, PalettePicture, BlurPictureExample, BlurTest
@@ -69,7 +81,7 @@ tasks.register("debugRun", JavaExec) {
   classpath = sourceSets.main.runtimeClasspath
   mainClass = application.mainClass
   workingDir = project.rootDir
-  jvmArgs = ["-javaagent:src/test/resources/lwjglx-debug-1.0.0.jar=tn;o=open-gl.log"]
+  jvmArgs = ["-javaagent:src/test/resources/lwjglx-debug-1.0.0.jar=tn;o=debugRun.gl.log"]
   def myProps = ["simulate.audio": "TRUE"]
   systemProperties myProps
   args = ["--interactive=false"] // Cthugha, TranslateExample, Triangle, PalettePicture, BlurPictureExample, BlurTest
