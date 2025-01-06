@@ -18,12 +18,19 @@ import java.util.stream.Stream;
 public class FontTextureFactory {
 	private final java.awt.Font font;
 	private final boolean antialias;
+	private final Rectangle padding;
 	private FontMetrics fontMetrics;
 	private Path imageDumpPath;
 
 	public FontTextureFactory(java.awt.Font font, boolean antialias) {
 		this.font = font;
+		this.padding = padding(font.getSize());
 		this.antialias = antialias;
+	}
+
+	public static Rectangle padding(int size) {
+		int pad = Math.max(1, (5 * size) / 100);
+		return new Rectangle(pad, pad, pad, pad);
 	}
 
 	void setImageDumpPath(Path p) {
@@ -56,6 +63,11 @@ public class FontTextureFactory {
 		Dimension imageDims = new Dimension(totalWidth, maxHeight);
 		BufferedImage image = newImage(imageDims);
 		Graphics2D g = image.createGraphics();
+		// OpenGL images are upside down... so correct for that
+		g.scale(1, -1);
+		g.translate(0, -image.getHeight());
+
+		// now draw each character in a line
 		int x = 0;
 		for(Character c : glyphImages.keySet()) {
       BufferedImage charImage = glyphImages.get(c);
@@ -94,14 +106,14 @@ public class FontTextureFactory {
 		/* Create image for holding the char */
 		// this is not using the native storage raster buffer
 		// as it's just going to be painted onto the actual image
-		BufferedImage image = new BufferedImage(charWidth, charHeight, BufferedImage.TYPE_INT_ARGB);
+		BufferedImage image = new BufferedImage(charWidth + padding.x + padding.width, charHeight + padding.y + padding.height, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g = image.createGraphics();
 		if (antialias) {
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		}
 		g.setFont(font);
 		g.setPaint(java.awt.Color.WHITE);
-		g.drawString(String.valueOf(c), 0, metrics.getAscent());
+		g.drawString(String.valueOf(c), padding.x, padding.y +metrics.getAscent());
 		g.dispose();
 		return image;
 	}

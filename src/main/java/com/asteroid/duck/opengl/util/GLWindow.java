@@ -4,6 +4,8 @@ import com.asteroid.duck.opengl.util.keys.*;
 import com.asteroid.duck.opengl.util.resources.ResourceManager;
 import com.asteroid.duck.opengl.util.resources.texture.ImageData;
 import com.asteroid.duck.opengl.util.resources.texture.ImageOptions;
+import org.joml.Matrix3f;
+import org.joml.Matrix4f;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
 import org.lwjgl.PointerBuffer;
@@ -278,6 +280,17 @@ public abstract class GLWindow implements RenderContext {
 
 	public Vector2f getWindowDimensions() {
 		return new Vector2f(window.width, window.height);
+	}
+
+	public Matrix4f ortho() {
+		float left = 0;
+		float right = window.width;
+		float bottom = window.height;
+		float top = 0;
+		float near = -1.0f;
+		float far = 1.0f;
+
+		return new Matrix4f().ortho(left, right, bottom, top, near, far);
 	}
 
 	private Rectangle readWindow() {

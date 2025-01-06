@@ -33,7 +33,7 @@ public class TextureRenderer2 {
 	private Vector4f clearColor = new Vector4f(0.0f, 0.0f, 0.0f, 1.0f);
 
 	private final Object[][] vertices = {
-					// screen positions           // colors            // texture coords
+					// screen positions                              // colors                                   // texture coords
 					{ new Vector3f(1.0f,  1.0f, 0.0f),     new Vector3f(1.0f, 0.0f, 0.0f),    new Vector2f(1.0f, 1.0f) },  // top right
 					{ new Vector3f(1.0f, -1.0f, 0.0f),     new Vector3f(0.0f, 1.0f, 0.0f),    new Vector2f(1.0f, 0.0f) },  // bottom right
 					{ new Vector3f(-1.0f, -1.0f, 0.0f),    new Vector3f(0.0f, 0.0f, 1.0f),    new Vector2f(0.0f, 0.0f) },  // bottom left
