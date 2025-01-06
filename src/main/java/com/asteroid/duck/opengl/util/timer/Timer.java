@@ -21,4 +21,9 @@ public interface Timer {
 	}
 
 
+	default double linearFunction(double maxY, double frequency) {
+		double period = 1.0 / frequency;
+		double progress = (elapsed() % period) / period;
+		return progress * maxY;
+	}
 }

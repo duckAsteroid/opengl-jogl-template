@@ -189,6 +189,6 @@ public class ExperimentChooser implements Supplier<Experiment> {
 	}
 
 	private static boolean isInteractive() {
-		return Main.args().anyMatch((arg) -> arg.equals("--interactive=false"));
+		return Main.args().noneMatch((arg) -> arg.equals("--interactive=false"));
 	}
 }

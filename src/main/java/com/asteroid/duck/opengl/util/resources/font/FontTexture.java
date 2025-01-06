@@ -1,11 +1,10 @@
 package com.asteroid.duck.opengl.util.resources.font;
-import java.awt.*;
+
 import java.nio.FloatBuffer;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Map;
+import java.util.*;
 
 import com.asteroid.duck.opengl.util.resources.Resource;
+import com.asteroid.duck.opengl.util.resources.buffer.VertexDataStructure;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import org.joml.Matrix3x2f;
 import org.joml.Vector2f;
@@ -114,7 +113,7 @@ public class FontTexture implements Resource {
 	 * @param c        Color to use
 	 * @param target   The float buffer (VBO) to write vertex data into
 	 */
-	public void computeVertexData(CharSequence text, float x, float y, Color c, FloatBuffer target) {
+	public void computeVertexData(CharSequence text, float x, float y, Object c, FloatBuffer target) {
 		// FIXME - create a GlyphTextureVert that would have the shader, VAO, VBO and color etc
 		// it would use this texture and associated glyph data to compute the buffer when changed
 		int textHeight = getHeight(text);
@@ -156,5 +155,9 @@ public class FontTexture implements Resource {
 
 	public Texture getTexture() {
 		return texture;
+	}
+
+	public List<Glyph> glyphs() {
+		return glyphs.values().stream().sorted(Comparator.comparingInt(Glyph::x)).toList();
 	}
 }

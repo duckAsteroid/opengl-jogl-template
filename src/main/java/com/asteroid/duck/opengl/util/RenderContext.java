@@ -4,7 +4,10 @@ import com.asteroid.duck.opengl.util.keys.KeyCombination;
 import com.asteroid.duck.opengl.util.keys.KeyRegistry;
 import com.asteroid.duck.opengl.util.resources.ResourceManager;
 import com.asteroid.duck.opengl.util.timer.Timer;
+import org.joml.Matrix3f;
+import org.joml.Matrix4f;
 import org.joml.Vector2f;
+import org.joml.Vector4f;
 
 import java.awt.*;
 
@@ -51,4 +54,8 @@ public interface RenderContext {
 
 
 	Vector2f getWindowDimensions();
+
+	Matrix4f ortho();
+
+	void setBackgroundColor(Vector4f vector4f);
 }
