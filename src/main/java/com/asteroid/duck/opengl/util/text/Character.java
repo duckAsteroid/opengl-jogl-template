@@ -1,6 +1,6 @@
 package com.asteroid.duck.opengl.util.text;
 
-import com.asteroid.duck.opengl.util.resources.font.Glyph;
+import com.asteroid.duck.opengl.util.resources.font.GlyphData;
 
 import java.awt.*;
 
@@ -10,5 +10,5 @@ import java.awt.*;
  * @param character the character itself
  * @param glyph the image glyph data for that character
  */
-public record Character(char character, Glyph glyph, Point position) {
+public record Character(char character, GlyphData glyph, Point position) {
 }

@@ -1,7 +1,9 @@
 package com.asteroid.duck.opengl.util.resources.font;
 
+import java.awt.*;
 import java.nio.FloatBuffer;
 import java.util.*;
+import java.util.List;
 
 import com.asteroid.duck.opengl.util.resources.Resource;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexDataStructure;
@@ -13,8 +15,8 @@ import org.joml.Vector4f;
 
 /**
  * A wrapper around a glyph-image based font. The glyphs (character images) are stored in a GPU
- * texture, and the various locations + sizes of each letter are described in a map of {@link Glyph}
- * objects.
+ * texture, and the various locations + sizes of each letter are described in a map of
+ * {@link GlyphData} objects.
  *
  * Based on (but different to)
  * https://github.com/SilverTiger/lwjgl3-tutorial/blob/master/src/silvertiger/tutorial/lwjgl/text/Font.java
@@ -25,7 +27,7 @@ public class FontTexture implements Resource {
 	/**
 	 * Contains the glyph data for each char.
 	 */
-	private final Map<Character, Glyph> glyphs;
+	private final Map<Character, GlyphData> glyphs;
 	/**
 	 * Contains the complete font texture.
 	 */
@@ -35,13 +37,16 @@ public class FontTexture implements Resource {
 	 */
 	private final int fontHeight;
 
-	public FontTexture(Map<Character, Glyph> glyphs, Texture texture) {
+	public FontTexture(Map<Character, GlyphData> glyphs, Texture texture) {
 		this.glyphs = Collections.unmodifiableMap(glyphs);
 		this.texture = texture;
-		this.fontHeight = glyphs.values().stream().mapToInt(Glyph::height).max().orElseThrow();
+		this.fontHeight = glyphs.values().stream()
+						.map(GlyphData::extent)
+						.mapToInt(r -> r.height)
+						.max().orElseThrow();
 	}
 
-	public Glyph getGlyph(char c) {
+	public GlyphData getGlyph(char c) {
 		return glyphs.get(c);
 	}
 
@@ -68,8 +73,8 @@ public class FontTexture implements Resource {
 				/* Carriage return, just skip it */
 				continue;
 			}
-			Glyph g = glyphs.get(c);
-			lineWidth += g.width();
+			GlyphData g = glyphs.get(c);
+			lineWidth += g.extent().width;
 		}
 		width = Math.max(width, lineWidth);
 		return width;
@@ -97,8 +102,8 @@ public class FontTexture implements Resource {
 				/* Carriage return, just skip it */
 				continue;
 			}
-			Glyph g = glyphs.get(c);
-			lineHeight = Math.max(lineHeight, g.height());
+			GlyphData g = glyphs.get(c);
+			lineHeight = Math.max(lineHeight, g.extent().height);
 		}
 		height += lineHeight;
 		return height;
@@ -157,7 +162,7 @@ public class FontTexture implements Resource {
 		return texture;
 	}
 
-	public List<Glyph> glyphs() {
-		return glyphs.values().stream().sorted(Comparator.comparingInt(Glyph::x)).toList();
+	public List<GlyphData> glyphs() {
+		return glyphs.values().stream().sorted(Comparator.comparingInt(value -> value.extent().x)).toList();
 	}
 }

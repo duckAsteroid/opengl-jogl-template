@@ -14,6 +14,7 @@ class FontTextureFactoryTest {
 		Font monospacedFont = new Font(Font.SERIF, Font.PLAIN, 24);
 		FontTextureFactory subject = new FontTextureFactory(monospacedFont, true);
 		subject.setImageDumpPath(Path.of("font-images"));
+		subject.debugBoundary = true;
 		FontTexture fontTexture = subject.createFontTexture();
 		assertNotNull(fontTexture);
 	}
