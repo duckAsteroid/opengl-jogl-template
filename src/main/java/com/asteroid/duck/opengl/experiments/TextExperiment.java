@@ -9,7 +9,7 @@ import com.asteroid.duck.opengl.util.resources.buffer.VertexElement;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexElementType;
 import com.asteroid.duck.opengl.util.resources.font.FontTexture;
 import com.asteroid.duck.opengl.util.resources.font.FontTextureFactory;
-import com.asteroid.duck.opengl.util.resources.font.Glyph;
+import com.asteroid.duck.opengl.util.resources.font.GlyphData;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
 import org.joml.*;
@@ -23,7 +23,7 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 	private int index = 0;
 
 	private FontTexture fontTexture;
-	private List<Glyph> glyphs;
+	private List<GlyphData> glyphs;
 	private VertexDataBuffer fontDataBuffer;
 	private ShaderProgram shader;
 	private final Vector4f color = new Vector4f(1,1,1,1); // green!
@@ -74,23 +74,23 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 		shader.unuse();
 	}
 
+	private final String TEXT = "ijqtQfyY";
+
 	private void createStringData(RenderContext ctx) {
 		// where on the screen to draw the char
 		final Vector2f position = new Vector2f(150,150);
 		final float scale = 1.2f;
 
-		int index = (int) ctx.getTimer().linearFunction(glyphs.size(), 0.01);
-		Glyph glyph = glyphs.get(index);
+		int index = (int) ctx.getTimer().linearFunction(TEXT.length(), 0.1);
+		GlyphData glyph = fontTexture.getGlyph(TEXT.charAt(index));
 		// figure out the area of the texture representing this char
 		Matrix2f transform = fontTexture.getTexture().normalisationMatrix();
-		Vector2f tex_pos = transform.transform(glyph.position());
-		Vector2f tex_size = transform.transform(glyph.dimension());
 		Vector4f tex_extent = glyph.extent(transform);
 
 		// now work out the area of the screen to draw the char onto
 		Matrix4f normalisation = ctx.ortho();
 		Vector4f screen_pos = new Vector4f(position, 0, 1.0f).mul(normalisation);
-		Vector2f tex_size_model = glyph.dimension().add(position).mul(scale);
+		Vector2f tex_size_model = new Vector2f(0).add(position).mul(scale);
 		Vector4f screen_size = new Vector4f(tex_size_model.x, tex_size_model.y, 0, 1.0f).mul(normalisation);
 		Vector4f screen_extent = new Vector4f(screen_pos.x, screen_size.y, screen_size.x, screen_pos.y);
 
