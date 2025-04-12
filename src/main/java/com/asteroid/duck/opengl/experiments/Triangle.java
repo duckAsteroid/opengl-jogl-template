@@ -5,7 +5,7 @@ import com.asteroid.duck.opengl.util.PassthruTextureRenderer;
 import com.asteroid.duck.opengl.util.CompositeRenderItem;
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.RenderedItem;
-import com.asteroid.duck.opengl.util.Triangles;
+import com.asteroid.duck.opengl.util.geom.Triangles;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import com.asteroid.duck.opengl.util.resources.texture.TextureFactory;
 import org.joml.Vector3f;

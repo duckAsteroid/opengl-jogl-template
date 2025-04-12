@@ -1,5 +1,7 @@
-package com.asteroid.duck.opengl.util;
+package com.asteroid.duck.opengl.util.geom;
 
+import com.asteroid.duck.opengl.util.RenderContext;
+import com.asteroid.duck.opengl.util.RenderedItem;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.timer.Timer;
 import org.joml.Vector3f;
