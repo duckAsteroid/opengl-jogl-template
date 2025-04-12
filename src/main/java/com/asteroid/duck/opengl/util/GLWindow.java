@@ -26,6 +26,11 @@ import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
+/// An abstract base class for creating OpenGL applications. Sets up a window with key handlers
+/// and responds to resize events.
+///
+/// This class sets up and runs the main render loop.
+/// Implements [RenderContext] for child components to interact with this window and the render loop.
 public abstract class GLWindow implements RenderContext {
 	private static final Logger LOG = LoggerFactory.getLogger(GLWindow.class);
 
