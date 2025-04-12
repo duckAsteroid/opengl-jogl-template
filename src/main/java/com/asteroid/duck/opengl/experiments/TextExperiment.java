@@ -1,8 +1,8 @@
 package com.asteroid.duck.opengl.experiments;
 
+import com.asteroid.duck.opengl.util.geom.Corner;
 import com.asteroid.duck.opengl.util.CompositeRenderItem;
 import com.asteroid.duck.opengl.util.RenderContext;
-import com.asteroid.duck.opengl.util.keys.KeyCombination;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexDataBuffer;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexDataStructure;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexElement;
@@ -16,8 +16,9 @@ import org.joml.*;
 
 import java.awt.*;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.List;
-import java.util.function.Function;
+import java.util.Map;
 
 public class TextExperiment extends CompositeRenderItem implements Experiment {
 	private int index = 0;
@@ -27,7 +28,11 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 	private VertexDataBuffer fontDataBuffer;
 	private ShaderProgram shader;
 	private final Vector4f color = new Vector4f(1,1,1,1); // green!
-	private final Vector4f backgroundColor = new Vector4f(.4f,0.2f,0f,1f);
+	private final Vector4f backgroundColor = new Vector4f(.2f,0.2f,0.2f,1f);
+	private final int maxStringLength = 20;
+	private final String TEXT = "ijqtQfyY";
+	private final VertexElement screenPosition = new VertexElement(VertexElementType.VEC_2F, "screenPosition");
+	private final VertexElement texturePosition = new VertexElement(VertexElementType.VEC_2F, "texturePosition");
 
 	@Override
 	public String getDescription() {
@@ -38,11 +43,13 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 	public void init(RenderContext ctx) throws IOException {
 		ctx.setClearScreen(true);
 		ctx.setBackgroundColor(backgroundColor);
-		this.shader = ctx.getResourceManager().getShaderLoader().LoadSimpleShaderProgram("text");
+		this.shader = ctx.getResourceManager().getShaderLoader().LoadSimpleShaderProgram("passthru2");
 
 		// create a texture for our font
 		Font font = new Font(Font.SERIF, Font.PLAIN, 100);
 		FontTextureFactory fac = new FontTextureFactory(font, true);
+		fac.debugBackground = true;
+		fac.imageDumpPath = Path.of("font-images");
 		this.fontTexture = fac.createFontTexture();
 		this.glyphs = fontTexture.glyphs();
 		TextureUnit textureUnit = ctx.getResourceManager().NextTextureUnit();
@@ -50,42 +57,39 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 
 
 		// create vertex data structure to render a part of the font texture to screen
-		VertexDataStructure structure = new VertexDataStructure(
-						new VertexElement(VertexElementType.VEC_2F, "position"),
-						new VertexElement(VertexElementType.VEC_2F, "texturePosition"),
-						new VertexElement(VertexElementType.VEC_4F, "color"));
+		VertexDataStructure structure = new VertexDataStructure(screenPosition, texturePosition);
 		// two triangles = one rect
-		this.fontDataBuffer = new VertexDataBuffer(structure, 6);
+		this.fontDataBuffer = new VertexDataBuffer(structure, 3 * 2 * TEXT.length());
 		fontDataBuffer.init(ctx);
-
 
 		// setup the shader
 		shader.use();
 		fontDataBuffer.setup(shader);
-		textureUnit.useInShader(shader, "image");
+		textureUnit.useInShader(shader, "tex");
 	}
 
 	@Override
 	public void doRender(RenderContext ctx) {
 		createStringData(ctx);
 		shader.use();
-		shader.setVector4f("spriteColor", color);
 		fontDataBuffer.render(0, 6);
 		shader.unuse();
 	}
 
-	private final String TEXT = "ijqtQfyY";
+
 
 	private void createStringData(RenderContext ctx) {
 		// where on the screen to draw the char
 		final Vector2f position = new Vector2f(150,150);
-		final float scale = 1.2f;
+		final float scale = 1.0f;
 
 		int index = (int) ctx.getTimer().linearFunction(TEXT.length(), 0.1);
-		GlyphData glyph = fontTexture.getGlyph(TEXT.charAt(index));
-		// figure out the area of the texture representing this char
-		Matrix2f transform = fontTexture.getTexture().normalisationMatrix();
-		Vector4f tex_extent = glyph.extent(transform);
+		char c = TEXT.charAt(index);
+		System.out.println("Char:"+c);
+		GlyphData glyph = fontTexture.getGlyph(c);
+		// figure out the area of the font strip texture representing this char
+		Matrix3x2f transform = fontTexture.getTexture().normalisationMatrix();
+		Vector4f tex_extent = new Vector4f(0);// glyph.bounds(transform);
 
 		// now work out the area of the screen to draw the char onto
 		Matrix4f normalisation = ctx.ortho();
@@ -95,59 +99,17 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 		Vector4f screen_extent = new Vector4f(screen_pos.x, screen_size.y, screen_size.x, screen_pos.y);
 
 		fontDataBuffer.clear();
-		Corner[] triangles = new Corner[]{
-						Corner.BOTTOM_LEFT, Corner.TOP_LEFT, Corner.TOP_RIGHT,
-						Corner.BOTTOM_LEFT, Corner.TOP_RIGHT, Corner.BOTTOM_RIGHT
-		};
 
-		// two triangles
-		for (int i = 0; i < triangles.length; i++) {
-			// position(2), texturePosition(2), color(4)
-			Corner vertice = triangles[i];
-			fontDataBuffer.set(i, vertice.from(screen_extent), vertice.from(tex_extent), color);
+		List<Map<VertexElement, Vector2f>> list = Corner.standardSixVertices()
+						.map(corner -> Map.of(
+										screenPosition, corner.from(screen_extent),
+										texturePosition, corner.from(tex_extent)))
+						.toList();
+		for (int i = 0; i < list.size(); i++) {
+			Map<VertexElement, Vector2f> map = list.get(i);
+			fontDataBuffer.set(i, map);
 		}
-		fontDataBuffer.update();
-	}
-
-	private enum H implements Function<Vector4f, Float> {
-		LEFT,
-		RIGHT;
-
-		@Override
-		public Float apply(Vector4f vector4f) {
-			return switch(this) {
-				case LEFT -> vector4f.x;
-				case RIGHT -> vector4f.z;
-			};
-		}
-	}
-
-	private enum V implements Function<Vector4f, Float> {
-		TOP, BOTTOM;
-
-		@Override
-		public Float apply(Vector4f vector4f) {
-			return switch(this) {
-				case TOP -> vector4f.w;
-				case BOTTOM -> vector4f.y;
-			};
-		}
-	}
-
-	public enum Corner {
-		TOP_LEFT(V.TOP, H.LEFT), TOP_RIGHT(V.TOP, H.RIGHT), BOTTOM_LEFT(V.BOTTOM, H.LEFT), BOTTOM_RIGHT(V.BOTTOM, H.RIGHT);
-
-		private final V vertical;
-		private final H horizontal;
-
-		Corner(V vertical, H horizontal) {
-			this.vertical = vertical;
-			this.horizontal = horizontal;
-		}
-
-		public Vector2f from(Vector4f extent) {
-			return new Vector2f(horizontal.apply(extent), vertical.apply(extent));
-		}
+		fontDataBuffer.update(VertexDataBuffer.UpdateHint.STREAM);
 	}
 
 	@Override

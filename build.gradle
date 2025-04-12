@@ -2,6 +2,7 @@ plugins {
   id 'java'
   id 'application'
   id "com.github.ben-manes.versions" version "0.51.0"
+  id 'com.gradleup.shadow' version '9.0.0-beta6'
 }
 
 group = 'com.asteroid.duck'
@@ -84,7 +85,7 @@ tasks.register("debugRun", JavaExec) {
   jvmArgs = ["-javaagent:src/test/resources/lwjglx-debug-1.0.0.jar=tn;o=debugRun.gl.log"]
   def myProps = ["simulate.audio": "TRUE"]
   systemProperties myProps
-  args = ["--interactive=false"] // Cthugha, TranslateExample, Triangle, PalettePicture, BlurPictureExample, BlurTest
+  args = ["TextExperiment"] // Cthugha, TranslateExample, Triangle, PalettePicture, BlurPictureExample, BlurTest
 }
 
 tasks.register("deleteCrashLogs", Delete) {

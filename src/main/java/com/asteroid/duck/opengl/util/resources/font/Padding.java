@@ -15,4 +15,8 @@ public record Padding(int left, int top, int right, int bottom) {
 	public int height() {
 		return bottom + top;
 	}
+
+	public Rectangle expand(Rectangle src) {
+		return new Rectangle(src.x - left, src.y - top, src.width + width(), src.height + height());
+	}
 }

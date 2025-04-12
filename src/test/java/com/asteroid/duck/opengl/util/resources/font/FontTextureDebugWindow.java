@@ -4,7 +4,6 @@ import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.nio.file.Path;
 import java.util.List;
@@ -12,6 +11,10 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
+/**
+ * A disposable swing app for playing around with FontTexture generated Glyph images
+ * rendering and bounds...
+ */
 public class FontTextureDebugWindow {
 
 	private JFrame frame;
@@ -31,6 +34,16 @@ public class FontTextureDebugWindow {
 		createAndShowGUI();
 	}
 
+	public static Rectangle renderFromStrip(GlyphData data, Point point, BufferedImage strip, Graphics2D g2d) {
+		Rectangle extent = data.bounds();
+		Point datumOffset = data.datumOffset();
+		ImageRenderer imageHelper = new ImageRenderer(g2d, strip);
+		Rectangle dest = new Rectangle(point.x, point.y, extent.width, extent.height);
+		dest.translate(-datumOffset.x, -datumOffset.y);
+		imageHelper.drawImage(extent, dest);
+		return dest;
+	}
+
 	private void createAndShowGUI() {
 		frame = new JFrame("Image with Details");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -42,7 +55,7 @@ public class FontTextureDebugWindow {
 		});
 
 		// Sample image - replace with your actual image
-		glyphy = new GlyphRenderer();
+		glyphy = new GlyphRenderer(fontTexture.combined());
 
 		// Create sample objects
 		List<Character> objects = fontTexture.glyphData().keySet().stream().sorted().toList();
@@ -89,10 +102,10 @@ public class FontTextureDebugWindow {
 			GlyphData g = fontTexture.glyphData().get(character);
 			GlyphImage image = fontTexture.glyphImages().get(character);
 			property1Label.setText("datumOffset: " + g.datumOffset());
-			property2Label.setText("strip extent: " + g.extent());
+			property2Label.setText("strip bounds: " + g.bounds());
 			property3Label.setText("src_bounds: "+ image.bounds());
 			property4Label.setText("advance:" + g.advance());
-			glyphy.setGlyph(image);
+			glyphy.setGlyph(g);
 		}
 	}
 
@@ -102,7 +115,7 @@ public class FontTextureDebugWindow {
 			public void run() {
 				Font monospacedFont = new Font(Font.SERIF, Font.PLAIN, 100);
 				FontTextureFactory factory = new FontTextureFactory(monospacedFont, true);
-				factory.setImageDumpPath(Path.of("font-images"));
+				factory.imageDumpPath = (Path.of("font-images"));
 				factory.debugBoundary = true;
 				new FontTextureDebugWindow(factory.createFontTextureData());
 			}
@@ -110,21 +123,18 @@ public class FontTextureDebugWindow {
 	}
 
 	public static class GlyphRenderer extends JComponent {
-		private BufferedImage image;
-		private Rectangle rectangle;
-		private Point datum = new Point(0,0);
+		private GlyphData glyph;
+		private final BufferedImage strip;
 		private double scale = 4.0;
 
-		public GlyphRenderer() {
+		public GlyphRenderer(BufferedImage strip) {
+			this.strip = strip;
 			setBackground(Color.BLACK);
 			repaint();
 		}
 
-		public void setGlyph(GlyphImage image) {
-			this.rectangle = image.bounds().getBounds();
-			rectangle.translate(image.x(), image.y());
-			this.datum = new Point(image.x(), image.y());
-			this.image = image.image();
+		public void setGlyph(GlyphData g) {
+			this.glyph = g;
 			repaint();
 		}
 
@@ -134,20 +144,25 @@ public class FontTextureDebugWindow {
 			Graphics2D g2d = (Graphics2D) g;
 			g2d.setColor(getBackground());
 			g2d.fillRect(0, 0, getWidth(), getHeight());
-			g2d.setTransform(AffineTransform.getScaleInstance(scale, scale));
-			if (image != null) {
+			g2d.scale(scale, scale);
+
+			// paint the glyph image
+			final int x = 100;
+			final int y = 100;
+			Point datum = new Point(x, y);
+			g2d.setColor(Color.BLUE);
+			g2d.drawLine(datum.x, 0, datum.x, getHeight());
+			g2d.drawLine(0, datum.y, getHeight(), datum.y);
+
+			if (glyph != null) {
+				//g2d.scale(scale, -scale);
+				//g2d.translate(0, -getHeight());
+				Rectangle target = renderFromStrip(glyph, datum, strip, g2d);
+
 				g2d.setColor(Color.CYAN);
-				g2d.drawRect(0,0, image.getWidth(), image.getHeight());
-				g2d.drawImage(image, 0,0, this);
+				g2d.drawRect(target.x, target.y, target.width, target.height);
 			}
-			if (rectangle != null) {
-				g2d.setColor(Color.BLUE);
-				g2d.drawLine(datum.x, 0 , datum.x, image.getHeight());
-				g2d.setColor(Color.magenta);
-				g2d.drawRect(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
-				g2d.setColor(Color.BLUE);
-				g2d.drawLine(0, datum.y,image.getWidth(), datum.y);
-			}
+
 			g2d.dispose();
 		}
 	}

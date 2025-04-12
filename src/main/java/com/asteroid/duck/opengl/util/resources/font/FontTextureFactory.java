@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -19,8 +20,9 @@ public class FontTextureFactory {
 	private final boolean antialias;
 	private final Padding padding;
 	private FontMetrics fontMetrics;
-	private Path imageDumpPath;
+	public Path imageDumpPath;
 	public boolean debugBoundary = false;
+	public boolean debugBackground = false;
 
 	public FontTextureFactory(java.awt.Font font, boolean antialias) {
 		this.font = font;
@@ -33,9 +35,6 @@ public class FontTextureFactory {
 		return new Padding(pad, pad, pad, pad);
 	}
 
-	void setImageDumpPath(Path p) {
-		this.imageDumpPath = p;
-	}
 
 	public Stream<Character> completeCharacterSet() {
 		return IntStream.range(32, 256).filter(i -> i != 127).mapToObj(i -> (char)i);
@@ -60,6 +59,7 @@ public class FontTextureFactory {
 			if (charImage != null) {
 				glyphImages.put(c, charImage);
 				Rectangle rect = charImage.bounds();
+				rect = padding.expand(rect);
 				if (rect.height > maxHeight) {
 					maxHeight = rect.height;
 				}
@@ -71,18 +71,15 @@ public class FontTextureFactory {
 		Dimension imageDims = new Dimension(totalWidth, maxHeight);
 		BufferedImage image = newImage(imageDims);
 		Graphics2D g = image.createGraphics();
-		// OpenGL images are upside down... so correct for that
-		g.scale(1, -1);
-		g.translate(0, -image.getHeight());
 
 		// now draw each character in a line
 		int x = 0;
 		for(Character c : glyphImages.keySet()) {
 			GlyphImage gi = glyphImages.get(c);
 
-			GlyphData gData = gi.renderToStrip(x, g);
+			GlyphData gData = gi.renderToStrip(padding, x, g);
 			glyphData.put(c, gData);
-			x += gData.extent().width;
+			x += gData.bounds().width + padding.right();
     }
 		// dump the image for debug
 		if(imageDumpPath != null) {
@@ -93,7 +90,6 @@ public class FontTextureFactory {
         System.err.println("Failed to dump image: " + e.getMessage());
       }
 		}
-
 		return new FontTextureData(glyphImages, glyphData, image );
 	}
 
@@ -117,6 +113,8 @@ public class FontTextureFactory {
 		// as it's just going to be painted onto the actual image
 		int imageWidth = metrics.getMaxAdvance() + padding.width();
 		int imageHeight = metrics.getMaxAscent() + metrics.getMaxDescent() + padding.height();
+		// the baseline is enough for the biggest font ascent plus the padding
+		// it is the same for all glyphs in the font
 		int baseline = metrics.getMaxAscent() + padding.top();
 		BufferedImage image = new BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_INT_ARGB);
 
@@ -126,31 +124,38 @@ public class FontTextureFactory {
 		}
 		g.setFont(font);
 		g.setPaint(java.awt.Color.WHITE);
+		// the position for the glyph to be rendered onto the image
 		int x = imageWidth / 2;
 		int y = baseline;
-		g.drawString(charStr, x, baseline);
+		g.drawString(charStr, x, y);
 
 		// find the bounding box
 		Rectangle bounds = findPixelBounds(image, 1);
 		if (bounds.width < 0 || bounds.height < 0) {
-			// we did not have any pixel bounds (empty image - e.g. space)
-			// make some up
+			// we did not have any pixel bounds (empty image - e.g. space character)
+			// make some up using metrics
 			int width = metrics.charWidth(c);
 			bounds = new Rectangle(x, y, width, 1);
 		}
-		bounds.translate(-x, -y);
 		g.dispose();
-		return new GlyphImage(image, x, y, bounds);
+		return new GlyphImage(image, new Point(x, y), bounds);
 	}
 
+	/**
+	 * Attempts to find the smallest rectangle in an image (from the border)
+	 * that contains some opaque pixel data (according to some alpha threshold).
+	 * @param image the image to search
+	 * @param alphaThreshold the threshold of transparency
+	 * @return the rectangle in the image outside which is only transparent pixels
+	 */
 	private Rectangle findPixelBounds(BufferedImage image, int alphaThreshold) {
 		int left = image.getWidth(), right = 0, top = image.getHeight(), bottom = 0;
 		for(int y = 0; y < image.getHeight(); y++) {
 			for(int x = 0; x < image.getWidth(); x++) {
 				int rgbaColor = image.getRGB(x, y);
-				int red = (rgbaColor >> 24) & 0xFF;
-				int green = (rgbaColor >> 16) & 0xFF;
-				int blue = (rgbaColor >> 8) & 0xFF;
+				//int red = (rgbaColor >> 24) & 0xFF;
+				//int green = (rgbaColor >> 16) & 0xFF;
+				//int blue = (rgbaColor >> 8) & 0xFF;
 				int alpha = rgbaColor & 0xFF;
 
 				if (alpha >= alphaThreshold) {
@@ -168,14 +173,9 @@ public class FontTextureFactory {
 		return DataFormat.RGBA.apply(size);
 	}
 
-	private BufferedImage newImage(int width, int height) {
-		return DataFormat.RGBA.apply(new Dimension(width, height));
-	}
-
-
 	private FontMetrics getFontMetrics() {
 		if (fontMetrics == null) {
-			BufferedImage tmp = newImage(1,1);
+			BufferedImage tmp = newImage(new Dimension(1,1));
 			Graphics2D g = tmp.createGraphics();
 			if (antialias) {
 				g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);

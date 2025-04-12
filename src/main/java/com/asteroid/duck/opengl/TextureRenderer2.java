@@ -159,7 +159,7 @@ public class TextureRenderer2 {
 			//System.out.println(i+"= old: " + render(old) + "\tupdated: " + render(updated) +"              \r");
 			vertexDataBuffer.setElement(i, structure.get("aTexCoord"), updated);
 		}
-		vertexDataBuffer.update();
+		vertexDataBuffer.update(VertexDataBuffer.UpdateHint.STREAM);
 	}
 
 	private static String render(Vector2f vec) {
