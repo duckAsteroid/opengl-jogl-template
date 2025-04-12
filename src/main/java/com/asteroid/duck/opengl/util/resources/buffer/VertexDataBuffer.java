@@ -3,6 +3,7 @@ package com.asteroid.duck.opengl.util.resources.buffer;
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.resources.Stateful;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
+import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
@@ -26,6 +27,25 @@ import static org.lwjgl.opengl.GL30.glGenVertexArrays;
  * This data can then be flushed out to the GPU as required.
  */
 public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implements Stateful {
+	public enum UpdateHint {
+		/** The data store contents will be modified once and used many times. */
+		STATIC(GL_STATIC_DRAW),
+		/** The data store contents will be modified once and used at most a few times. */
+		STREAM(GL_STREAM_DRAW),
+		/** The data store contents will be modified repeatedly and used many times */
+		DYNAMIC(GL_DYNAMIC_DRAW);
+
+		private final int glCode;
+
+		UpdateHint(int glCode) {
+			this.glCode = glCode;
+		}
+
+		public int getGlCode() {
+			return glCode;
+		}
+	}
+
 	private static final byte ZERO_BYTE = 0;
 	/**
 	 * This defines the order of the elements for each vertex.
@@ -225,9 +245,12 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 		glBindVertexArray(vao);
 	}
 
-	public void update() {
+	public void update(UpdateHint hint) {
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glBufferData(GL_ARRAY_BUFFER, memBuffer, GL_STREAM_DRAW);
+		if (hint == null) {
+			hint = UpdateHint.STATIC;
+		}
+		glBufferData(GL_ARRAY_BUFFER, memBuffer, hint.glCode);
 	}
 
 	public void render(int start, int count) {
