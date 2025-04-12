@@ -19,7 +19,7 @@ import org.joml.Vector4f;
  * {@link GlyphData} objects.
  *
  * Based on (but different to)
- * https://github.com/SilverTiger/lwjgl3-tutorial/blob/master/src/silvertiger/tutorial/lwjgl/text/Font.java
+ * <a href="https://github.com/SilverTiger/lwjgl3-tutorial/blob/master/src/silvertiger/tutorial/lwjgl/text/Font.java">this</a>
  */
 
 public class FontTexture implements Resource {
@@ -41,7 +41,7 @@ public class FontTexture implements Resource {
 		this.glyphs = Collections.unmodifiableMap(glyphs);
 		this.texture = texture;
 		this.fontHeight = glyphs.values().stream()
-						.map(GlyphData::extent)
+						.map(GlyphData::bounds)
 						.mapToInt(r -> r.height)
 						.max().orElseThrow();
 	}
@@ -74,7 +74,7 @@ public class FontTexture implements Resource {
 				continue;
 			}
 			GlyphData g = glyphs.get(c);
-			lineWidth += g.extent().width;
+			lineWidth += g.bounds().width;
 		}
 		width = Math.max(width, lineWidth);
 		return width;
@@ -103,7 +103,7 @@ public class FontTexture implements Resource {
 				continue;
 			}
 			GlyphData g = glyphs.get(c);
-			lineHeight = Math.max(lineHeight, g.extent().height);
+			lineHeight = Math.max(lineHeight, g.bounds().height);
 		}
 		height += lineHeight;
 		return height;
@@ -163,6 +163,6 @@ public class FontTexture implements Resource {
 	}
 
 	public List<GlyphData> glyphs() {
-		return glyphs.values().stream().sorted(Comparator.comparingInt(value -> value.extent().x)).toList();
+		return glyphs.values().stream().sorted(Comparator.comparingInt(value -> value.bounds().x)).toList();
 	}
 }

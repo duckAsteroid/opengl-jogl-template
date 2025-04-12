@@ -170,10 +170,12 @@ public class Texture implements Resource {
 	/**
 	 * A matrix that can be used to normalise texture pixel coordinates
 	 */
-	public Matrix2f normalisationMatrix() {
-		return new Matrix2f(
-						1f / Width, 0f,
-						0f, 1f / Height
+	public Matrix3x2f normalisationMatrix() {
+		return new Matrix3x2f(
+						1f / Width,   0f,
+						0f,           -1f / Height,
+						0f,           1f
+
 		);
 	}
 

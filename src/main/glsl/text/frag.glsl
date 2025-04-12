@@ -8,5 +8,5 @@ out vec4 FragColor;
 
 void main()
 {
-    FragColor = spriteColor * texture(image, texCoords);
+    FragColor = vec4(0.3) + (spriteColor * texture(image, texCoords));
 }
