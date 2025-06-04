@@ -4,6 +4,7 @@ import com.asteroid.duck.opengl.util.OffscreenTextureRenderer;
 import com.asteroid.duck.opengl.util.PassthruTextureRenderer;
 import com.asteroid.duck.opengl.util.*;
 import com.asteroid.duck.opengl.util.resources.texture.*;
+import com.asteroid.duck.opengl.util.resources.texture.io.ImageLoadingOptions;
 import com.asteroid.duck.opengl.util.toggle.Frequency;
 import com.asteroid.duck.opengl.util.toggle.ToggledRenderItem;
 
@@ -19,14 +20,14 @@ public class TranslateExample extends CompositeRenderItem implements Experiment 
 	@Override
 	public void init(RenderContext ctx) throws IOException {
 		ctx.setClearScreen(true);
-		double updatePeriod = 1.0 / 25.0; // in seconds
+		double updatePeriod = 1.0 / 35.0; // in seconds
 		ctx.setDesiredUpdatePeriod(updatePeriod);
 		// load the test card image
-		Texture texture = ctx.getResourceManager().GetTexture("testcard", "test-card.jpeg", ImageOptions.DEFAULT);
+		Texture texture = ctx.getResourceManager().GetTexture("testcard", "test-card.jpeg", ImageLoadingOptions.DEFAULT);
 		// load the translation map - it's a matrix (screen sized) of 2 * 16 bit floats
-		Texture translateMap = ctx.getResourceManager().GetTexture("translate", "translate/bighalfwheel.1024x800.tab", ImageOptions.DEFAULT.withType(DataFormat.TWO_CHANNEL_16_BIT));
+		Texture translateMap = ctx.getResourceManager().GetTexture("translate", "translate/bighalfwheel.1024x800.tab", ImageLoadingOptions.DEFAULT.withType(DataFormat.TWO_CHANNEL_16_BIT));
 		// offscreen texture
-		TextureOptions opts = new TextureOptions(DataFormat.GRAY, Texture.Filter.LINEAR, Texture.Wrap.REPEAT);
+		TextureOptions opts = new TextureOptions(DataFormat.GRAY, Filter.LINEAR, Wrap.REPEAT);
 		Texture offscreen = TextureFactory.createTexture(ctx.getWindow(), null, opts);
 		ctx.getResourceManager().PutTexture("yabadabado", offscreen);
 

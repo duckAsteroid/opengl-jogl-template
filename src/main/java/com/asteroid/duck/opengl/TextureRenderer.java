@@ -1,12 +1,9 @@
 package com.asteroid.duck.opengl;
 
-import com.asteroid.duck.opengl.util.resources.shader.ShaderLoader;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
-import com.asteroid.duck.opengl.util.resources.texture.ImageOptions;
+import com.asteroid.duck.opengl.util.resources.texture.io.ImageLoadingOptions;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import com.asteroid.duck.opengl.util.resources.texture.TextureFactory;
-import org.joml.Matrix4f;
-import org.lwjgl.BufferUtils;
 import org.lwjgl.glfw.*;
 import org.lwjgl.opengl.*;
 import org.lwjgl.system.MemoryUtil;
@@ -14,7 +11,6 @@ import org.lwjgl.system.MemoryUtil;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
 import java.nio.file.Path;
 
 import static org.lwjgl.glfw.GLFW.*;
@@ -206,7 +202,7 @@ public class TextureRenderer {
 
 		TextureFactory texFac = new TextureFactory(dir);
 
-		Texture loaded = texFac.LoadTexture(path.getFileName().toString(), ImageOptions.DEFAULT);
+		Texture loaded = texFac.LoadTexture(path.getFileName().toString(), ImageLoadingOptions.DEFAULT);
 		System.out.println("Loaded texture: " + loaded);
 		this.texture = loaded.id();
 

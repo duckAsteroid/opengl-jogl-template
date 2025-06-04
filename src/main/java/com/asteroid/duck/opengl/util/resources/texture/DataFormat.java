@@ -12,7 +12,7 @@ import static org.lwjgl.opengl.GL11C.GL_RGBA8;
 import static org.lwjgl.opengl.GL30.*;
 
 /**
- * High levels foramts of Texture, used during the texture loading process.
+ * High levels formats of Texture, used during the texture loading process.
  * Defines the number of channels and the data type of those channels.
  * e.g. RGBA etc.
  */
@@ -110,8 +110,8 @@ public enum DataFormat implements TextureFactory.FormatHelper {
 
 	@Override
 	public ByteBuffer pixelData(BufferedImage img) {
-		// build a byte buffer from the temporary image
-		// that be used by OpenGL to produce a texture.
+		// build a byte buffer from the image data
+		// that OpenGL can use to produce a texture.
 		byte[] data = ((DataBufferByte) img.getRaster().getDataBuffer())
 						.getData();
 

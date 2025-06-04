@@ -1,119 +1,21 @@
 package com.asteroid.duck.opengl.util.resources.texture;
 
 import com.asteroid.duck.opengl.util.resources.Resource;
-import org.joml.Matrix2f;
-import org.joml.Matrix3f;
 import org.joml.Matrix3x2f;
 import org.joml.Vector2f;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
-import java.util.function.Supplier;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.lwjgl.opengl.GL11.*;
 
-
+/**
+ * Represents an OpenGL Texture object. Typically, this is a pixel-based image in the graphics memory.
+ */
 public class Texture implements Resource {
 	private static final Logger LOG = LoggerFactory.getLogger(Texture.class);
-
-
-	    /**
-     * An interface that represents an OpenGL coded object.
-     * This interface provides methods to retrieve the OpenGL code and parameters associated with the object.
-     */
-    public interface OpenGLCoded extends Supplier<Integer> {
-        /**
-         * Returns the OpenGL code associated with this object.
-         *
-         * @return the OpenGL code
-         */
-        int openGlCode();
-
-        /**
-         * Returns an array of OpenGL parameters associated with this object.
-         *
-         * @return an array of OpenGL parameters
-         */
-        int[] openGlParams();
-
-        @Override
-        default Integer get() {
-            return openGlCode();
-        }
-
-        /**
-         * Returns a stream of OpenGL parameters used to apply this code
-         *
-         * @return a stream of OpenGL parameters
-         */
-        default IntStream openGlParamsStream() {
-            return IntStream.of(openGlParams());
-        }
-    }
-
-	/** The basic dimensions of a texture: 1- or 2-dimensional */
-	public enum Dimensions implements OpenGLCoded {
-		/** A 1D Texture */
-		ONE_DIMENSION(GL_TEXTURE_1D),
-		/** A 2D Texture */
-		TWO_DIMENSION(GL_TEXTURE_2D);
-		private final int openGlCode;
-
-		Dimensions(int openGlCode) {
-			this.openGlCode = openGlCode;
-		}
-
-		public int openGlCode() {
-			return openGlCode;
-		}
-
-		public int[] openGlParams() {
-			return new int[]{};
-		}
-	}
-
-	/** How the texture wraps - repeat or stop at edge */
-	public enum Wrap implements OpenGLCoded {
-		CLAMP_TO_EDGE(GL_CLAMP), REPEAT(GL_REPEAT);
-		private final int openGlCode;
-
-		Wrap(int openGlCode) {
-			this.openGlCode = openGlCode;
-		}
-
-		public int openGlCode() {
-			return openGlCode;
-		}
-
-		public int[] openGlParams() {
-			return new int[]{GL_TEXTURE_WRAP_S, GL_TEXTURE_WRAP_T};
-		}
-	}
-
-	/**
-	 * How the texture is filtered when magnified or minified.
-	 * LINEAR interpolation or NEAREST neighbour
-	 */
-	public enum Filter implements OpenGLCoded {
-		LINEAR(GL_LINEAR), NEAREST(GL_NEAREST);
-
-		private final int openGlCode;
-
-		Filter(int openGlCode) {
-			this.openGlCode = openGlCode;
-		}
-
-		public int openGlCode() {
-			return openGlCode;
-		}
-
-		public int[] openGlParams() {
-			return new int[]{GL_TEXTURE_MIN_FILTER, GL_TEXTURE_MAG_FILTER};
-		}
-	}
 
 	// e.g. 2D or 1D
 	Dimensions dimensions;
@@ -130,6 +32,7 @@ public class Texture implements Resource {
 	public Stream<OpenGLCoded> openGlCodedStream() {
 		return Stream.of(wrap, filter);
 	}
+
 	/**
 	 * Constructs a new Texture object.
 	 *
@@ -146,8 +49,7 @@ public class Texture implements Resource {
 	 * Generates a unique texture ID using OpenGL's glGenTextures function.
 	 * Logs the creation of the texture with the generated ID.
 	 */
-	public Texture()
-	{
+	public Texture() {
 		this.Width = 0;
 		this.Height = 0;
 		this.Internal_Format = GL_RGB;
@@ -172,57 +74,55 @@ public class Texture implements Resource {
 	 */
 	public Matrix3x2f normalisationMatrix() {
 		return new Matrix3x2f(
-						1f / Width,   0f,
-						0f,           -1f / Height,
-						0f,           1f
+						1f / Width, 0f,
+						0f, -1f / Height,
+						0f, 1f
 
 		);
 	}
 
 	// generate an empty texture (e.g. for rendering)
-	public void Generate( int width,  int height, long pixels) {
+	public void Generate(int width, int height, long pixels) {
 		this.Width = width;
 		this.Height = height;
 		if (dimensions != Dimensions.TWO_DIMENSION) throw new IllegalArgumentException("Texture type must be 2D");
 		// create texture
-		glBindTexture(dimensions.openGlCode, this.ID);
-		glTexImage2D(dimensions.openGlCode, 0, this.Internal_Format, width, height, 0, this.Image_Format, this.dataType, pixels);
+		glBindTexture(dimensions.openGlCode(), this.ID);
+		glTexImage2D(dimensions.openGlCode(), 0, this.Internal_Format, width, height, 0, this.Image_Format, this.dataType, pixels);
 		// set Texture wrap and filter modes
-		wrap.openGlParamsStream().forEach(param -> glTexParameteri(dimensions.openGlCode, param, wrap.openGlCode));
-		filter.openGlParamsStream().forEach(param -> glTexParameteri(dimensions.openGlCode, param, filter.openGlCode));
+		wrap.openGlParamsStream().forEach(param -> glTexParameteri(dimensions.openGlCode(), param, wrap.openGlCode()));
+		filter.openGlParamsStream().forEach(param -> glTexParameteri(dimensions.openGlCode(), param, filter.openGlCode()));
 
 		// unbind texture
-		glBindTexture(dimensions.openGlCode, 0);
+		glBindTexture(dimensions.openGlCode(), 0);
 	}
 
-	public void Generate( int width, int height, ByteBuffer data)
-	{
+	public void Generate(int width, int height, ByteBuffer data) {
 		this.Width = width;
 		this.Height = height;
 		if (dimensions != Dimensions.TWO_DIMENSION) throw new IllegalArgumentException("Texture type must be 2D");
 		// create Texture
 		Bind();
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-		glTexImage2D(dimensions.openGlCode, 0, this.Internal_Format, width, height, 0, this.Image_Format, this.dataType, data);
+		glTexImage2D(dimensions.openGlCode(), 0, this.Internal_Format, width, height, 0, this.Image_Format, this.dataType, data);
 		// set Texture wrap and filter modes
-		wrap.openGlParamsStream().forEach(param -> glTexParameteri(dimensions.openGlCode, param, wrap.openGlCode));
-		filter.openGlParamsStream().forEach(param -> glTexParameteri(dimensions.openGlCode, param, filter.openGlCode));
+		wrap.openGlParamsStream().forEach(param -> glTexParameteri(dimensions.openGlCode(), param, wrap.openGlCode()));
+		filter.openGlParamsStream().forEach(param -> glTexParameteri(dimensions.openGlCode(), param, filter.openGlCode()));
 		// unbind texture
 		UnBind();
 	}
 
-	public void Generate1D( int length, ByteBuffer data)
-	{
+	public void Generate1D(int length, ByteBuffer data) {
 		this.Width = length;
 		this.Height = 1;
 		this.dimensions = Dimensions.ONE_DIMENSION;
 		this.wrap = Wrap.REPEAT;
 		// create Texture
 		Bind();
-		glTexImage1D(this.dimensions.openGlCode, 0, this.Internal_Format, Width, 0, this.Image_Format, GL_UNSIGNED_BYTE, data);
+		glTexImage1D(this.dimensions.openGlCode(), 0, this.Internal_Format, Width, 0, this.Image_Format, GL_UNSIGNED_BYTE, data);
 		// set Texture wrap and filter modes
-		wrap.openGlParamsStream().forEach(param -> glTexParameteri(dimensions.openGlCode, param, wrap.openGlCode));
-		filter.openGlParamsStream().forEach(param -> glTexParameteri(dimensions.openGlCode, param, filter.openGlCode));
+		wrap.openGlParamsStream().forEach(param -> glTexParameteri(dimensions.openGlCode(), param, wrap.openGlCode()));
+		filter.openGlParamsStream().forEach(param -> glTexParameteri(dimensions.openGlCode(), param, filter.openGlCode()));
 		// unbind texture
 		UnBind();
 	}
@@ -231,14 +131,12 @@ public class Texture implements Resource {
 		return ID;
 	}
 
-	public void Bind()
-	{
-		glBindTexture(dimensions.openGlCode, ID);
+	public void Bind() {
+		glBindTexture(dimensions.openGlCode(), ID);
 	}
 
-	public void UnBind()
-	{
-		glBindTexture(dimensions.openGlCode, 0);
+	public void UnBind() {
+		glBindTexture(dimensions.openGlCode(), 0);
 	}
 
 	public void destroy() {

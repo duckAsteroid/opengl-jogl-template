@@ -8,9 +8,9 @@ import java.util.stream.Stream;
 
 /**
  * Represents one of the four corners of a rectangle.
- * With utilities to go for AWT coordinates and OpenGL ones
+ * With utilities for AWT coordinates and OpenGL ones
  */
-public enum Corner {
+public enum Vertice {
 	TOP_LEFT(Vertical.TOP, Horizontal.LEFT),
 	TOP_RIGHT(Vertical.TOP, Horizontal.RIGHT),
 	BOTTOM_LEFT(Vertical.BOTTOM, Horizontal.LEFT),
@@ -24,7 +24,7 @@ public enum Corner {
 	 */
 	private final Horizontal horizontal;
 
-	Corner(Vertical vertical, Horizontal horizontal) {
+	Vertice(Vertical vertical, Horizontal horizontal) {
 		this.vertical = vertical;
 		this.horizontal = horizontal;
 	}
@@ -44,7 +44,7 @@ public enum Corner {
 	 */
 	public Vector2f from(Vector4f extent) {
 		assert(extent != null);
-		return new Vector2f(horizontal.apply(extent), vertical.apply(extent));
+		return new Vector2f(horizontal.from(extent), vertical.from(extent));
 	}
 	/**
 	 * Get this corner from an AWT bounds rectangle.
@@ -61,23 +61,28 @@ public enum Corner {
 	 */
 	public Vector2f from(Rectangle rect) {
 		assert(rect != null);
-		float x = switch(horizontal) {
-			case LEFT -> rect.x;
-			case RIGHT -> rect.x + rect.width;
-		};
-		float y = switch(vertical) {
-			case TOP -> rect.y ;
-			case BOTTOM -> rect.y + rect.height;
-		};
-		return new Vector2f(x,y);
+		return new Vector2f(horizontal.from(rect), vertical.from(rect));
+	}
+
+	public Point pointFrom(Rectangle awt) {
+		assert(awt != null);
+		return new Point(horizontal.from(awt), vertical.from(awt));
 	}
 
 	/**
-	 * The standard six vertices that make up a regular GL rectangle.
+	 * The standard six vertices that make up a regular GL rectangle in two triangles
 	 * Clockwise around the edge starting Top Left
 	 * @return TL, TR, BR, BR, BL, TL
 	 */
-	public static Stream<Corner> standardSixVertices() {
+	public static Stream<Vertice> standardSixVertices() {
 		return Stream.of(TOP_LEFT, TOP_RIGHT, BOTTOM_RIGHT, BOTTOM_RIGHT, BOTTOM_LEFT, TOP_LEFT);
+	}
+	/**
+	 * The standard four vertices that make up a regular GL rectangle
+	 * Clockwise around the edge starting Top Left
+	 * @return TL, TR, BR, BL
+	 */
+	public static Stream<Vertice> standardFourVertices() {
+		return Stream.of(TOP_LEFT, TOP_RIGHT, BOTTOM_RIGHT, BOTTOM_LEFT);
 	}
 }

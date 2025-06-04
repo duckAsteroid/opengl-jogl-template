@@ -11,17 +11,23 @@ import java.util.Objects;
 import static org.lwjgl.opengl.GL11.GL_FLOAT;
 
 /**
- * Represents the type of a {@link VertexElement} in a {@link VertexDataStructure}.
+ * Represents the type of {@link VertexElement} in a {@link VertexDataStructure}.
+ * Can go between the bytes in the underlying memory buffer and the Java type this element holds.
+ * There are implementations for common vertex data types as static members:
+ * <ul>
+ * <li>{@link #FLOAT}</li>
+ * <li>{@link #VEC_2F}</li>
+ * <li>{@link #VEC_3F}</li>
+ * <li>{@link #VEC_4F}</li>
+ * </ul>
  * @param <T> The Java type of data stored in the element
  */
 public abstract class VertexElementType<T> {
-
-
 	private final Class<T> javaType;
 	private final int dimensions;
 	private final int glType;
 
-	VertexElementType(Class<T> t, int s, int glType) {
+	public VertexElementType(Class<T> t, int s, int glType) {
 		this.javaType = t;
 		this.dimensions = s;
 		this.glType = glType;
@@ -77,23 +83,6 @@ public abstract class VertexElementType<T> {
 		throw new IllegalArgumentException("Serialized value of "+javaType.getName()+" cannot be null");
 	}
 
-	@Override
-	public boolean equals(Object o) {
-		if (o == null || getClass() != o.getClass()) return false;
-		VertexElementType<?> that = (VertexElementType<?>) o;
-		return dimensions == that.dimensions && Objects.equals(javaType, that.javaType);
-	}
-
-	@Override
-	public int hashCode() {
-		return Objects.hash(javaType, dimensions);
-	}
-
-	@Override
-	public String toString() {
-		return "[%s, size=%d]".formatted(javaType.getName(), dimensions);
-	}
-
 	public String dataStringRaw(Object obj) {
 		try {
 			if (obj == null) {
@@ -107,10 +96,30 @@ public abstract class VertexElementType<T> {
 
 	public abstract String dataString(T dataValue);
 
+	@Override
+	public boolean equals(Object o) {
+		if (o == null || getClass().equals(o.getClass())) return false;
+		VertexElementType<?> that = (VertexElementType<?>) o;
+		return glType == that.glType &&
+						dimensions == that.dimensions &&
+						Objects.equals(javaType, that.javaType);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(javaType, dimensions, glType);
+	}
+
+	@Override
+	public String toString() {
+		return "[%s, %dx%d]".formatted(javaType.getName(), dimensions, glType);
+	}
+
+	/// TYPED SINGLETON INSTANCES --------------------------------------------------------------------
+
 	public static String floatToString(float f) {
 		return String.format("%.4f", f);
 	}
-	/// TYPED SINGLETON INSTANCES --------------------------------------------------------------------
 
 	public static VertexElementType<Float> FLOAT = new VertexElementType<>(Float.class, 1, GL_FLOAT) {
 

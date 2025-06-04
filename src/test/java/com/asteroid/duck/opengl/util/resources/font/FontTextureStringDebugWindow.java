@@ -1,5 +1,8 @@
 package com.asteroid.duck.opengl.util.resources.font;
 
+import com.asteroid.duck.opengl.util.resources.font.factory.FontTextureData;
+import com.asteroid.duck.opengl.util.resources.font.factory.FontTextureDataFactory;
+
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.event.DocumentEvent;
@@ -114,9 +117,7 @@ public class FontTextureStringDebugWindow {
 		SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
 				Font monospacedFont = new Font(Font.SERIF, Font.BOLD, 50);
-				FontTextureFactory factory = new FontTextureFactory(monospacedFont, false);
-				factory.imageDumpPath = Path.of("font-images");
-				factory.debugBoundary = true;
+				FontTextureDataFactory factory = new FontTextureDataFactory(monospacedFont, false);
 				new FontTextureStringDebugWindow(monospacedFont, factory.createFontTextureData());
 			}
 		});

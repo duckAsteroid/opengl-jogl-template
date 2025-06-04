@@ -1,6 +1,6 @@
 package com.asteroid.duck.opengl.experiments;
 
-import com.asteroid.duck.opengl.util.geom.Corner;
+import com.asteroid.duck.opengl.util.geom.Vertice;
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.keys.KeyCombination;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexDataBuffer;
@@ -100,12 +100,12 @@ public class PassthruTexture implements Experiment {
 				float yScreenStart = -1.0f + (screenSegmentSize * y);
 				float yScreenEnd = yScreenStart + screenSegmentSize;
 				final Vector4f screenSquare = new Vector4f(xScreenStart, yScreenStart, xScreenEnd, yScreenEnd);
-				List<Vector2f> screenTriangles = Corner.standardSixVertices().map(corner -> corner.from(screenSquare)).toList();
+				List<Vector2f> screenTriangles = Vertice.standardSixVertices().map(corner -> corner.from(screenSquare)).toList();
 
 				float yTextureStart = 0f + (textureSegmentSize * y);
 				float yTextureEnd = yTextureStart + textureSegmentSize;
 				final Vector4f textureSquare = new Vector4f(xTextureStart, yTextureStart, xTextureEnd, yTextureEnd);
-				List<Vector2f> textureTriangles = Corner.standardSixVertices().map(corner -> corner.from(textureSquare)).toList();
+				List<Vector2f> textureTriangles = Vertice.standardSixVertices().map(corner -> corner.from(textureSquare)).toList();
 
 				List<Map<VertexElement, Vector2f>> squareData = IntStream.range(0, screenTriangles.size())
 								.mapToObj(i -> Map.of(screenPosition, screenTriangles.get(i), texturePosition, textureTriangles.get(i)))

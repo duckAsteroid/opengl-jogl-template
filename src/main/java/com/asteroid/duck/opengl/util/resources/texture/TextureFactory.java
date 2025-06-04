@@ -1,6 +1,9 @@
 package com.asteroid.duck.opengl.util.resources.texture;
 
 import com.asteroid.duck.opengl.util.resources.impl.AbstractResourceLoader;
+import com.asteroid.duck.opengl.util.resources.texture.io.ImageLoadingOptions;
+import com.asteroid.duck.opengl.util.resources.texture.io.JavaImageLoader;
+import com.asteroid.duck.opengl.util.resources.texture.io.RawLoader;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -31,10 +34,10 @@ public class TextureFactory extends AbstractResourceLoader<Texture> {
 	public static Texture createTexture(Rectangle screen, boolean is32f) {
 		TextureOptions options = null;
 		if (is32f) {
-			options = new TextureOptions(DataFormat.GRAY, Texture.Filter.LINEAR, Texture.Wrap.REPEAT);
+			options = new TextureOptions(DataFormat.GRAY, Filter.LINEAR, Wrap.REPEAT);
 		}
 		else {
-			options = new TextureOptions(DataFormat.RGBA, Texture.Filter.LINEAR, Texture.Wrap.REPEAT);
+			options = new TextureOptions(DataFormat.RGBA, Filter.LINEAR, Wrap.REPEAT);
 		}
 		return createTexture(screen, null, options );
 	}
@@ -56,7 +59,7 @@ public class TextureFactory extends AbstractResourceLoader<Texture> {
 	}
 
 
-	public static Texture createTexture(ImageOptions options, ImageData data) {
+	public static Texture createTexture(ImageLoadingOptions options, ImageData data) {
 		Texture tex = new Texture();
 
 		tex.setInternalFormat( options.dataFormat().internalFormat());
@@ -75,12 +78,12 @@ public class TextureFactory extends AbstractResourceLoader<Texture> {
 		return tex;
 	}
 
-	public Texture LoadTexture(String texturePath, ImageOptions options) throws IOException {
+	public Texture LoadTexture(String texturePath, ImageLoadingOptions options) throws IOException {
 			ImageData imageData = loadTextureData(texturePath, options);
 			return createTexture(options, imageData);
 	}
 
-	public ImageData loadTextureData(String texturePath, ImageOptions options) throws IOException {
+	public ImageData loadTextureData(String texturePath, ImageLoadingOptions options) throws IOException {
 		if (IMAGE_FORMATS.stream().anyMatch(texturePath::endsWith)) {
 			return new JavaImageLoader().load(getPath(texturePath), options);
 		}

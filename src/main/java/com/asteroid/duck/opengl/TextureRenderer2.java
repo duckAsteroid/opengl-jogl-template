@@ -5,7 +5,7 @@ import com.asteroid.duck.opengl.util.resources.buffer.VertexDataStructure;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexElement;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexElementType;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
-import com.asteroid.duck.opengl.util.resources.texture.ImageOptions;
+import com.asteroid.duck.opengl.util.resources.texture.io.ImageLoadingOptions;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import com.asteroid.duck.opengl.util.resources.texture.TextureFactory;
 import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
@@ -200,7 +200,7 @@ public class TextureRenderer2 {
 
 		TextureFactory texFac = new TextureFactory(dir);
 
-		Texture loaded = texFac.LoadTexture(path.getFileName().toString(), ImageOptions.DEFAULT);
+		Texture loaded = texFac.LoadTexture(path.getFileName().toString(), ImageLoadingOptions.DEFAULT);
 		System.out.println("Loaded texture: " + loaded);
 
 		return loaded;

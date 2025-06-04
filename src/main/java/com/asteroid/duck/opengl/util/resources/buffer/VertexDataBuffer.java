@@ -1,14 +1,12 @@
 package com.asteroid.duck.opengl.util.resources.buffer;
 
 import com.asteroid.duck.opengl.util.RenderContext;
-import com.asteroid.duck.opengl.util.resources.Stateful;
+import com.asteroid.duck.opengl.util.resources.Resource;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
-import org.lwjgl.opengl.GL;
 import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -26,7 +24,7 @@ import static org.lwjgl.opengl.GL30.glGenVertexArrays;
  * The data structure is written to the VBO/VAO and can be mapped into a shader.
  * This data can then be flushed out to the GPU as required.
  */
-public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implements Stateful {
+public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implements Resource {
 	public enum UpdateHint {
 		/** The data store contents will be modified once and used many times. */
 		STATIC(GL_STATIC_DRAW),
@@ -51,27 +49,38 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 	 * This defines the order of the elements for each vertex.
 	 */
 	private final VertexDataStructure vertexDataStructure;
-	private final int initialSize;
-	private Boolean initialised = Boolean.FALSE;
-	private boolean active = false;
+	/**
+	 * The maximum number of vertices that can be stored in the buffer.
+	 * Each vertice will have a set of data elements associated as described by the structure.
+	 */
+	private final int capacity;
+	/**
+	 * A memory buffer that contains the raw vertex data
+	 */
 	private ByteBuffer memBuffer = null;
+	/**
+	 * A GL pointer for the vertex array object
+	 */
 	private int vao;
+	/**
+	 * A GL pointer for the vertex buffer object
+	 */
 	private int vbo;
 
-	public VertexDataBuffer(VertexDataStructure structure, int initialSize) {
+	/**
+	 * Create a vertex data buffer to store the given data structure for each of; (up to) a given
+	 * number of vertices.
+	 * @param structure the data structure for each vertice
+	 * @param capacity the maximum number of vertices that can be stored
+	 */
+	public VertexDataBuffer(VertexDataStructure structure, int capacity) {
 		Objects.requireNonNull(structure);
-		if (initialSize <= 0) {
+		if (capacity <= 0) {
 			throw new IllegalArgumentException("Initial size must be greater than zero");
 		}
 		this.vertexDataStructure = structure;
-		this.initialSize = initialSize;
+		this.capacity = capacity;
 	}
-
-	public void createBuffer() {
-		// create a buffer of the initial size
-		this.memBuffer = MemoryUtil.memAlloc(initialSize * vertexDataStructure.size());
-	}
-
 
 	ByteBuffer memBuffer() {
 		return memBuffer;
@@ -127,28 +136,29 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 		}
 	}
 
-	@Override
 	public void init(RenderContext ctx) {
-		if (!initialised) {
-			// set up the VAO and VBO
-			vao = glGenVertexArrays();
-			glBindVertexArray(vao);
+		// set up the VAO and VBO
+		vao = glGenVertexArrays();
+		glBindVertexArray(vao);
 
-			// Create a VBO and bind it
-			vbo = glGenBuffers();
-			glBindBuffer(GL_ARRAY_BUFFER, vbo);
-			createBuffer();
-			// FIXME optimise the data hint...
-			glBufferData(GL_ARRAY_BUFFER, memBuffer, GL_STREAM_DRAW);
-		}
-		// do nothing - already initialised
+		// Create a VBO and bind it
+		vbo = glGenBuffers();
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		createBuffer();
+		// FIXME optimise the data hint...
+		glBufferData(GL_ARRAY_BUFFER, memBuffer, GL_STREAM_DRAW);
 	}
 
-	@Override
-	public boolean isInitialised() {
-		return initialised;
+	public void createBuffer() {
+		// create a memory buffer of the initial size
+		this.memBuffer = MemoryUtil.memAlloc(capacity * vertexDataStructure.size());
 	}
 
+	/**
+	 * Setup the buffer to use with the given shader.
+	 * Each element in the data structure is mapped to a vertex attribute pointer
+	 * @param shader the shader to initialise
+	 */
 	public void setup(ShaderProgram shader) {
 		use();
 		for(VertexElement element : vertexDataStructure) {
@@ -217,9 +227,9 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 	}
 
 	/**
-	 * Like {@link ByteBuffer#duplicate()} but keeps the byte order
+	 * Like {@link ByteBuffer#duplicate()} but keeps the byte order!!
 	 * @param original the byte buffer to copy
-	 * @return the copy
+	 * @return the copy (same content, new pointers)
 	 */
 	private static ByteBuffer duplicate(ByteBuffer original) {
 		ByteBuffer copy = original.duplicate();
@@ -230,15 +240,6 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 	@Override
 	public int size() {
 		return memBuffer.capacity() / vertexDataStructure.size();
-	}
-
-	@Override
-	public void begin(RenderContext ctx) {
-		if(!active) {
-			active = true;
-			// activate
-
-		}
 	}
 
 	public void use() {
@@ -258,18 +259,7 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 	}
 
 	@Override
-	public boolean isActive() {
-		return active;
-	}
-
-	@Override
-	public void end(RenderContext ctx) {
-		active = false;
-	}
-
-	@Override
 	public void destroy() {
-		initialised = null;
 		MemoryUtil.memFree(memBuffer);
 		memBuffer = null;
 	}
