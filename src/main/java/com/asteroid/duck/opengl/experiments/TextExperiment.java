@@ -22,7 +22,7 @@ import java.util.Map;
 
 public class TextExperiment extends CompositeRenderItem implements Experiment {
 
-	//private FontTexture fontTexture;
+	private FontTexture fontTexture;
 	private VertexDataBuffer fontDataBuffer;
 	private IndexBuffer indexBuffer;
 	private ShaderProgram shader;
@@ -42,16 +42,19 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 		this.shader = ctx.getResourceManager().getShaderLoader().LoadSimpleShaderProgram("passthru2");
 
 		// create a texture for our font
-		var molly = ctx.getResourceManager().GetTexture("molly", "molly.jpg");
+		var ftf = new FontTextureFactory(new Font("Times New Roman", Font.PLAIN,200), true);
+		fontTexture = ftf.createFontTexture();
+		var tex = fontTexture.getTexture();
 		TextureUnit textureUnit = ctx.getResourceManager().NextTextureUnit();
-		textureUnit.bind(molly);
-
+		textureUnit.bind(tex);
 
 		// create vertex data structure to render a part of the font texture to screen
 		List<Vertice> vertices = Vertice.standardFourVertices().toList();
 		VertexDataStructure structure = new VertexDataStructure(screenPosition, texturePosition);
 		final Vector4f screen = new Vector4f(-1f,-1f,1f,1f);
-		final Vector4f texture = new  Vector4f(0f,0f,1f,1f);
+		var glyph = fontTexture.getGlyph('C');
+		Vector4f texture = glyph.normalBounds(tex.dimensions());
+		//texture = new Vector4f(0.05f,1f,.1f,0f);
 		// two triangles = one rect
 		this.fontDataBuffer = new VertexDataBuffer(structure, vertices.size());
 		fontDataBuffer.init(ctx);
