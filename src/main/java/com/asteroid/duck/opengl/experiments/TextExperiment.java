@@ -1,42 +1,38 @@
 package com.asteroid.duck.opengl.experiments;
 
-import com.asteroid.duck.opengl.util.geom.Corner;
+import com.asteroid.duck.opengl.util.color.StandardColors;
+import com.asteroid.duck.opengl.util.geom.Vertice;
 import com.asteroid.duck.opengl.util.CompositeRenderItem;
 import com.asteroid.duck.opengl.util.RenderContext;
-import com.asteroid.duck.opengl.util.resources.buffer.VertexDataBuffer;
-import com.asteroid.duck.opengl.util.resources.buffer.VertexDataStructure;
-import com.asteroid.duck.opengl.util.resources.buffer.VertexElement;
-import com.asteroid.duck.opengl.util.resources.buffer.VertexElementType;
+import com.asteroid.duck.opengl.util.geom.Triangles;
+import com.asteroid.duck.opengl.util.resources.buffer.*;
 import com.asteroid.duck.opengl.util.resources.font.FontTexture;
 import com.asteroid.duck.opengl.util.resources.font.FontTextureFactory;
 import com.asteroid.duck.opengl.util.resources.font.GlyphData;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
 import org.joml.*;
+import org.lwjgl.opengl.GL11C;
 
 import java.awt.*;
 import java.io.IOException;
-import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 public class TextExperiment extends CompositeRenderItem implements Experiment {
-	private int index = 0;
 
-	private FontTexture fontTexture;
-	private List<GlyphData> glyphs;
+	//private FontTexture fontTexture;
 	private VertexDataBuffer fontDataBuffer;
+	private IndexBuffer indexBuffer;
 	private ShaderProgram shader;
-	private final Vector4f color = new Vector4f(1,1,1,1); // green!
-	private final Vector4f backgroundColor = new Vector4f(.2f,0.2f,0.2f,1f);
-	private final int maxStringLength = 20;
-	private final String TEXT = "ijqtQfyY";
+	private final Vector4f backgroundColor = StandardColors.BLACK.get();
 	private final VertexElement screenPosition = new VertexElement(VertexElementType.VEC_2F, "screenPosition");
 	private final VertexElement texturePosition = new VertexElement(VertexElementType.VEC_2F, "texturePosition");
 
 	@Override
 	public String getDescription() {
-		return "Attempts to render text to screen";
+		return "Attempts to render a single character to the screen";
 	}
 
 	@Override
@@ -46,21 +42,31 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 		this.shader = ctx.getResourceManager().getShaderLoader().LoadSimpleShaderProgram("passthru2");
 
 		// create a texture for our font
-		Font font = new Font(Font.SERIF, Font.PLAIN, 100);
-		FontTextureFactory fac = new FontTextureFactory(font, true);
-		fac.debugBackground = true;
-		fac.imageDumpPath = Path.of("font-images");
-		this.fontTexture = fac.createFontTexture();
-		this.glyphs = fontTexture.glyphs();
+		var molly = ctx.getResourceManager().GetTexture("molly", "molly.jpg");
 		TextureUnit textureUnit = ctx.getResourceManager().NextTextureUnit();
-		textureUnit.bind(fontTexture.getTexture());
+		textureUnit.bind(molly);
 
 
 		// create vertex data structure to render a part of the font texture to screen
+		List<Vertice> vertices = Vertice.standardFourVertices().toList();
 		VertexDataStructure structure = new VertexDataStructure(screenPosition, texturePosition);
+		final Vector4f screen = new Vector4f(-1f,-1f,1f,1f);
+		final Vector4f texture = new  Vector4f(0f,0f,1f,1f);
 		// two triangles = one rect
-		this.fontDataBuffer = new VertexDataBuffer(structure, 3 * 2 * TEXT.length());
+		this.fontDataBuffer = new VertexDataBuffer(structure, vertices.size());
 		fontDataBuffer.init(ctx);
+		for (int i = 0; i < vertices.size(); i++) {
+			Vertice v =  vertices.get(i);
+			fontDataBuffer.setElement(i, screenPosition, v.from(screen));
+			fontDataBuffer.setElement(i, texturePosition, v.from(texture));
+		}
+		fontDataBuffer.update(VertexDataBuffer.UpdateHint.STATIC);
+
+		// create an index buffer to point at the vertices
+		List<Integer> indices = Vertice.standardSixVertices().map(vertices::indexOf).toList();
+		this.indexBuffer = new IndexBuffer(indices.size());
+		indexBuffer.init(ctx);
+		indexBuffer.update(indices);
 
 		// setup the shader
 		shader.use();
@@ -70,52 +76,18 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 
 	@Override
 	public void doRender(RenderContext ctx) {
-		createStringData(ctx);
 		shader.use();
-		fontDataBuffer.render(0, 6);
+		fontDataBuffer.use();
+		indexBuffer.use();
+
+		GL11C.glDrawElements(GL11C.GL_TRIANGLES, indexBuffer.capacity(), IndexBuffer.GL_TYPE, 0L);
+
 		shader.unuse();
-	}
-
-
-
-	private void createStringData(RenderContext ctx) {
-		// where on the screen to draw the char
-		final Vector2f position = new Vector2f(150,150);
-		final float scale = 1.0f;
-
-		int index = (int) ctx.getTimer().linearFunction(TEXT.length(), 0.1);
-		char c = TEXT.charAt(index);
-		System.out.println("Char:"+c);
-		GlyphData glyph = fontTexture.getGlyph(c);
-		// figure out the area of the font strip texture representing this char
-		Matrix3x2f transform = fontTexture.getTexture().normalisationMatrix();
-		Vector4f tex_extent = new Vector4f(0);// glyph.bounds(transform);
-
-		// now work out the area of the screen to draw the char onto
-		Matrix4f normalisation = ctx.ortho();
-		Vector4f screen_pos = new Vector4f(position, 0, 1.0f).mul(normalisation);
-		Vector2f tex_size_model = new Vector2f(0).add(position).mul(scale);
-		Vector4f screen_size = new Vector4f(tex_size_model.x, tex_size_model.y, 0, 1.0f).mul(normalisation);
-		Vector4f screen_extent = new Vector4f(screen_pos.x, screen_size.y, screen_size.x, screen_pos.y);
-
-		fontDataBuffer.clear();
-
-		List<Map<VertexElement, Vector2f>> list = Corner.standardSixVertices()
-						.map(corner -> Map.of(
-										screenPosition, corner.from(screen_extent),
-										texturePosition, corner.from(tex_extent)))
-						.toList();
-		for (int i = 0; i < list.size(); i++) {
-			Map<VertexElement, Vector2f> map = list.get(i);
-			fontDataBuffer.set(i, map);
-		}
-		fontDataBuffer.update(VertexDataBuffer.UpdateHint.STREAM);
 	}
 
 	@Override
 	public void dispose() {
 		shader.destroy();
 		fontDataBuffer.destroy();
-		fontTexture.destroy();
 	}
 }

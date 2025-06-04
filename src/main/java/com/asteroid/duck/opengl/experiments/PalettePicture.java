@@ -3,7 +3,7 @@ package com.asteroid.duck.opengl.experiments;
 import com.asteroid.duck.opengl.util.palette.PaletteRenderer;
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.resources.texture.DataFormat;
-import com.asteroid.duck.opengl.util.resources.texture.ImageOptions;
+import com.asteroid.duck.opengl.util.resources.texture.io.ImageLoadingOptions;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 
 import java.io.IOException;
@@ -21,9 +21,9 @@ public class PalettePicture extends PaletteRenderer implements Experiment {
 	@Override
 	public void init(RenderContext ctx) throws IOException {
 		// this is our one channel grey scale picture
-		Texture gray = ctx.getResourceManager().GetTexture("gray", "window.jpeg", ImageOptions.DEFAULT.withType(DataFormat.GRAY));
+		Texture gray = ctx.getResourceManager().GetTexture("gray", "window.jpeg", ImageLoadingOptions.DEFAULT.withType(DataFormat.GRAY));
 		// this is our palette
-		Texture palette = ctx.getResourceManager().GetTexture("palette", "palettes/FIRE2.MAP.png", ImageOptions.DEFAULT.withSingleLine());
+		Texture palette = ctx.getResourceManager().GetTexture("palette", "palettes/FIRE2.MAP.png", ImageLoadingOptions.DEFAULT.withSingleLine());
 		super.init(ctx);
 	}
 }

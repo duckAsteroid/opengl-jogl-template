@@ -3,10 +3,7 @@ package com.asteroid.duck.opengl.util.blur;
 import com.asteroid.duck.opengl.util.*;
 import com.asteroid.duck.opengl.util.keys.KeyRegistry;
 import com.asteroid.duck.opengl.util.resources.shader.vars.ShaderVariable;
-import com.asteroid.duck.opengl.util.resources.texture.DataFormat;
-import com.asteroid.duck.opengl.util.resources.texture.Texture;
-import com.asteroid.duck.opengl.util.resources.texture.TextureFactory;
-import com.asteroid.duck.opengl.util.resources.texture.TextureOptions;
+import com.asteroid.duck.opengl.util.resources.texture.*;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +26,7 @@ public class OffscreenBlurTextureRenderer extends CompositeRenderItem {
 	private BlurTextureRenderer stage2;
 
 	public OffscreenBlurTextureRenderer(String source) {
-		this(source, new TextureOptions(DataFormat.RGBA, Texture.Filter.LINEAR, Texture.Wrap.REPEAT));
+		this(source, new TextureOptions(DataFormat.RGBA, Filter.LINEAR, Wrap.REPEAT));
 	}
 
 	public OffscreenBlurTextureRenderer(String source, TextureOptions options) {

@@ -6,8 +6,7 @@ import com.asteroid.duck.opengl.util.blur.OffscreenBlurTextureRenderer;
 import com.asteroid.duck.opengl.util.keys.KeyCombination;
 import com.asteroid.duck.opengl.util.palette.PaletteRenderer;
 import com.asteroid.duck.opengl.util.resources.texture.*;
-import com.asteroid.duck.opengl.util.toggle.Frequency;
-import com.asteroid.duck.opengl.util.toggle.ToggledRenderItem;
+import com.asteroid.duck.opengl.util.resources.texture.io.ImageLoadingOptions;
 import org.joml.Vector4f;
 
 import java.io.IOException;
@@ -38,11 +37,11 @@ public class Cthugha extends CompositeRenderItem implements Experiment {
 		ctx.setDesiredUpdatePeriod(1.0 / frequency);
 		ctx.getKeyRegistry().registerKeyAction(KeyCombination.simple('F'), () -> updateFrequency(), "Modify update frequency");
 		// load the test card image
-		Texture texture = ctx.getResourceManager().GetTexture("testcard", "test-card.jpeg", ImageOptions.DEFAULT);
+		Texture texture = ctx.getResourceManager().GetTexture("testcard", "test-card.jpeg", ImageLoadingOptions.DEFAULT);
 		// load the translation map - it's a matrix (screen sized) of 2 * 16 bit floats
-		Texture translateMap = ctx.getResourceManager().GetTexture("translate", "translate/bighalfwheel.1024x800.tab", ImageOptions.DEFAULT.withType(DataFormat.TWO_CHANNEL_16_BIT));
+		Texture translateMap = ctx.getResourceManager().GetTexture("translate", "translate/bighalfwheel.1024x800.tab", ImageLoadingOptions.DEFAULT.withType(DataFormat.TWO_CHANNEL_16_BIT));
 		// offscreen texture
-		TextureOptions opts = new TextureOptions(DataFormat.RGBA, Texture.Filter.LINEAR, Texture.Wrap.REPEAT);
+		TextureOptions opts = new TextureOptions(DataFormat.RGBA, Filter.LINEAR, Wrap.REPEAT);
 		Texture offscreen = TextureFactory.createTexture(ctx.getWindow(), null, opts);
 		ctx.getResourceManager().PutTexture(OFFSCREEN_TEXTURE_NAME, offscreen);
 
@@ -63,7 +62,7 @@ public class Cthugha extends CompositeRenderItem implements Experiment {
 	  addItem(waveRenderStage);
 
 		// palette
-		Texture palette = ctx.getResourceManager().GetTexture("palette", "palettes/FIRE2.MAP.png", ImageOptions.DEFAULT.withSingleLine());
+		Texture palette = ctx.getResourceManager().GetTexture("palette", "palettes/FIRE2.MAP.png", ImageLoadingOptions.DEFAULT.withSingleLine());
 		PaletteRenderer paletteRenderer = new PaletteRenderer(OFFSCREEN_TEXTURE_NAME);
 
 		addItem(paletteRenderer);

@@ -1,4 +1,7 @@
-package com.asteroid.duck.opengl.util.resources.font;
+package com.asteroid.duck.opengl.util.resources.font.factory;
+
+import com.asteroid.duck.opengl.util.resources.font.GlyphData;
+import com.asteroid.duck.opengl.util.resources.font.Padding;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;

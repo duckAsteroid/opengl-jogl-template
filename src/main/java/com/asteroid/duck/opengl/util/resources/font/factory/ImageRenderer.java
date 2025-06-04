@@ -1,4 +1,6 @@
-package com.asteroid.duck.opengl.util.resources.font;
+package com.asteroid.duck.opengl.util.resources.font.factory;
+
+import com.asteroid.duck.opengl.util.geom.Vertice;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -16,19 +18,11 @@ public class ImageRenderer {
 		this.source = source;
 	}
 
-	private static Point topLeftOf(Rectangle r) {
-		return new Point(r.x, r.y);
-	}
-
-	private static Point bottomRightOf(Rectangle r) {
-		return new Point(r.x + r.width, r.y + r.height);
-	}
-
 	public void drawImage(Rectangle src, Rectangle dst) {
-		Point srcFirst = topLeftOf(src);
-		Point srcSecond = bottomRightOf(src);
-		Point dstFirst = topLeftOf(dst);
-		Point dstSecond = bottomRightOf(dst);
+		Point srcFirst = Vertice.TOP_LEFT.pointFrom(src);
+		Point srcSecond = Vertice.BOTTOM_RIGHT.pointFrom(src);
+		Point dstFirst = Vertice.TOP_LEFT.pointFrom(dst);
+		Point dstSecond = Vertice.BOTTOM_RIGHT.pointFrom(dst);
 		target.drawImage(source,
 						dstFirst.x, dstFirst.y, dstSecond.x, dstSecond.y,
 						srcFirst.x, srcFirst.y, srcSecond.x, srcSecond.y, null);

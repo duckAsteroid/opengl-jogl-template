@@ -3,8 +3,7 @@ package com.asteroid.duck.opengl.util;
 import com.asteroid.duck.opengl.util.keys.*;
 import com.asteroid.duck.opengl.util.resources.ResourceManager;
 import com.asteroid.duck.opengl.util.resources.texture.ImageData;
-import com.asteroid.duck.opengl.util.resources.texture.ImageOptions;
-import org.joml.Matrix3f;
+import com.asteroid.duck.opengl.util.resources.texture.io.ImageLoadingOptions;
 import org.joml.Matrix4f;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
@@ -75,7 +74,7 @@ public abstract class GLWindow implements RenderContext {
 
 		if (icon != null) {
 			try (GLFWImage.Buffer icons = GLFWImage.malloc(1)) {
-				ImageData imgData = resourceManager.LoadTextureData(icon, ImageOptions.DEFAULT.withNoFlip());
+				ImageData imgData = resourceManager.LoadTextureData(icon, ImageLoadingOptions.DEFAULT.withNoFlip());
 				icons.position(0)
 								.width(imgData.size().width)
 								.height(imgData.size().height)

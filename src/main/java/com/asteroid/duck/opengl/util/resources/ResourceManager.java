@@ -3,6 +3,7 @@ package com.asteroid.duck.opengl.util.resources;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderLoader;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.texture.*;
+import com.asteroid.duck.opengl.util.resources.texture.io.ImageLoadingOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,10 +56,10 @@ public class ResourceManager {
 		resources.put(locator, texture);
 	}
 	public Texture GetTexture(String name, String path) {
-		return GetTexture(name, path, ImageOptions.DEFAULT);
+		return GetTexture(name, path, ImageLoadingOptions.DEFAULT);
 	}
 
-	public Texture GetTexture(String name, String path, ImageOptions options) {
+	public Texture GetTexture(String name, String path, ImageLoadingOptions options) {
 		ResourceLocator locator = new ResourceLocator(Texture.class, name);
 		if (!resources.containsKey(locator)) {
 			Texture tex = null;
@@ -79,7 +80,7 @@ public class ResourceManager {
 
 
 
-	public ImageData LoadTextureData(String image, ImageOptions options) throws IOException {
+	public ImageData LoadTextureData(String image, ImageLoadingOptions options) throws IOException {
 		return textureFactory.loadTextureData(image, options);
 	}
 
