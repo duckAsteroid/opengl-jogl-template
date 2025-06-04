@@ -60,6 +60,7 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 			fontDataBuffer.setElement(i, screenPosition, v.from(screen));
 			fontDataBuffer.setElement(i, texturePosition, v.from(texture));
 		}
+		// FIXME Add a dirty flag to warn if we don't flush the updated data to the GPU and we "use" this buffer
 		fontDataBuffer.update(VertexDataBuffer.UpdateHint.STATIC);
 
 		// create an index buffer to point at the vertices
