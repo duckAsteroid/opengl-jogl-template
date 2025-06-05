@@ -76,7 +76,7 @@ public class FontTextureDataFactory {
 		for(Character c : glyphImages.keySet()) {
 			GlyphImage gi = glyphImages.get(c);
 
-			GlyphData gData = gi.renderToStrip(padding, x, g);
+			GlyphData gData = gi.renderToStrip(padding, x, g, imageDims);
 			glyphData.put(c, gData);
 			x += gData.bounds().width + padding.right();
 		}

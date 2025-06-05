@@ -2,6 +2,7 @@ package com.asteroid.duck.opengl.util.resources.font;
 
 import org.joml.Vector2f;
 import org.joml.Vector4f;
+import org.w3c.dom.css.Rect;
 
 import java.awt.*;
 
@@ -10,15 +11,16 @@ import java.awt.*;
  * This is defined in the normal pixel coordinate system where 0,0 is top left.
  * @param datumOffset The offset to the datum within the image bounds
  * @param bounds The bounds of the image for the glyph (in the strip texture)
+ * @param normalBounds The normalized (0-1) bounds of the glyph in the texture strip (as used in OpenGL).
  */
-public record GlyphData(Point datumOffset, Rectangle bounds) {
+public record GlyphData(Point datumOffset, Rectangle bounds, Vector4f normalBounds) {
 	public int advance() {
 		int advance = bounds.width;
 		advance -= datumOffset.x;
 		return advance;
 	}
 
-	public Vector4f normalBounds(Vector2f imageDimensions) {
+	public static Vector4f normalBounds(Rectangle bounds, Vector2f imageDimensions) {
 		// 1. Calculate the pixel coordinates for the sub-rectangle's corners.
 		//    AWT coordinates:
 		//    top-left: (bounds.x, bounds.y)
