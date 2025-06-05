@@ -53,7 +53,7 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 		VertexDataStructure structure = new VertexDataStructure(screenPosition, texturePosition);
 		final Vector4f screen = new Vector4f(-1f,-1f,1f,1f);
 		var glyph = fontTexture.getGlyph('C');
-		Vector4f texture = glyph.normalBounds(tex.dimensions());
+		Vector4f texture = glyph.normalBounds();
 		//texture = new Vector4f(0.05f,1f,.1f,0f);
 		// two triangles = one rect
 		this.fontDataBuffer = new VertexDataBuffer(structure, vertices.size());

@@ -2,6 +2,7 @@ package com.asteroid.duck.opengl.util.resources.font.factory;
 
 import com.asteroid.duck.opengl.util.resources.font.GlyphData;
 import com.asteroid.duck.opengl.util.resources.font.Padding;
+import org.joml.Vector2f;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -43,11 +44,11 @@ public record GlyphImage(BufferedImage image, Point datum, Rectangle bounds) {
 	 *
 	 * @return the resulting GlyphData of the rendered section - allowing us to recover the glyph later
 	 */
-	public GlyphData renderToStrip(Padding padding, int x, Graphics2D g) {
+	public GlyphData renderToStrip(Padding padding, int x, Graphics2D g, Dimension imageSize) {
 		Rectangle destination = new Rectangle(x + padding.left(), padding.top(), bounds.width, bounds.height);
 		ImageRenderer renderer = new ImageRenderer(g, image);
 		renderer.drawImage(bounds, destination);
-		return new GlyphData(boundsRelativeDatum(), destination);
+		return new GlyphData(boundsRelativeDatum(), destination, GlyphData.normalBounds(destination, new Vector2f(imageSize.width, imageSize.height)));
 	}
 
 }
