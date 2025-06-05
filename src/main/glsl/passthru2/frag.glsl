@@ -3,11 +3,14 @@
 precision mediump float;
 
 uniform sampler2D tex;
-in vec2 texCoords;
+uniform vec4 textColor;
 
+in vec2 texCoords;
 out vec4 fragColor;
 
 void main() {
-    // copy the texel straight into the pixel
-    fragColor = vec4(texture(tex, texCoords).rgb, 1.0);
+    // get the color from the texture
+    vec4 color = texture(tex, texCoords);
+    float mask = color.r; // grey scale mask from the red channel
+    fragColor = vec4(textColor.rgb * mask, textColor.a * color.a);
 }

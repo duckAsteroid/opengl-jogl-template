@@ -98,10 +98,10 @@ public interface RenderContext {
 	}
 
 	/**
-	 * The orthographic projection matrix
-	 * @return
+	 * The orthographic projection matrix for the current screen size in pixels.
+	 * Using 0,0 as the top left
+	 * @return a matrix suitable for use as an orthographic projection
 	 */
 	Matrix4f ortho();
-
 
 }

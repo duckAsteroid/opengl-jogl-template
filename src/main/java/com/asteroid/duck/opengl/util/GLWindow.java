@@ -286,11 +286,14 @@ public abstract class GLWindow implements RenderContext {
 		return new Vector2f(window.width, window.height);
 	}
 
+
 	public Matrix4f ortho() {
 		float left = 0;
 		float right = window.width;
-		float bottom = window.height;
+
 		float top = 0;
+		float bottom = window.height;
+
 		float near = -1.0f;
 		float far = 1.0f;
 
