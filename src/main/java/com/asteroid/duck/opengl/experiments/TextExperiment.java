@@ -26,7 +26,7 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 	private VertexDataBuffer fontDataBuffer;
 	private IndexBuffer indexBuffer;
 	private ShaderProgram shader;
-	private final Vector4f backgroundColor = StandardColors.BLACK.get();
+	private final Vector4f backgroundColor = StandardColors.REBECCAPURPLE.color;
 	private final VertexElement screenPosition = new VertexElement(VertexElementType.VEC_2F, "screenPosition");
 	private final VertexElement texturePosition = new VertexElement(VertexElementType.VEC_2F, "texturePosition");
 
@@ -76,6 +76,7 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 		shader.use();
 		fontDataBuffer.setup(shader);
 		textureUnit.useInShader(shader, "tex");
+		shader.setVector4f("textColor", new Vector4f(0f, 0f, 1f, 1f));
 	}
 
 	@Override

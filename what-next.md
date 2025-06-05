@@ -25,3 +25,25 @@ in synch with OpenGL (bottom, left) oriented coordinates.
 So I created a bunch of "vertice" helpers for corners of rectangles and for creating triangles to
 represent those for rendering in a shader.
 
+## Update: 2025-06-14
+
+Now we can render a single letter on screen - look at using the Orthographic projection matrix to 
+render to screen coordinates. 
+
+We should also be able to blend a color with the texture to draw the text in a different color. 
+We want to respect the alpha channel of the texture, but swap the color channels proportionally.
+
+Then move on to rendering a string of text along a baseline.
+
+# Shader Enhancements
+
+Since every time you change shader programs you have to reinit uniforms - it would be nice to have a
+class to manage this (so whenever it is used it sorts out the uniforms). 
+This could be combined with our Variable like clases to manage updating the uniforms.
+Thinking of a few kinds of variables:
+* Static - set once, never changes
+* Push - cache the value between render calls
+* Pull - grab the value during each render call
+* Event - update the value when an event occurs
+
+Given we have all the uniforms names etc - we can also validate the variables during initialization.

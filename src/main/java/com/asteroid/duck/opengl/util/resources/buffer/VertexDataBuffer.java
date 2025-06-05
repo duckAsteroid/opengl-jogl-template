@@ -160,6 +160,8 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 	 * @param shader the shader to initialise
 	 */
 	public void setup(ShaderProgram shader) {
+		// FIXME check the shader is compatible with the vertex data structure
+		// FIXME check the shader is ready to be setup
 		use();
 		for(VertexElement element : vertexDataStructure) {
 			shader.setVertexAttribPointer(
