@@ -277,7 +277,7 @@ public class ShaderProgram implements Resource {
 		GL20C.glUniform4fv(uniformLocation(name), new float[]{value.x, value.y, value.z, value.w});
 	}
 
-	public void setMatrix4(String name, Matrix4f matrix)
+	public void setMatrix4f(String name, Matrix4f matrix)
 	{
 		try (MemoryStack stack = MemoryStack.stackPush()) {
 			FloatBuffer fb = matrix.get(stack.mallocFloat(16));
