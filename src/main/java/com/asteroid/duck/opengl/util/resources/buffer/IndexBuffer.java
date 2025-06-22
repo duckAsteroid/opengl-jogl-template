@@ -58,6 +58,28 @@ public class IndexBuffer implements Resource {
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBuffer, GL_STATIC_DRAW);
 	}
 
+	public void clear() {
+		indexBuffer.clear();
+	}
+
+	public void put(int index, int[] indices) {
+		indexBuffer.position(index);
+		indexBuffer.put(indices);
+	}
+
+	public void put(int[] indices) {
+		indexBuffer.put(indices);
+	}
+
+	public void put(int i) {
+		indexBuffer.put(i);
+	}
+
+	public void update() {
+		indexBuffer.flip();
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBuffer, GL_STATIC_DRAW);
+	}
+
 	public void update(Iterable<Integer> indices) {
 		indexBuffer.clear();
 		for (Integer index : indices) {

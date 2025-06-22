@@ -2,18 +2,24 @@ package com.asteroid.duck.opengl.util.resources.font;
 
 import org.joml.Vector2f;
 import org.joml.Vector4f;
-import org.w3c.dom.css.Rect;
 
 import java.awt.*;
 
 /**
- * A Font Glyph location inside a font texture strip.
- * This is defined in the normal pixel coordinate system where 0,0 is top left.
+ * Data about a single glyph in a font image/texture.
+ * The datum represents the origin of the glyph when drawing it. Typically this is on the 'baseline'
+ * of the font.
+ * The bounds represent the AWT pixel rectangle in the image strip that contains the glyph image data
+ * The normalBounds are the OpenGL texture coordinates for the glyph (0-1 range) in the texture strip.
  * @param datumOffset The offset to the datum within the image bounds
- * @param bounds The bounds of the image for the glyph (in the strip texture)
- * @param normalBounds The normalized (0-1) bounds of the glyph in the texture strip (as used in OpenGL).
+ * @param bounds The AWT bounds of the image for the glyph (in the strip texture)
+ * @param normalBounds The normalised (0-1) OpenGL bounds of the glyph in the texture strip (as used in OpenGL).
  */
 public record GlyphData(Point datumOffset, Rectangle bounds, Vector4f normalBounds) {
+	/**
+	 * How many pixels to advance the cursor after drawing this glyph.
+	 * @return the advance for this glyph in pixels
+	 */
 	public int advance() {
 		int advance = bounds.width;
 		advance -= datumOffset.x;
@@ -47,5 +53,13 @@ public record GlyphData(Point datumOffset, Rectangle bounds, Vector4f normalBoun
 
 		// Create and return the Vector4f
 		return new Vector4f(s_min, t_min, s_max, t_max);
+	}
+
+	public Rectangle rawBounds(Point pos) {
+		if (pos == null) {
+			pos = new Point(0, 0);
+		}
+		// The bounds are relative to the datum offset, so we need to adjust the position
+		return new  Rectangle(pos.x - datumOffset().x, pos.y - datumOffset().y, bounds.width, bounds.height);
 	}
 }

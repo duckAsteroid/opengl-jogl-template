@@ -128,7 +128,7 @@ public class FontTextureDebugWindow {
 	public static class GlyphRenderer extends JComponent {
 		private GlyphData glyph;
 		private final BufferedImage strip;
-		private double scale = 4.0;
+		private double scale = 5.0;
 
 		public GlyphRenderer(BufferedImage strip) {
 			this.strip = strip;
@@ -145,9 +145,22 @@ public class FontTextureDebugWindow {
 		protected void paintComponent(Graphics g) {
 			super.paintComponent(g);
 			Graphics2D g2d = (Graphics2D) g;
-			g2d.setColor(getBackground());
-			g2d.fillRect(0, 0, getWidth(), getHeight());
 			g2d.scale(scale, scale);
+			// paint a background grid
+			for(int x = 0; x < getWidth(); x += 1) {
+				boolean xEven = (x % 2) == 0;
+				for(int y = 0; y < getHeight(); y += 1) {
+					boolean yEven = (y % 2) == 0;
+					if (xEven == yEven) {
+						g2d.setColor(Color.LIGHT_GRAY);
+					} else {
+						g2d.setColor(Color.DARK_GRAY);
+					}
+					g2d.drawRect(x,y, 1, 1);
+				}
+			}
+
+
 
 			// paint the glyph image
 			final int x = 100;
