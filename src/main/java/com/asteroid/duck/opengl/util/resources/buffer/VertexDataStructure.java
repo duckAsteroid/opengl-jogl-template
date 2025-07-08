@@ -126,4 +126,27 @@ public class VertexDataStructure implements Iterable<VertexElement> {
 	public String headerString() {
 		return stream().map(VertexElement::headerString).collect(Collectors.joining(" "));
 	}
+
+	/**
+	 * Check that the given vertex data map exactly matches the structure of this VertexDataStructure.
+	 * i.e. that all elements are present, and no more or less.
+	 * @param vertexData the vertex data map to check
+	 * @throws NullPointerException if vertexData is null
+	 * @throws IllegalArgumentException if vertexData is empty, or does not match the structure size, or is missing an element
+	 */
+	public void checkStructure(Map<VertexElement,?> vertexData) {
+		Objects.requireNonNull(vertexData, "vertexData");
+		if (vertexData.isEmpty()) {
+			throw new IllegalArgumentException("Vertex data map must not be empty");
+		}
+		if (vertexData.size() != structure.size()) {
+			throw new IllegalArgumentException("Vertex data map size (" + vertexData.size() + ") does not match structure size (" + structure.size() + ")");
+		}
+		for (VertexElement element : structure) {
+			if (!vertexData.containsKey(element)) {
+				throw new IllegalArgumentException("Vertex data map is missing element: " + element.name());
+			}
+			element.checkInstanceOf(vertexData.get(element));
+		}
+	}
 }

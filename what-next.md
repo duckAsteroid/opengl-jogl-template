@@ -27,13 +27,15 @@ represent those for rendering in a shader.
 
 ## Update: 2025-06-14
 
-Now we can render a single letter on screen - look at using the Orthographic projection matrix to 
+DONE: Now we can render a single letter on screen - look at using the Orthographic projection matrix to 
 render to screen coordinates. 
 
-We should also be able to blend a color with the texture to draw the text in a different color. 
+DONE: We should also be able to blend a color with the texture to draw the text in a different color. 
 We want to respect the alpha channel of the texture, but swap the color channels proportionally.
 
-Then move on to rendering a string of text along a baseline.
+DONE: Then move on to rendering a string of text along a baseline.
+
+But the text spacing looks wrong : verify the advance metrics for each glyph. See [later](#update-2025-06-23)
 
 # Shader Enhancements
 
@@ -47,3 +49,13 @@ Thinking of a few kinds of variables:
 * Event - update the value when an event occurs
 
 Given we have all the uniforms names etc - we can also validate the variables during initialization.
+
+## Update: 2025-06-23
+
+Can we render the baseline and datum for each glyph in a text string?
+`glDrawArray` for a set of lines as `GL_LINES`
+One for the baseline, one for the x datum of each glyph.
+Could draw the bounding box of the text as well as a `GL_LINE_LOOP`
+use orthographic projection to render in screen coordinates.
+
+https://eng.libretexts.org/Bookshelves/Computer_Science/Applied_Programming/Introduction_to_Computer_Graphics_(Eck)/03%3A_OpenGL_1.1-_Geometry/3.01%3A_Shapes_and_Colors_in_OpenGL_1.1

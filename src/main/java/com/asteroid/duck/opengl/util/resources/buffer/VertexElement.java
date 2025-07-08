@@ -24,6 +24,12 @@ public record VertexElement(VertexElementType<?> type, String name) {
 		return header.substring(0, header.length() - 2) + "^";
 	}
 
+	/**
+	 * Checks if the given value is an instance of the type defined by this element.
+	 * If the value is null, it will not throw an exception.
+	 * @param value The value to check
+	 * @throws IllegalArgumentException if the value is not of the expected type
+	 */
 	public void checkInstanceOf(Object value) throws IllegalArgumentException {
 		if (value != null) {
 			Class<?> actualType = value.getClass();
@@ -32,21 +38,6 @@ public record VertexElement(VertexElementType<?> type, String name) {
 				throw new IllegalArgumentException(name + ": "+actualType.getName() +" is not of type " + expectedType.getName());
 			}
 		}
-	}
-
-	public static Map<String, VertexElement> structure(VertexElement ... elements) {
-		return structure(Arrays.asList(elements));
-	}
-
-	public static Map<String, VertexElement> structure(Collection<VertexElement> elements) {
-		Map<String, VertexElement> map = new HashMap<>(elements.size());
-		for (VertexElement element : elements) {
-			if (map.containsKey(element.name())) {
-        throw new IllegalArgumentException("Duplicate vertex element name: " + element.name());
-      }
-			map.put(element.name(), element);
-		}
-		return map;
 	}
 
 }

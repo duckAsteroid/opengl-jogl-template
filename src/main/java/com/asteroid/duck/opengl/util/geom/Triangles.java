@@ -164,7 +164,13 @@ public class Triangles {
 
 	public void setup(ShaderProgram shaderProgram) {
 		// setup the vertex attribute pointer to tell GL what shape our vertices are (2 floats)
-		shaderProgram.setVertexAttribPointer("position", 2, GL_FLOAT, false, 0, 0);
+		int position = shaderProgram.getAttributeLocation("position");
+		setVertexAttribPointer(position, 2, GL_FLOAT, false, 0, 0);
+	}
+
+	public void setVertexAttribPointer(int position, int size, int type, boolean normalized, int stride, long pointer) {
+		glVertexAttribPointer(position, size, type, normalized, stride, pointer);
+		glEnableVertexAttribArray(position);
 	}
 
 	public int triangleCount() {
