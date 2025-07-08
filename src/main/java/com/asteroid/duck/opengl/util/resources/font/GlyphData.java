@@ -62,4 +62,12 @@ public record GlyphData(Point datumOffset, Rectangle bounds, Vector4f normalBoun
 		// The bounds are relative to the datum offset, so we need to adjust the position
 		return new  Rectangle(pos.x - datumOffset().x, pos.y - datumOffset().y, bounds.width, bounds.height);
 	}
+
+	public Vector2f datum(Point pos) {
+		if (pos == null) {
+			pos = new Point(0, 0);
+		}
+		// The bounds are relative to the datum offset, so we need to adjust the position
+		return new Vector2f((float)(pos.x - datumOffset().x), (float)(pos.y - datumOffset().y));
+	}
 }

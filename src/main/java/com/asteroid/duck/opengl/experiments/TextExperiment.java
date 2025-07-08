@@ -5,6 +5,7 @@ import com.asteroid.duck.opengl.util.geom.Vertice;
 import com.asteroid.duck.opengl.util.CompositeRenderItem;
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.resources.buffer.*;
+import com.asteroid.duck.opengl.util.resources.buffer.debug.VdbVisualizer;
 import com.asteroid.duck.opengl.util.resources.font.FontTexture;
 import com.asteroid.duck.opengl.util.resources.font.FontTextureFactory;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
@@ -16,6 +17,8 @@ import java.awt.*;
 import java.io.IOException;
 import java.nio.IntBuffer;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class TextExperiment extends CompositeRenderItem implements Experiment {
@@ -24,9 +27,13 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 	private VertexDataBuffer fontDataBuffer;
 	private IndexBuffer indexBuffer;
 	private ShaderProgram shader;
-	private final Vector4f backgroundColor = StandardColors.REBECCAPURPLE.color;
+	private final Vector4f backgroundColor = StandardColors.BLACK.color;
 	private final VertexElement screenPosition = new VertexElement(VertexElementType.VEC_2F, "screenPosition");
 	private final VertexElement texturePosition = new VertexElement(VertexElementType.VEC_2F, "texturePosition");
+
+	private ShaderProgram debugShader;
+	private VertexDataBuffer debugLineBuffer;
+
 
 	@Override
 	public String getDescription() {
@@ -38,6 +45,7 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 		ctx.setClearScreen(true);
 		ctx.setBackgroundColor(backgroundColor);
 		this.shader = ctx.getResourceManager().getShaderLoader().LoadSimpleShaderProgram("passthru2");
+		this.debugShader = ctx.getResourceManager().getShaderLoader().LoadSimpleShaderProgram("line");
 
 		// create a texture for our font
 		var ftf = new FontTextureFactory(new Font("Times New Roman", Font.PLAIN,100), true);
@@ -46,17 +54,21 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 		TextureUnit textureUnit = ctx.getResourceManager().NextTextureUnit();
 		textureUnit.bind(tex);
 
-		initText(ctx, new Point(10, 200), "Hello Alice! xx");
+		initText(ctx, new Point(10, 200), "Hello World!");
 		// setup the shader
 		shader.use();
-		fontDataBuffer.setup(shader);
 		textureUnit.useInShader(shader, "tex");
 
 		// put the ortho matrix into the shader
 		Matrix4f ortho = ctx.ortho();
 		shader.setMatrix4f("projection", ortho);
 		// set the text color for the shader
-		shader.setVector4f("textColor", new Vector4f(0f, 0f, 1f, 1f));
+		shader.setVector4f("textColor", StandardColors.LIGHTBLUE.color);
+
+		// setup the debug shader
+		debugShader.use();
+		debugShader.setMatrix4f("projection", ortho);
+		debugShader.setVector4f("lineColor", StandardColors.REBECCAPURPLE.color);
 	}
 
 	protected void initText(RenderContext ctx, Point cursor, String text) {
@@ -73,6 +85,23 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 		VertexDataStructure structure = new VertexDataStructure(screenPosition, texturePosition);
 		this.fontDataBuffer = new VertexDataBuffer(structure, size);
 		fontDataBuffer.init(ctx);
+		fontDataBuffer.setup(shader);
+
+		// the screen size
+		float width = ctx.getWindow().width;
+		float height = ctx.getWindow().height;
+		// vertex data elements for the debug lines (colr, start, end)
+		VertexElement position = new VertexElement(VertexElementType.VEC_2F, "position");
+		// create a vertex data buffer to hold the debug lines
+		VertexDataStructure debugLineStructure = new VertexDataStructure(position);
+		debugLineBuffer = new VertexDataBuffer(debugLineStructure, 2 + (text.length() * 2));
+		debugLineBuffer.init(ctx);
+		// add the baseline
+		int debugIndex = 0;
+		debugLineBuffer.setElement(debugIndex++, position, new Vector2f(0f, cursor.y));
+		debugLineBuffer.setElement(debugIndex++, position, new Vector2f(width, cursor.y));
+		debugLineBuffer.setup(debugShader);
+
 		for(int i = 0; i < text.length(); i++) {
 			// lets try to draw a glyph with it's datum on a given screen position
 			var glyph = fontTexture.getGlyph(text.charAt(i));
@@ -81,6 +110,11 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 			Vector4f texture = glyph.normalBounds();
 			// the screen bounds (where to draw the glyph)
 			final var screen = glyph.rawBounds(cursor);
+			// add the debug line for the glyph datum
+			final Vector2f datum = glyph.datum(cursor);
+			System.out.println("Datum: " + datum);
+			debugLineBuffer.setElement(debugIndex++, position, new Vector2f(datum.x, 0f));
+			debugLineBuffer.setElement(debugIndex++, position, new Vector2f(datum.x, height));
 			// populate the vertex data buffer with the screen and texture positions of each vertice
 			for(int j = 0; j < fourCorners.size(); j++) {
 				Vertice v = fourCorners.get(j);
@@ -92,26 +126,60 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 			}
 			// add the indices for this glyph to the index buffer
 			for(int j = 0; j < indices.length; j++) {
-				indexBuffer.put((i * 6) + indices[j]);
+				indexBuffer.put((i * 4) + indices[j]);
 			}
 			// advance the cursor for the next glyph
 			cursor.x += glyph.advance();
 		}
-		// FIXME Add a dirty flag to warn if we don't flush the updated data to the GPU and we "use" this buffer
+		debugLineBuffer.use();
+		debugLineBuffer.update(VertexDataBuffer.UpdateHint.DYNAMIC);
+
+		fontDataBuffer.use();
 		fontDataBuffer.update(VertexDataBuffer.UpdateHint.DYNAMIC);
+
 		indexBuffer.use();
 		indexBuffer.update();
+		indexBuffer.unuse();
 
+		dumpBuffers();
+	}
+
+	private void dumpBuffers() {
+		System.out.println("Index Buffer:");
+		IntStream ib = indexBuffer.stream();
+		System.out.println("\t"+ib.mapToObj(Integer::toString).collect(Collectors.joining(",", "[", "]")));
+
+		System.out.println("Font Data Buffer:");
+		VdbVisualizer viz = new VdbVisualizer(fontDataBuffer);
+		System.out.println("\t"+viz.verticeString());
+		System.out.println("\t"+viz.headerString());
+		System.out.println("\t"+viz.dataString());
+		System.out.println("\t"+viz.byteString());
+
+		System.out.println("Debug Line Buffer:");
+		VdbVisualizer debug = new VdbVisualizer(this.debugLineBuffer);
+		System.out.println("\t"+debug.verticeString());
+		System.out.println("\t"+debug.headerString());
+		System.out.println("\t"+debug.dataString());
+		System.out.println("\t"+debug.byteString());
 	}
 
 	@Override
 	public void doRender(RenderContext ctx) {
+		debugShader.use();
+		debugLineBuffer.use();
+		GL11C.glDrawArrays(GL11C.GL_LINES, 0, debugLineBuffer.size());
+		debugLineBuffer.unuse();
+		debugShader.unuse();
+
 		shader.use();
 		fontDataBuffer.use();
 		indexBuffer.use();
 
 		GL11C.glDrawElements(GL11C.GL_TRIANGLES, indexBuffer.capacity(), IndexBuffer.GL_TYPE, 0L);
 
+		indexBuffer.unuse();
+		fontDataBuffer.unuse();
 		shader.unuse();
 	}
 
@@ -119,5 +187,8 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 	public void dispose() {
 		shader.destroy();
 		fontDataBuffer.destroy();
+
+		debugShader.destroy();
+		debugLineBuffer.destroy();
 	}
 }

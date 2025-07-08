@@ -4,6 +4,8 @@ import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.resources.Resource;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import org.lwjgl.system.MemoryUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -15,6 +17,7 @@ import java.util.stream.StreamSupport;
 import static org.lwjgl.opengl.GL11.GL_TRIANGLES;
 import static org.lwjgl.opengl.GL11.glDrawArrays;
 import static org.lwjgl.opengl.GL15.*;
+import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL30.glBindVertexArray;
 import static org.lwjgl.opengl.GL30.glGenVertexArrays;
 
@@ -25,6 +28,10 @@ import static org.lwjgl.opengl.GL30.glGenVertexArrays;
  * This data can then be flushed out to the GPU as required.
  */
 public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implements Resource {
+
+
+	private static final Logger log = LoggerFactory.getLogger(VertexDataBuffer.class);
+
 	public enum UpdateHint {
 		/** The data store contents will be modified once and used many times. */
 		STATIC(GL_STATIC_DRAW),
@@ -66,7 +73,12 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 	 * A GL pointer for the vertex buffer object
 	 */
 	private int vbo;
-
+	/**
+	 * The update hint for the buffer.
+	 * This defines how the data will be used and how it should be optimised.
+	 * Defaults to {@link UpdateHint#STATIC}.
+	 */
+	private UpdateHint updateHint = UpdateHint.STATIC;
 	/**
 	 * Create a vertex data buffer to store the given data structure for each of; (up to) a given
 	 * number of vertices.
@@ -82,10 +94,26 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 		this.capacity = capacity;
 	}
 
-	ByteBuffer memBuffer() {
-		return memBuffer;
+	/**
+	 * Get the vertex data structure that defines the data for each vertex.
+	 * @return the vertex data structure
+	 */
+	public VertexDataStructure getStructure() {
+		return vertexDataStructure;
 	}
 
+	public UpdateHint getUpdateHint() {
+		return updateHint;
+	}
+
+	public void setUpdateHint(UpdateHint updateHint) {
+		this.updateHint = updateHint;
+	}
+
+	/**
+	 * An iterable view of the bytes in the memory buffer.
+	 * @see #duplicate(ByteBuffer)
+	 */
 	public Iterable<Byte> bytes() {
 		return () -> new Iterator<>() {
 			private final ByteBuffer copy = duplicate(memBuffer);
@@ -102,40 +130,47 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 		};
 	}
 
+	/**
+	 * A stream of the bytes in the memory buffer.
+	 * @return a stream of bytes
+	 */
 	public Stream<Byte> byteStream() {
 		return StreamSupport.stream(bytes().spliterator(), false);
 	}
-
-	public String byteString() {
-		return byteStream()
-						.map((b) -> Integer.toHexString(b & 0xFF).toUpperCase())
-						.map((s) -> s.length() == 1 ? "0" + s : s)
-						.collect(Collectors.joining(","));
+	/**
+	 * Like {@link ByteBuffer#duplicate()} but keeps the byte order!!
+	 * @param original the byte buffer to copy
+	 * @return the copy (same content, new pointers)
+	 */
+	private static ByteBuffer duplicate(ByteBuffer original) {
+		ByteBuffer copy = original.duplicate();
+		copy.order(original.order());
+		return copy;
 	}
 
-	public String dataString() {
-		StringBuilder result = new StringBuilder();
-		for (int i = 0; i < size(); i++) {
-			Map<VertexElement, ?> data = get(i);
-			for(VertexElement ve : vertexDataStructure) {
-				Object value = data.get(ve);
-				String text = "^" + ve.type().dataStringRaw(value);
-				text = truncateAndPad(text, ve.type().byteSize() * 3);
-				text = text.substring(0, text.length() - 2) + "^";
-				result.append(text).append(' ');
-			}
-		}
-		return result.toString();
+	/**
+	 * The number of vertices that can be stored in the buffer.
+	 * The backing memory buffer divided by the size of the vertex data structure.
+	 * @return the number of vertices
+	 */
+	@Override
+	public int size() {
+		return memBuffer.capacity() / vertexDataStructure.size();
 	}
 
-	private static String truncateAndPad(String text, int maxLength) {
-		if (text.length() > maxLength) {
-			return text.substring(0, maxLength);
-		} else {
-			return String.format("%-" + maxLength + "s", text).replace(' ', '-');
-		}
+	/**
+	 * Unit test helper to get the byte buffer that contains the vertex data.
+	 */
+	ByteBuffer memBuffer() {
+		return memBuffer;
 	}
 
+	/**
+	 * Initialise the vertex data buffer.
+	 * This sets up the VAO and VBO, and creates the memory buffer.
+	 * The memory buffer is allocated to the initial capacity of the buffer.
+	 * @param ctx the render context
+	 */
 	public void init(RenderContext ctx) {
 		// set up the VAO and VBO
 		vao = glGenVertexArrays();
@@ -145,27 +180,24 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 		vbo = glGenBuffers();
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		createBuffer();
-		// FIXME optimise the data hint...
-		glBufferData(GL_ARRAY_BUFFER, memBuffer, GL_STREAM_DRAW);
-	}
-
-	public void createBuffer() {
-		// create a memory buffer of the initial size
-		this.memBuffer = MemoryUtil.memAlloc(capacity * vertexDataStructure.size());
+		// initialise the buffer with the memory buffer
+		glBufferData(GL_ARRAY_BUFFER, memBuffer, updateHint.glCode);
 	}
 
 	/**
 	 * Setup the buffer to use with the given shader.
-	 * Each element in the data structure is mapped to a vertex attribute pointer
+	 * Each element in the data structure is mapped to a vertex attribute
+	 * pointer using the name of the element as the vertex attribute name.
 	 * @param shader the shader to initialise
 	 */
 	public void setup(ShaderProgram shader) {
 		// FIXME check the shader is compatible with the vertex data structure
 		// FIXME check the shader is ready to be setup
-		use();
 		for(VertexElement element : vertexDataStructure) {
-			shader.setVertexAttribPointer(
-							element.name(),
+			int position = shader.getAttributeLocation(element.name());
+			log.debug("Setting up vertex attribute '{}' at position {}", element.name(), position);
+			setVertexAttribPointer(
+							position,
 							element.type().dimensions(),
 							element.type().glType(),
 							false,
@@ -174,6 +206,22 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 		}
 	}
 
+	protected void setVertexAttribPointer(int position, int size, int type, boolean normalized, int stride, long pointer) {
+		glVertexAttribPointer(position, size, type, normalized, stride, pointer);
+		glEnableVertexAttribArray(position);
+	}
+
+	public void createBuffer() {
+		// create a memory buffer of the initial size
+		this.memBuffer = MemoryUtil.memAlloc(capacity * vertexDataStructure.size());
+	}
+
+
+
+	/**
+	 * Get the vertex data for the given index.
+	 * @return a map of the vertex data elements and their values
+	 */
 	@Override
 	public Map<VertexElement, ?> get(int index) {
 		ByteBuffer readCopy = duplicate(memBuffer);
@@ -186,6 +234,12 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 		return Collections.unmodifiableMap(result);
 	}
 
+	/**
+	 * Get the value of a specific vertex data element for the given index (vertex).
+	 * @param index the index of the vertex
+	 * @param element the vertex data element to get
+	 * @return the value of the element
+	 */
 	public Object getElement(int index, VertexElement element) {
 		ByteBuffer readCopy = duplicate(memBuffer);
 		long elementOffset = vertexDataStructure.getOffset(element);
@@ -193,8 +247,16 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 		return element.type().deserializeRaw(readCopy);
 	}
 
+	/**
+	 * Set the entire vertex data for the given index.
+	 * This will overwrite all the existing data for the vertex.
+	 * @param index the index of the vertex to set
+	 * @param vertexData a map of the vertex data elements and their values
+	 * @return the supplied vertex data map
+	 */
 	@Override
 	public Map<VertexElement, ?> set(int index, Map<VertexElement, ?> vertexData) {
+		vertexDataStructure.checkStructure(vertexData);
 		ByteBuffer writeCopy = duplicate(memBuffer);
 		writeCopy.position(index * vertexDataStructure.size());
 		for(VertexElement element : vertexDataStructure) {
@@ -202,13 +264,29 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 			VertexElementType<?> type = element.type();
 			type.serializeRaw(object, writeCopy);
 		}
-		return null;
+		return vertexData;
 	}
 
+	/**
+	 * Set the vertex data for the given index.
+	 * This will overwrite all the existing data for the vertex.
+	 * The data is provided as a variable number of arguments, which are mapped to the vertex data
+	 * structure by their respective structure index.
+	 * @param index the index of the vertex to set
+	 * @param data the data to set for the vertex
+	 * @return a map of the vertex data elements and their values
+	 */
 	public Map<VertexElement, ?> set(int index, Object ... data) {
 		return set(index, vertexDataStructure.asMap(data));
 	}
 
+	/**
+	 * Set a specific vertex data element for the given index (vertex).
+	 * This will ONLY overwrite the data for that element.
+	 * @param index the index of the vertex to set
+	 * @param element the vertex data element to set
+	 * @param data the value to set for the element
+	 */
 	public void setElement(int index, VertexElement element, Object data) {
 		ByteBuffer writeCopy = duplicate(memBuffer);
 		long elementOffset = vertexDataStructure.getOffset(element);
@@ -228,24 +306,12 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 		return current;
 	}
 
-	/**
-	 * Like {@link ByteBuffer#duplicate()} but keeps the byte order!!
-	 * @param original the byte buffer to copy
-	 * @return the copy (same content, new pointers)
-	 */
-	private static ByteBuffer duplicate(ByteBuffer original) {
-		ByteBuffer copy = original.duplicate();
-		copy.order(original.order());
-		return copy;
-	}
-
-	@Override
-	public int size() {
-		return memBuffer.capacity() / vertexDataStructure.size();
-	}
-
 	public void use() {
 		glBindVertexArray(vao);
+	}
+
+	public void unuse() {
+		glBindVertexArray(0);
 	}
 
 	public void update(UpdateHint hint) {
@@ -264,16 +330,5 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 	public void destroy() {
 		MemoryUtil.memFree(memBuffer);
 		memBuffer = null;
-	}
-
-
-	public VertexDataStructure getStructure() {
-		return vertexDataStructure;
-	}
-
-	public String headerString() {
-		return IntStream.range(0, size())
-						.mapToObj((i) -> vertexDataStructure.headerString())
-						.collect(Collectors.joining(" "));
 	}
 }

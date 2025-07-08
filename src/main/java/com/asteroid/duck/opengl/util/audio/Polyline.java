@@ -111,8 +111,9 @@ public class Polyline implements RenderedItem {
 		vbo = glGenBuffers();
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-		shaderProgram.setVertexAttribPointer("vertex", 2, GL_FLOAT, false, 0, 0);
-
+		int vertexAttribLocation = shaderProgram.getAttributeLocation("vertex");
+		glVertexAttribPointer(vertexAttribLocation, 2, GL_FLOAT, false, 0, 0);
+		glEnableVertexAttribArray(vertexAttribLocation);
 	}
 
 	private void addKeyHandlers(KeyRegistry ctx) {

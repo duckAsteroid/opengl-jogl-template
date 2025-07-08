@@ -1,0 +1,28 @@
+{
+    "rdocCaptureSettings": 1,
+    "settings": {
+        "autoStart": false,
+        "commandLine": "-jar build/libs/opengl-jogl-template-0.0.1-all.jar",
+        "environment": [
+        ],
+        "executable": "C:\\Program Files\\jvms\\store\\21.0.4\\jdk-21.0.4\\bin\\java.exe",
+        "inject": false,
+        "numQueuedFrames": 1,
+        "options": {
+            "allowFullscreen": true,
+            "allowVSync": true,
+            "apiValidation": true,
+            "captureAllCmdLists": false,
+            "captureCallstacks": false,
+            "captureCallstacksOnlyDraws": false,
+            "debugOutputMute": true,
+            "delayForDebugger": 0,
+            "hookIntoChildren": false,
+            "refAllResources": true,
+            "softMemoryLimit": 0,
+            "verifyBufferAccess": true
+        },
+        "queuedFrameCap": 3,
+        "workingDir": "D:/git/github.com/duckasteroid/opengl-jogl-template"
+    }
+}

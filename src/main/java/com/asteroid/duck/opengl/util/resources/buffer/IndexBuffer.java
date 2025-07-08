@@ -7,6 +7,7 @@ import org.lwjgl.BufferUtils;
 import java.nio.IntBuffer;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.stream.IntStream;
 
 import static org.lwjgl.opengl.GL15.*;
 
@@ -49,6 +50,10 @@ public class IndexBuffer implements Resource {
 
 	public void use() {
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+	}
+
+	public void unuse() {
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	}
 
 	public void update(int[] indices) {
@@ -111,5 +116,19 @@ public class IndexBuffer implements Resource {
 		else sb.append("null");
 		sb.append("]}");
 		return sb.toString();
+	}
+
+	public IntStream stream() {
+		if (indexBuffer == null) {
+			return IntStream.empty();
+		}
+		final var buffer = indexBuffer.asReadOnlyBuffer().flip();
+		return IntStream.generate(() -> {
+			if (buffer.hasRemaining()) {
+				return buffer.get();
+			} else {
+				throw new IndexOutOfBoundsException("Index buffer has no more elements.");
+			}
+		}).limit(buffer.remaining());
 	}
 }
