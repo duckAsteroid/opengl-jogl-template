@@ -5,7 +5,6 @@ import org.joml.Vector3f;
 import org.joml.Vector4f;
 
 import java.nio.ByteBuffer;
-import java.nio.FloatBuffer;
 import java.util.Objects;
 
 import static org.lwjgl.opengl.GL11.GL_FLOAT;
@@ -83,19 +82,6 @@ public abstract class VertexElementType<T> {
 		throw new IllegalArgumentException("Serialized value of "+javaType.getName()+" cannot be null");
 	}
 
-	public String dataStringRaw(Object obj) {
-		try {
-			if (obj == null) {
-				obj = nullReplacementValue();
-			}
-			return dataString(javaType.cast(obj));
-		} catch (ClassCastException e) {
-			throw new IllegalArgumentException("Object is not of type " + javaType.getName(), e);
-		}
-	}
-
-	public abstract String dataString(T dataValue);
-
 	@Override
 	public boolean equals(Object o) {
 		if (o == null || getClass().equals(o.getClass())) return false;
@@ -117,10 +103,6 @@ public abstract class VertexElementType<T> {
 
 	/// TYPED SINGLETON INSTANCES --------------------------------------------------------------------
 
-	public static String floatToString(float f) {
-		return String.format("%.4f", f);
-	}
-
 	public static VertexElementType<Float> FLOAT = new VertexElementType<>(Float.class, 1, GL_FLOAT) {
 
 		public Float deserialize(ByteBuffer byteBuffer) {
@@ -134,11 +116,6 @@ public abstract class VertexElementType<T> {
 		@Override
 		public Object nullReplacementValue() {
 			return 0f;
-		}
-
-		@Override
-		public String dataString(Float dataValue) {
-			return floatToString(dataValue);
 		}
 	};
 
@@ -157,11 +134,6 @@ public abstract class VertexElementType<T> {
 		@Override
 		public Object nullReplacementValue() {
 			return new Vector2f(0f);
-		}
-
-		@Override
-		public String dataString(Vector2f dataValue) {
-			return "["+floatToString(dataValue.x)+","+floatToString(dataValue.y)+"]";
 		}
 	};
 
@@ -182,11 +154,6 @@ public abstract class VertexElementType<T> {
 		public Object nullReplacementValue() {
 			return new Vector3f(0f);
 		}
-
-		@Override
-		public String dataString(Vector3f dataValue) {
-			return "["+floatToString(dataValue.x)+","+floatToString(dataValue.y)+","+floatToString(dataValue.z)+"]";
-		}
 	};
 
 	public static final VertexElementType<Vector4f> VEC_4F = new VertexElementType<>(Vector4f.class,4,GL_FLOAT) {
@@ -205,11 +172,6 @@ public abstract class VertexElementType<T> {
 		@Override
 		public Object nullReplacementValue() {
 			return new Vector4f(0f);
-		}
-
-		@Override
-		public String dataString(Vector4f dataValue) {
-			return "["+floatToString(dataValue.x)+","+floatToString(dataValue.y)+","+floatToString(dataValue.z)+","+floatToString(dataValue.w)+"]";
 		}
 	};
 

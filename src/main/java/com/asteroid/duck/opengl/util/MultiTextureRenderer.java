@@ -69,7 +69,7 @@ public class MultiTextureRenderer implements RenderedItem {
 
 		shaderProgram.use();
 		double amount = (Math.sin(Math.toRadians(ctx.getTimer().elapsed() * 100)) + 1.0 ) / 2.0;
-		shaderProgram.setFloat("amount", (float) amount);
+		shaderProgram.uniforms().get("amount", Float.class).set((float) amount);
 
 		renderedShape.render();
 

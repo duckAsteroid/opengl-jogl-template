@@ -52,7 +52,7 @@ public abstract class AbstractPassthruRenderer implements RenderedItem {
 		TextureUnit textureUnit = ctx.getResourceManager().NextTextureUnit();
 		textureUnit.bind(texture);
 		textureUnit.useInShader(shaderProgram, "tex");
-		shaderProgram.setVector2f("dimensions", new Vector2f(texture.Width, texture.Height));
+		//shaderProgram.uniforms().get("dimensions", Vector2f.class).set(new Vector2f(texture.Width, texture.Height));
 		for(BiConsumer<RenderContext, ShaderProgram> var : variables) {
 			var.accept(ctx, shaderProgram);
 		}

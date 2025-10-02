@@ -123,9 +123,7 @@ public class VertexDataStructure implements Iterable<VertexElement> {
 		return structure.get(i);
 	}
 
-	public String headerString() {
-		return stream().map(VertexElement::headerString).collect(Collectors.joining(" "));
-	}
+
 
 	/**
 	 * Check that the given vertex data map exactly matches the structure of this VertexDataStructure.

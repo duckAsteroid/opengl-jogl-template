@@ -6,3 +6,4 @@ com.asteroid.duck.opengl.experiments.Cthugha
 com.asteroid.duck.opengl.experiments.SoundWave
 com.asteroid.duck.opengl.experiments.TextExperiment
 com.asteroid.duck.opengl.experiments.PassthruTexture
+com.asteroid.duck.opengl.experiments.BasicTexture

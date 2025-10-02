@@ -124,7 +124,7 @@ public class Triangles {
 					tempColor.y = (float)timer.waveFunction(freq.y, color.y);
 					tempColor.z = (float)timer.waveFunction(freq.z, color.z);
 				}
-				shaderProgram.setVector4f("color", tempColor);
+				shaderProgram.uniforms().get("color", Vector4f.class).set(tempColor);
 				Triangles.this.render();
 				shaderProgram.unuse();
 			}

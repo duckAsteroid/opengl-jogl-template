@@ -11,7 +11,7 @@ import java.util.function.Supplier;
 
 /**
  * A shader variable that uses a {@link Supplier} to provide values.
- * This provides a nice way for renderitems to control variables into the shader -
+ * This provides a nice way for renderitems to control variables in the shader -
  * by invoking functions they pass to the variable.
  * @param <T> the type of variable
  */
@@ -35,7 +35,7 @@ public abstract class ShaderVariable<T> implements BiConsumer<RenderContext, Sha
 	public static ShaderVariable<Boolean> booleanVariable(String name, Function<RenderContext, Boolean> provider) {
     return new ShaderVariable<>(name, provider) {
 	    public void accept(RenderContext ctx, ShaderProgram program) {
-		    program.setBoolean(name, provider.apply(ctx));
+		    program.uniforms().get(name, Boolean.class).set(provider.apply(ctx));
 	    }
     };
   }
@@ -47,7 +47,7 @@ public abstract class ShaderVariable<T> implements BiConsumer<RenderContext, Sha
 	public static ShaderVariable<Float> floatVariable(String name, Function<RenderContext, Float> provider) {
 		return new ShaderVariable<>(name, provider) {
 			public void accept(RenderContext ctx, ShaderProgram program) {
-				program.setFloat(name, provider.apply(ctx));
+				program.uniforms().get(name, Float.class).set(provider.apply(ctx));
 			}
 		};
 	}
@@ -55,7 +55,7 @@ public abstract class ShaderVariable<T> implements BiConsumer<RenderContext, Sha
 	public static ShaderVariable<Integer> intVariable(String name, Function<RenderContext, Integer> provider) {
 		return new ShaderVariable<>(name, provider) {
 			public void accept(RenderContext ctx, ShaderProgram program) {
-				program.setFloat(name, provider.apply(ctx));
+				program.uniforms().get(name, Integer.class).set(provider.apply(ctx));
 			}
 		};
 	}
@@ -67,7 +67,7 @@ public abstract class ShaderVariable<T> implements BiConsumer<RenderContext, Sha
 	public static ShaderVariable<Vector2f> vec2fVariable(String name, Function<RenderContext, Vector2f> provider) {
 		return new ShaderVariable<>(name, provider) {
 			public void accept(RenderContext ctx, ShaderProgram program) {
-				program.setVector2f(name, provider.apply(ctx));
+				program.uniforms().get(name, Vector2f.class).set(provider.apply(ctx));
 			}
 		};
 	}
@@ -75,7 +75,7 @@ public abstract class ShaderVariable<T> implements BiConsumer<RenderContext, Sha
 	public static ShaderVariable<Vector4f> vec4fVariable(String name, Function<RenderContext, Vector4f> provider) {
 		return new ShaderVariable<>(name, provider) {
 			public void accept(RenderContext ctx, ShaderProgram program) {
-				program.setVector4f(name, provider.apply(ctx));
+				program.uniforms().get(name, Vector4f.class).set(provider.apply(ctx));
 			}
 		};
 	}
