@@ -72,7 +72,7 @@ public abstract class GLWindow implements RenderContext {
 
 		updateTitle();
 
-		if (icon != null) {
+		if (icon != null && OperatingSystem.CURRENT == OperatingSystem.WINDOWS) {
 			try (GLFWImage.Buffer icons = GLFWImage.malloc(1)) {
 				ImageData imgData = resourceManager.LoadTextureData(icon, ImageLoadingOptions.DEFAULT.withNoFlip());
 				icons.position(0)
@@ -96,6 +96,9 @@ public abstract class GLWindow implements RenderContext {
 		glEnable(GL_BLEND);
 		glDisable(GL_DEPTH_TEST);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		String gpuName = glGetString(GL_RENDERER);
+		System.out.println("GPU Renderer: " + gpuName);
 	}
 
 	@Override
@@ -310,7 +313,9 @@ public abstract class GLWindow implements RenderContext {
 
 			IntBuffer pX = stack.mallocInt(1);
 			IntBuffer pY = stack.mallocInt(1);
-			glfwGetWindowPos(windowHandle, pX, pY);
+			if (OperatingSystem.CURRENT != OperatingSystem.LINUX) {
+				glfwGetWindowPos(windowHandle, pX, pY);
+			}
 
 			return new Rectangle(pX.get(0), pY.get(0), pWidth.get(0), pHeight.get(0));
 		}

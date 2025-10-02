@@ -22,6 +22,10 @@ import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL30.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
+/**
+ * This is a really simple renderer of a single texture full screen
+ * It does not use any of the libraries in this project.
+ */
 public class TextureRenderer {
 
 	private long window;

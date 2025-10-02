@@ -24,6 +24,15 @@ import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
+/**
+ * A simple renderer that displays a texture on a quad, demonstrating dynamic texture
+ * coordinate updates.
+ * This implementation uses the libraries provided by this project.
+ * Notably
+ * @see VertexDataBuffer
+ * @see ShaderProgram
+ * @see Texture
+ */
 public class TextureRenderer2 {
 
 	private long window;
@@ -43,28 +52,35 @@ public class TextureRenderer2 {
 					{ new Vector3f(-1.0f,  1.0f, 0.0f),    new Vector3f(1.0f, 1.0f, 0.0f),    new Vector2f(0.0f, 1.0f) } // top left
 	};
 
-	private final String vertexShaderSource =
-					"#version 330 core\n" +
-					"in vec3 aPos;\n" +
-					"in vec3 aColor;\n" +
-					"in vec2 aTexCoord;\n" +
-					"out vec3 ourColor;\n" +
-					"out vec2 TexCoord;\n" +
-					"void main() {\n" +
-					"    gl_Position = vec4(aPos, 1.0);\n" + // Directly use the position
-					"    ourColor = aColor;\n" +
-					"    TexCoord = aTexCoord;\n" +
-					"}\n";
+    // Directly use the position
+    private final String vertexShaderSource =
+            //language=GLSL
+            """
+            #version 330 core
+            in vec3 aPos;
+            in vec3 aColor;
+            in vec2 aTexCoord;
+            out vec3 ourColor;
+            out vec2 TexCoord;
+            void main() {
+                gl_Position = vec4(aPos, 1.0);
+                ourColor = aColor;
+                TexCoord = aTexCoord;
+            }
+            """;
 
 	private final String fragmentShaderSource =
-					"#version 330 core\n" +
-									"out vec4 FragColor;\n" +
-									"in vec3 ourColor;\n" +
-									"in vec2 TexCoord;\n" +
-									"uniform sampler2D ourTexture;\n" +
-									"void main() {\n" +
-									"    FragColor = vec4(ourColor, 1.0) * texture(ourTexture, TexCoord);\n" +
-									"}\n";
+            //language=GLSL
+            """
+            #version 330 core
+            out vec4 FragColor;
+            in vec3 ourColor;
+            in vec2 TexCoord;
+            uniform sampler2D ourTexture;
+            void main() {
+                FragColor = vec4(ourColor, 1.0) * texture(ourTexture, TexCoord);
+            }
+            """;
 
 	private ByteBuffer memBuffer;
 	private final VertexDataStructure structure = new VertexDataStructure(
@@ -86,9 +102,16 @@ public class TextureRenderer2 {
 			throw new IllegalStateException("Unable to initialize GLFW");
 		}
 
-		glfwDefaultWindowHints();
-		glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-		glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+
+        glfwDefaultWindowHints();
+        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // Required for Mac OS X
+        // This is required to run on NVIDIA with prime offload
+        glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_NATIVE_CONTEXT_API);
 
 		window = glfwCreateWindow(800, 600, "Texture Renderer", NULL, NULL);
 		if (window == NULL) {
@@ -122,17 +145,28 @@ public class TextureRenderer2 {
 		});
 
 		GLFWVidMode vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-		glfwSetWindowPos(
-						window,
-						(vidmode.width() - 800) / 2,
-						(vidmode.height() - 600) / 2
-		);
+        // Don't try and center on Wayland
+        if (glfwGetPlatform() != GLFW_PLATFORM_WAYLAND) {
+            glfwSetWindowPos(
+                    window,
+                    (vidmode.width() - 800) / 2,
+                    (vidmode.height() - 600) / 2
+            );
+        }
 
 		glfwMakeContextCurrent(window);
+        GL.createCapabilities();
+
 		glfwSwapInterval(1);
 		glfwShowWindow(window);
 
-		GL.createCapabilities();
+
+
+        // Get OpenGL version and renderer info
+        System.out.println("OpenGL Vendor: " + GL11.glGetString(GL11.GL_VENDOR));
+        System.out.println("OpenGL Renderer: " + GL11.glGetString(GL11.GL_RENDERER));
+        System.out.println("OpenGL Version: " + GL11.glGetString(GL11.GL_VERSION));
+        System.out.println("GLSL Version: " + GL11.glGetString(GL20.GL_SHADING_LANGUAGE_VERSION));
 
 		this.shaderProgram = ShaderProgram.compile(vertexShaderSource, fragmentShaderSource, null);
 

@@ -13,27 +13,33 @@ repositories {
   mavenCentral()
 }
 
+java {
+  toolchain {
+    languageVersion.set(JavaLanguageVersion.of(21))
+  }
+}
+
 dependencies {
   // Logging libraries
-  implementation 'org.slf4j:slf4j-api:2.0.12'
-  runtimeOnly 'ch.qos.logback:logback-classic:1.5.5'
+  implementation 'org.slf4j:slf4j-api:2.1.0-alpha1'
+  runtimeOnly 'ch.qos.logback:logback-classic:1.5.18'
   //runtimeOnly 'org.slf4j:slf4j-simple:2.0.12'
 
   // Lightweight Java Game Libraries (LWJGL)
-  implementation platform("org.lwjgl:lwjgl-bom:3.3.3")
+  implementation platform("org.lwjgl:lwjgl-bom:3.3.6")
   implementation "org.lwjgl:lwjgl"
-  runtimeOnly "org.lwjgl:lwjgl::natives-windows"
+  runtimeOnly "org.lwjgl:lwjgl::natives-linux"
 
   // glfw for windows
   implementation "org.lwjgl:lwjgl-glfw"
-  runtimeOnly "org.lwjgl:lwjgl-glfw::natives-windows"
+  runtimeOnly "org.lwjgl:lwjgl-glfw::natives-linux"
 
   // open GL
   implementation "org.lwjgl:lwjgl-opengl"
-  runtimeOnly "org.lwjgl:lwjgl-opengl::natives-windows"
+  runtimeOnly "org.lwjgl:lwjgl-opengl::natives-linux"
 
   // help for GL Vector types
-  implementation "org.joml:joml:1.10.5"
+  implementation "org.joml:joml:1.10.8"
 
   // JUnit
   testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0-M1'
@@ -50,6 +56,14 @@ test {
 
 application {
   mainClass = 'com.asteroid.duck.opengl.Main'
+}
+
+run {
+    jvmArgs += ['-Dsun.java2d.uiScale=2']
+    environment += [
+            '__NV_PRIME_RENDER_OFFLOAD': '1',
+            '__GLX_VENDOR_LIBRARY_NAME': 'nvidia',
+            '__GL_THREADED_OPTIMIZATIONS': '0']
 }
 
 tasks.register("runTextureRenderer", JavaExec) {
@@ -85,11 +99,24 @@ tasks.register("debugRun", JavaExec) {
   jvmArgs = ["-javaagent:src/test/resources/lwjglx-debug-1.0.0.jar=tn;o=debugRun.gl.log"]
   def myProps = ["simulate.audio": "TRUE"]
   systemProperties myProps
-  args = ["TextExperiment"] // Cthugha, TranslateExample, Triangle, PalettePicture, BlurPictureExample, BlurTest
+  environment += [
+          '__NV_PRIME_RENDER_OFFLOAD': '1',
+          '__GLX_VENDOR_LIBRARY_NAME': 'nvidia',
+          '__GL_THREADED_OPTIMIZATIONS': '0']
+  args = ["BasicTexture"] // Cthugha, TranslateExample, Triangle, PalettePicture, BlurPictureExample, BlurTest
 }
 
 tasks.register("deleteCrashLogs", Delete) {
   group = BasePlugin.BUILD_GROUP
   description = "Clear out Java crash logs"
   delete fileTree('.').include('hs_err_pid*.log')
+}
+
+tasks.register("graphicsCardLogger", JavaExec) {
+  classpath = sourceSets.main.runtimeClasspath
+  environment += [
+          '__NV_PRIME_RENDER_OFFLOAD': '1',
+          '__GLX_VENDOR_LIBRARY_NAME': 'nvidia',
+          '__GL_THREADED_OPTIMIZATIONS': '0']
+  mainClass = "com.asteroid.duck.opengl.util.GraphicsCardLogger"
 }

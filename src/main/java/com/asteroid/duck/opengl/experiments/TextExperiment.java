@@ -1,5 +1,6 @@
 package com.asteroid.duck.opengl.experiments;
 
+import com.asteroid.duck.opengl.util.PassthruTextureRenderer;
 import com.asteroid.duck.opengl.util.color.StandardColors;
 import com.asteroid.duck.opengl.util.geom.Vertice;
 import com.asteroid.duck.opengl.util.CompositeRenderItem;
@@ -31,6 +32,7 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 	private final VertexElement screenPosition = new VertexElement(VertexElementType.VEC_2F, "screenPosition");
 	private final VertexElement texturePosition = new VertexElement(VertexElementType.VEC_2F, "texturePosition");
 
+	private final PassthruTextureRenderer backgroundTexture = new PassthruTextureRenderer("test-card");
 	private ShaderProgram debugShader;
 	private VertexDataBuffer debugLineBuffer;
 
@@ -42,8 +44,10 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 
 	@Override
 	public void init(RenderContext ctx) throws IOException {
-		ctx.setClearScreen(true);
-		ctx.setBackgroundColor(backgroundColor);
+		//ctx.setClearScreen(true);
+		//ctx.setBackgroundColor(backgroundColor);
+		ctx.getResourceManager().GetTexture("test-card", "test-card.jpeg");
+		backgroundTexture.init(ctx);
 		this.shader = ctx.getResourceManager().getShaderLoader().LoadSimpleShaderProgram("passthru2");
 		this.debugShader = ctx.getResourceManager().getShaderLoader().LoadSimpleShaderProgram("line");
 
@@ -61,14 +65,14 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 
 		// put the ortho matrix into the shader
 		Matrix4f ortho = ctx.ortho();
-		shader.setMatrix4f("projection", ortho);
+		shader.uniforms().get("projection", Matrix4f.class).set(ortho);
 		// set the text color for the shader
-		shader.setVector4f("textColor", StandardColors.LIGHTBLUE.color);
+		shader.uniforms().get("textColor", Vector4f.class).set(StandardColors.LIGHTBLUE.color);
 
 		// setup the debug shader
 		debugShader.use();
-		debugShader.setMatrix4f("projection", ortho);
-		debugShader.setVector4f("lineColor", StandardColors.REBECCAPURPLE.color);
+		debugShader.uniforms().get("projection", Matrix4f.class).set(ortho);
+		debugShader.uniforms().get("lineColor", Vector4f.class).set(StandardColors.REBECCAPURPLE.color);
 	}
 
 	protected void initText(RenderContext ctx, Point cursor, String text) {
@@ -166,6 +170,8 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 
 	@Override
 	public void doRender(RenderContext ctx) {
+		backgroundTexture.doRender(ctx);
+
 		debugShader.use();
 		debugLineBuffer.use();
 		GL11C.glDrawArrays(GL11C.GL_LINES, 0, debugLineBuffer.size());

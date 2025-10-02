@@ -36,12 +36,15 @@ import static org.lwjgl.opengl.GL32.GL_GEOMETRY_SHADER;
  */
 public class ShaderProgram implements Resource {
 	private static final Logger LOG = LoggerFactory.getLogger(ShaderProgram.class);
-	private final int id;
+	final int id;
 
-	private final HashMap<String, Integer> uniformLocationCache = new HashMap<>();
+	private final Map<VariableType, Map<String, Variable>> variableCache = new HashMap<>();
+
+	private final Uniforms uniforms;
 
 	private ShaderProgram(int id) {
 		this.id = id;
+		this.uniforms = new Uniforms(this);
 	}
 
 	public int id() {
@@ -186,7 +189,13 @@ public class ShaderProgram implements Resource {
 		glUseProgram(0);
 	}
 
-	private final Map<VariableType, Map<String, Variable>> variableCache = new HashMap<>();
+	/**
+	 * Access to the uniform variables of this shader program
+	 * @return an object to get/set uniforms
+	 */
+	public Uniforms uniforms() {
+		return uniforms;
+	}
 
 	public Map<String, Variable> get(VariableType type) {
 		if (!variableCache.containsKey(type)) {
@@ -220,71 +229,6 @@ public class ShaderProgram implements Resource {
 		}
 	}
 
-	protected int uniformLocation(String uniformName) {
-		if (!uniformLocationCache.containsKey(uniformName)) {
-			int uniformLocation = glGetUniformLocation(id, uniformName);
-			uniformLocationCache.put(uniformName, uniformLocation);
-		}
-		return uniformLocationCache.get(uniformName);
-	}
-
-	public void setBoolean(String name, boolean value) {
-		glUniform1i(uniformLocation(name), value ? 1 : 0);
-	}
-
-	public void setFloat(String name, float value)
-	{
-		glUniform1f(uniformLocation(name), value);
-	}
-
-	public void setFloatArray(String name, float[] value)
-	{
-		glUniform1fv(uniformLocation(name), value);
-	}
-
-	public void setInteger(String name, int value)
-	{
-		glUniform1i(uniformLocation(name), value);
-	}
-
-	public void setUnsignedInteger(String name, int value)
-	{
-		glUniform1ui(uniformLocation(name), value);
-	}
-
-	public void setVector2f(String name, float x, float y)
-	{
-		glUniform2f(uniformLocation(name), x, y);
-	}
-	public void setVector2f(String name, Vector2f value)
-	{
-		glUniform2f(uniformLocation(name), value.x, value.y);
-	}
-	public void setVector3f(String name, float x, float y, float z)
-	{
-		glUniform3f(uniformLocation(name), x, y, z);
-	}
-	public void setVector3f(String name, Vector3f value)
-	{
-		glUniform3f(uniformLocation(name), value.x, value.y, value.z);
-	}
-	public void setVector4f(String name, float x, float y, float z, float w)
-	{
-		glUniform4f(uniformLocation(name), x, y, z, w);
-	}
-	public void setVector4f(String name, Vector4f value)
-	{
-		GL20C.glUniform4fv(uniformLocation(name), new float[]{value.x, value.y, value.z, value.w});
-	}
-
-	public void setMatrix4f(String name, Matrix4f matrix)
-	{
-		try (MemoryStack stack = MemoryStack.stackPush()) {
-			FloatBuffer fb = matrix.get(stack.mallocFloat(16));
-			glUniformMatrix4fv(uniformLocation(name), false, fb);
-		}
-	}
-
 	public int getAttributeLocation(String attributeName) {
 		int location = glGetAttribLocation(id, attributeName);
 		if (location < 0) {
@@ -294,7 +238,7 @@ public class ShaderProgram implements Resource {
 	}
 
 	public void destroy() {
-		uniformLocationCache.clear();
+		uniforms.clear();
 		glDeleteProgram(id);
 	}
 

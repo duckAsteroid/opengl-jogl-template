@@ -26,7 +26,9 @@ public enum VariableType implements VariableEx {
 		}
 	};
 
+	/// The GL ID for count of this variable type
 	protected final int counter;
+	/// The GL ID for the max length of any name of this variable type
 	protected final int nameLengther;
 
 	VariableType(int counter, int nameLengther) {

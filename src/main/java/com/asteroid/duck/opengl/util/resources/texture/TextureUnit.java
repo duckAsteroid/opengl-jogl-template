@@ -48,7 +48,7 @@ public class TextureUnit implements Resource, Comparable<TextureUnit> {
 	}
 
 	public void useInShader(ShaderProgram program, String variable) {
-		program.setInteger(variable, index);
+		program.uniforms().get(variable, Integer.class).set(index);
 	}
 
 	@Override

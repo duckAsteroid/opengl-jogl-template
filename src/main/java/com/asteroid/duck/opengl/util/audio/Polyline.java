@@ -4,6 +4,7 @@ import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.RenderedItem;
 import com.asteroid.duck.opengl.util.keys.KeyRegistry;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
+import org.joml.Vector2f;
 import org.joml.Vector4f;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.system.MemoryStack;
@@ -42,6 +43,7 @@ public class Polyline implements RenderedItem {
 
 	private float lineWidth = 4.0f;
 	private Vector4f lineColour = new Vector4f(1.0f,0.0f,0.0f,1.0f);
+
 	private Vector4f backgroundColour = new Vector4f(0.4f, 0.4f, 0.4f, 1.0f);
 	private boolean clear = false;
 
@@ -153,8 +155,8 @@ public class Polyline implements RenderedItem {
 
 		Rectangle window = ctx.getWindow();
 		shaderProgram.use();
-		shaderProgram.setVector2f("resolution", window.width, window.height);
-		shaderProgram.setVector4f("lineColor", lineColour);
+		shaderProgram.uniforms().get("resolution", Vector2f.class).set(new Vector2f(window.width, window.height));
+		shaderProgram.uniforms().get("lineColor", Vector4f.class).set(lineColour);
 
 
 

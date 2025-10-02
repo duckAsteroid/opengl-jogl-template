@@ -16,7 +16,7 @@ public class PassthruTextureRenderer extends AbstractPassthruRenderer implements
 	private static final Logger LOG = LoggerFactory.getLogger(PassthruTextureRenderer.class);
 
 	private final String shaderName;
-	private final String textureName;
+	protected final String textureName;
 
 	public PassthruTextureRenderer(String textureName) {
 		this(textureName, "passthru");

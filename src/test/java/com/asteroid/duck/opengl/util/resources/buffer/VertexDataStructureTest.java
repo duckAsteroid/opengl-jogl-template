@@ -105,11 +105,6 @@ class VertexDataStructureTest {
 			public Object nullReplacementValue() {
 				return 0.0d;
 			}
-
-			@Override
-			public String dataString(Number dataValue) {
-				return dataValue.toString();
-			}
 		};
 		VertexElement element1 = new VertexElement(FLOAT, "element1");
 		VertexElement element2 = new VertexElement(NUMBER, "element2");

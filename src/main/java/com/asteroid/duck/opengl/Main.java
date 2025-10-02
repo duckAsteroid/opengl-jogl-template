@@ -68,6 +68,8 @@ public class Main extends GLWindow implements RenderContext {
     }
 
     public static void main(String[] args) throws Exception {
+        String javaVersion = System.getProperty("java.version");
+        System.out.println("Running with Java version: " + javaVersion);
         Main.ARGS = args;
         Main main = new Main( "(cShader Playground", 1024, 800);
         main.setClearScreen(false);
