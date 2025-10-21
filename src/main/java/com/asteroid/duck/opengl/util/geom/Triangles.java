@@ -4,6 +4,7 @@ import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.RenderedItem;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.timer.Timer;
+import com.asteroid.duck.opengl.util.timer.WaveFunction;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.lwjgl.system.MemoryStack;
@@ -116,11 +117,11 @@ public class Triangles {
 				shaderProgram.use();
 				Vector4f tempColor = color;
 				if (freq != null) {
-					Timer timer = ctx.getTimer();
+					double elapsed = ctx.getTimer().elapsed();
 					tempColor = new Vector4f();
-					tempColor.x = (float)timer.waveFunction(freq.x, color.x);
-					tempColor.y = (float)timer.waveFunction(freq.y, color.y);
-					tempColor.z = (float)timer.waveFunction(freq.z, color.z);
+					tempColor.x = (float)WaveFunction.value(freq.x, color.x, elapsed);
+					tempColor.y = (float)WaveFunction.value(freq.y, color.y, elapsed);
+					tempColor.z = (float)WaveFunction.value(freq.z, color.z, elapsed);
 				}
 				shaderProgram.uniforms().get("color", Vector4f.class).set(tempColor);
 				Triangles.this.render();
