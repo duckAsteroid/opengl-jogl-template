@@ -10,6 +10,7 @@ import com.asteroid.duck.opengl.util.resources.buffer.VertexElementType;
 import com.asteroid.duck.opengl.util.resources.buffer.debug.VdbVisualizer;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import org.joml.Vector2f;
+import org.joml.Vector4f;
 
 import java.io.IOException;
 
@@ -20,10 +21,13 @@ public class SimpleTriangle implements Experiment {
             """
             #version 460
             in vec2 position;
+            in vec4 color;
+            out vec4 fColor;
             
             void main()
             {
                 gl_Position = vec4( position.x, position.y, 0.0, 1.0);
+                fColor = color;
             }
             """;
 
@@ -33,7 +37,7 @@ public class SimpleTriangle implements Experiment {
             """
             #version 460
             out vec4 FragColor;
-            uniform vec4 fColor = vec4(1.0, 0.5, 0.2, 1.0);
+            in vec4 fColor;
 
             void main()
             {
@@ -50,7 +54,7 @@ public class SimpleTriangle implements Experiment {
 
     @Override
     public void init(RenderContext ctx) throws IOException {
-        VertexDataStructure structure = new VertexDataStructure(POSITION);//, COLOR);
+        VertexDataStructure structure = new VertexDataStructure(POSITION, COLOR);
         this.vbo = new VertexDataBuffer(structure, 3);
         this.vbo.setUpdateHint(VertexDataBuffer.UpdateHint.STATIC);
         this.vbo.init(ctx);
@@ -66,8 +70,13 @@ public class SimpleTriangle implements Experiment {
                 new Vector2f(.5f, -.5f), // bottom right [1]
                 new Vector2f(0.0f, .5f) // top middle [2]
         };
+        Vector4f[] verticeColors = {
+                StandardColors.RED.color,
+                StandardColors.GREEN.color,
+                StandardColors.BLUE.color
+        };
         for (int i = 0; i < verticeCoords.length; i++) {
-            vbo.set(i, verticeCoords[i]);//, colors[i].color);
+            vbo.set(i, verticeCoords[i], verticeColors[i]);
         }
         vbo.update(VertexDataBuffer.UpdateHint.STATIC);
 
