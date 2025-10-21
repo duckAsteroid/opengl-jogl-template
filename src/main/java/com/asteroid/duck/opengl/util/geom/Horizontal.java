@@ -4,6 +4,9 @@ import org.joml.Vector4f;
 
 import java.awt.*;
 
+/**
+ * The horizontal component of a @{@link Vertice}
+ */
 enum Horizontal {
 	LEFT,
 	RIGHT;

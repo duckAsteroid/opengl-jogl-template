@@ -26,6 +26,15 @@ import static org.lwjgl.opengl.GL30.glGenVertexArrays;
  * Helps with reading and writing data to a native (not JVM) CPU memory area.
  * The data structure is written to the VBO/VAO and can be mapped into a shader.
  * This data can then be flushed out to the GPU as required.
+ *
+ * A vertex data buffer stores a structure of data for each vertex (point). This data structure
+ * is described using {@link VertexDataStructure} which contains 1 or more {@link VertexElement}s.
+ *
+ * As an example suppose we want to store a Vector3f colour and a Vector2f point (x/y coords) for
+ * each vertex in a simple triangle. We could initialise the {@link VertexDataBuffer} as follows:
+ * <code>
+ *
+ * </code>
  */
 public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implements Resource {
 

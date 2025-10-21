@@ -78,8 +78,9 @@ public class Main extends GLWindow implements RenderContext {
         Experiment experiment = chooser.get();
         main.setRenderedItem(experiment);
 
-        Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
+        //Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
         main.displayLoop();
+        System.exit(0);
     }
 
     public void registerKeys() {

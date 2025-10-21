@@ -1,5 +1,8 @@
 package com.asteroid.duck.opengl.util;
 
+/**
+ * What flavour of operating system are we working with?
+ */
 public enum OperatingSystem {
     LINUX, MAC, WINDOWS, UNKNOWN;
     private static final String OS_NAME = System.getProperty("os.name").toLowerCase();

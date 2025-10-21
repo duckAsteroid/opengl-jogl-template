@@ -4,6 +4,9 @@ import org.joml.Vector4f;
 
 import java.awt.*;
 
+/**
+ * The vertical component of a @{@link Vertice}
+ */
 enum Vertical  {
 	TOP, BOTTOM;
 
