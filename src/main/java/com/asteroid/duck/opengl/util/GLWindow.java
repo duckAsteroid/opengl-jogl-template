@@ -39,69 +39,82 @@ public abstract class GLWindow implements RenderContext {
 	private final ResourceManager resourceManager = new ResourceManager("src/main/");
 	private final GLFWKeyCallback glfwKeyCallback;
 	private final GLFWFramebufferSizeCallback glfwFramebufferSizeCallback;
+    private final GLFWWindowCloseCallback glfwWindowCloseCallback;
+
 	private final KeyRegistry keyRegistry = new KeyRegistry();
 	private GLFWErrorCallback errorCallback;
 	private Rectangle windowed = null;
 	private Rectangle window;
 	private Vector4f backgroundColor = new Vector4f(0.0f);
 	private boolean clearScreen = true;
+    private boolean windowClosing = false;
 
 	public GLWindow(String title, int width, int height, String icon) {
-		this.windowTitle = title;
-		//System.out.println("INFO: OpenGL Version: "+glGetString(GL_VERSION));
-		//this.errorCallback = GLFWErrorCallback.createPrint(System.err).set();
+        this.windowTitle = title;
+        //System.out.println("INFO: OpenGL Version: "+glGetString(GL_VERSION));
+        //this.errorCallback = GLFWErrorCallback.createPrint(System.err).set();
 
-		if(!glfwInit()) throw new RuntimeException("Unable to init GLFW");
+        if (!glfwInit()) throw new RuntimeException("Unable to init GLFW");
 
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-		glfwWindowHint(GLFW_CONTEXT_DEBUG, GLFW_TRUE);
-		glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-		//glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        glfwWindowHint(GLFW_CONTEXT_DEBUG, GLFW_TRUE);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+        //glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
 
 
-		windowHandle = glfwCreateWindow(width, height, title, NULL, NULL);
-		// Make the OpenGL context current
-		glfwMakeContextCurrent(windowHandle);
+        windowHandle = glfwCreateWindow(width, height, title, NULL, NULL);
+        // Make the OpenGL context current
+        glfwMakeContextCurrent(windowHandle);
 
-		this.glfwKeyCallback = glfwSetKeyCallback(windowHandle, this::keyCallback);
-		this.glfwFramebufferSizeCallback = glfwSetFramebufferSizeCallback(windowHandle, this::frameBufferSizeCallback);
+        this.glfwKeyCallback = glfwSetKeyCallback(windowHandle, this::keyCallback);
+        this.glfwFramebufferSizeCallback = glfwSetFramebufferSizeCallback(windowHandle, this::frameBufferSizeCallback);
+        this.glfwWindowCloseCallback = glfwSetWindowCloseCallback(windowHandle, this::windowCloseCallback);
 
-		window = readWindow();
+        window = readWindow();
 
-		updateTitle();
+        updateTitle();
 
-		if (icon != null && OperatingSystem.CURRENT == OperatingSystem.WINDOWS) {
-			try (GLFWImage.Buffer icons = GLFWImage.malloc(1)) {
-				ImageData imgData = resourceManager.LoadTextureData(icon, ImageLoadingOptions.DEFAULT.withNoFlip());
-				icons.position(0)
-								.width(imgData.size().width)
-								.height(imgData.size().height)
-								.pixels(imgData.buffer());
-				glfwSetWindowIcon(windowHandle, icons);
-			} catch (IOException e) {
-				LOG.error("Unable to load window icon", e);
-			}
-		}
+        if (icon != null && OperatingSystem.CURRENT == OperatingSystem.WINDOWS) {
+            try (GLFWImage.Buffer icons = GLFWImage.malloc(1)) {
+                ImageData imgData = resourceManager.LoadTextureData(icon, ImageLoadingOptions.DEFAULT.withNoFlip());
+                icons.position(0)
+                        .width(imgData.size().width)
+                        .height(imgData.size().height)
+                        .pixels(imgData.buffer());
+                glfwSetWindowIcon(windowHandle, icons);
+            } catch (IOException e) {
+                LOG.error("Unable to load window icon", e);
+            }
+        }
 
-		// Enable v-sync
-		glfwSwapInterval(1);
+        // Enable v-sync
+        glfwSwapInterval(1);
 
-		// Make the window visible
-		glfwShowWindow(windowHandle);
+        // Make the window visible
+        glfwShowWindow(windowHandle);
 
-		// kick off GL
-		GL.createCapabilities();
-		glEnable(GL_BLEND);
-		glDisable(GL_DEPTH_TEST);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        // kick off GL
+        GL.createCapabilities();
+        glEnable(GL_BLEND);
+        glDisable(GL_DEPTH_TEST);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		String gpuName = glGetString(GL_RENDERER);
-		System.out.println("GPU Renderer: " + gpuName);
-	}
+        // Set the initial viewport. This is critical for high-DPI displays.
+        // We query the framebuffer size, which may be larger than the window size
+        // we requested, and set the viewport to match.
+        try (MemoryStack stack = stackPush()) {
+            IntBuffer pWidth = stack.mallocInt(1), pHeight = stack.mallocInt(1);
+            glfwGetFramebufferSize(windowHandle, pWidth, pHeight);
+            glViewport(0, 0, pWidth.get(0), pHeight.get(0));
+        }
 
-	@Override
+        String gpuName = glGetString(GL_RENDERER);
+        System.out.println("GPU Renderer: " + gpuName);
+    }
+
+    @Override
 	public ResourceManager getResourceManager() {
 		return resourceManager;
 	}
@@ -152,14 +165,14 @@ public abstract class GLWindow implements RenderContext {
 	}
 
 	public void frameBufferSizeCallback(long window, int width, int height) {
-		int[] wwidth={0};
-		int[] wheight={0};
-		glfwGetFramebufferSize(window, wwidth, wheight);
-
 		glViewport(0, 0, width, height);
 		this.window = readWindow();
 		updateTitle();
 	}
+
+    public void windowCloseCallback(long l) {
+        windowClosing = true;
+    }
 
 	public void displayLoop() throws IOException {
 		// initialize
@@ -169,7 +182,7 @@ public abstract class GLWindow implements RenderContext {
 		printInstructions();
 
 		// loop
-		while (!glfwWindowShouldClose(windowHandle))
+		while (!windowClosing)
 		{
 			glfwPollEvents();
 
@@ -182,6 +195,7 @@ public abstract class GLWindow implements RenderContext {
 			render();
 
 			glfwSwapBuffers(windowHandle);
+            windowClosing |= glfwWindowShouldClose(windowHandle);
 		}
 
 		// delete all resources
@@ -217,6 +231,7 @@ public abstract class GLWindow implements RenderContext {
 	public void dispose() {
 		if (glfwKeyCallback != null) glfwKeyCallback.close();
 		if (glfwFramebufferSizeCallback != null) glfwFramebufferSizeCallback.close();
+        if (glfwWindowCloseCallback != null) glfwWindowCloseCallback.close();
 		resourceManager.clear();
 		if (errorCallback != null) errorCallback.free();
 	}

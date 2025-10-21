@@ -4,6 +4,9 @@ import org.joml.Vector4f;
 
 import java.util.function.Supplier;
 
+/**
+ * A useful enumeration of standard (HTML) colours
+ */
 public enum StandardColors implements Supplier<Vector4f> {
 	WHITE(1.0f),
 	BLACK(0.0f),

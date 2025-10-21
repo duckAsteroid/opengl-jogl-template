@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * A class that can visualise the contents of a Vertex Data Buffer (VDB).
+ * A class that can "visualise" (print out) the contents of a {@link VertexDataBuffer} (VDB).
  * @see com.asteroid.duck.opengl.util.resources.buffer.VertexDataBuffer
  */
 public class VdbVisualizer {
@@ -22,7 +22,16 @@ public class VdbVisualizer {
 		this.buffer = buffer;
 	}
 
-	public String byteString() {
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(headerString()).append('\n');
+        sb.append(verticeString()).append('\n');
+        sb.append(dataString()).append('\n');
+        return sb.toString();
+    }
+
+    public String byteString() {
 		return buffer.byteStream()
 						.map((b) -> Integer.toHexString(b & 0xFF).toUpperCase())
 						.map((s) -> s.length() == 1 ? "0" + s : s)

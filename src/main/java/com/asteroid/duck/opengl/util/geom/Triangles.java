@@ -20,10 +20,8 @@ import static org.lwjgl.opengl.GL30.*;
  * Represents a set of triangular vertices and the vao, vbo and ibo that can be used to render them.
  */
 public class Triangles {
-	private final float[] vertices;
-	private final short[] indices;
 
-	private final int vao;
+    private final int vao;
 	private final int vbo;
 	private final int ibo;
 	private final int triangleCount;
@@ -137,9 +135,7 @@ public class Triangles {
 	}
 
 	public Triangles(float[] vertices, short[] indices) {
-		this.vertices = vertices;
-		this.indices = indices;
-		this.triangleCount = indices.length / 3;
+        this.triangleCount = indices.length / 3;
 		try(MemoryStack stack = MemoryStack.stackPush()) {
 			vao = glGenVertexArrays();
 			glBindVertexArray(vao);

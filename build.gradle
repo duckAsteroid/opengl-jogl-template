@@ -1,8 +1,8 @@
 plugins {
   id 'java'
   id 'application'
-  id "com.github.ben-manes.versions" version "0.51.0"
-  id 'com.gradleup.shadow' version '9.0.0-beta6'
+  id "com.github.ben-manes.versions" version "0.53.0"
+  id 'com.gradleup.shadow' version '9.2.2'
 }
 
 group = 'com.asteroid.duck'
@@ -15,14 +15,18 @@ repositories {
 
 java {
   toolchain {
-    languageVersion.set(JavaLanguageVersion.of(21))
+    languageVersion.set(JavaLanguageVersion.of(17))
   }
+}
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs = ['-Xlint:unchecked', '-Xlint:deprecation', '--enable-preview']
 }
 
 dependencies {
   // Logging libraries
   implementation 'org.slf4j:slf4j-api:2.1.0-alpha1'
-  runtimeOnly 'ch.qos.logback:logback-classic:1.5.18'
+  runtimeOnly 'ch.qos.logback:logback-classic:1.5.20'
   //runtimeOnly 'org.slf4j:slf4j-simple:2.0.12'
 
   // Lightweight Java Game Libraries (LWJGL)
@@ -42,9 +46,9 @@ dependencies {
   implementation "org.joml:joml:1.10.8"
 
   // JUnit
-  testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0-M1'
+  testImplementation 'org.junit.jupiter:junit-jupiter:6.0.0'
   // Mocking in tests
-  testImplementation 'org.mockito:mockito-inline:3.12.4'
+  testImplementation 'org.mockito:mockito-inline:5.2.0'
 
 }
 
@@ -96,14 +100,14 @@ tasks.register("debugRun", JavaExec) {
   classpath = sourceSets.main.runtimeClasspath
   mainClass = application.mainClass
   workingDir = project.rootDir
-  jvmArgs = ["-javaagent:src/test/resources/lwjglx-debug-1.0.0.jar=tn;o=debugRun.gl.log"]
+  jvmArgs = ["--enable-preview","-javaagent:src/test/resources/lwjglx-debug-1.0.0.jar=tn;o=debugRun.gl.log"]
   def myProps = ["simulate.audio": "TRUE"]
   systemProperties myProps
   environment += [
           '__NV_PRIME_RENDER_OFFLOAD': '1',
           '__GLX_VENDOR_LIBRARY_NAME': 'nvidia',
           '__GL_THREADED_OPTIMIZATIONS': '0']
-  args = ["BasicTexture"] // Cthugha, TranslateExample, Triangle, PalettePicture, BlurPictureExample, BlurTest
+  args = ["SimpleTriangle"] //BasicTexture, Cthugha, TranslateExample, Triangle, PalettePicture, BlurPictureExample, BlurTest
 }
 
 tasks.register("deleteCrashLogs", Delete) {

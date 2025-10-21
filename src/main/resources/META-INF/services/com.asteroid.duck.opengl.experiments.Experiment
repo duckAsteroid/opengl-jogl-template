@@ -7,3 +7,4 @@ com.asteroid.duck.opengl.experiments.SoundWave
 com.asteroid.duck.opengl.experiments.TextExperiment
 com.asteroid.duck.opengl.experiments.PassthruTexture
 com.asteroid.duck.opengl.experiments.BasicTexture
+com.asteroid.duck.opengl.experiments.SimpleTriangle
