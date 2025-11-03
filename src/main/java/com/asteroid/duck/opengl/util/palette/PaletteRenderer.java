@@ -92,16 +92,16 @@ public class PaletteRenderer extends AbstractPassthruRenderer {
 
 	protected ShaderProgram initShaderProgram(RenderContext ctx) throws IOException {
 		// load the GLSL Shaders
-		return ctx.getResourceManager().GetSimpleShader("palette");
+		return ctx.getResourceManager().getSimpleShader("palette");
 	}
 
 	protected Texture initTexture(RenderContext ctx) {
 
-		this.palette = ctx.getResourceManager().GetTexture(paletteName);
-		this.paletteUnit = ctx.getResourceManager().NextTextureUnit();
+		this.palette = ctx.getResourceManager().getTexture(paletteName);
+		this.paletteUnit = ctx.getResourceManager().nextTextureUnit();
 		this.paletteUnit.bind(palette);
 
-		return ctx.getResourceManager().GetTexture(textureName);
+		return ctx.getResourceManager().getTexture(textureName);
 	}
 
 	@Override

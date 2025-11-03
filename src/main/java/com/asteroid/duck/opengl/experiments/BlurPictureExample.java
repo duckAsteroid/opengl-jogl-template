@@ -20,7 +20,7 @@ public class BlurPictureExample extends OffscreenBlurTextureRenderer implements 
 	}
 	@Override
 	public void init(RenderContext ctx) throws IOException {
-		Texture window = ctx.getResourceManager().GetTexture("window", "test-card.jpeg", ImageLoadingOptions.DEFAULT);
+		Texture window = ctx.getResourceManager().getTexture("window", "test-card.jpeg", ImageLoadingOptions.DEFAULT);
 		super.init(ctx);
 	}
 }

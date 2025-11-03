@@ -35,12 +35,12 @@ public class MultiTextureRenderer implements RenderedItem {
 	public void init(RenderContext ctx) throws IOException {
 		initShaderProgram(ctx);
 		initTextures(ctx);
-		initBuffers();
+		initBuffers(ctx);
 	}
 
 	private void initShaderProgram(RenderContext ctx) throws IOException {
 		// load the GLSL Shaders
-		this.shaderProgram = ctx.getResourceManager().GetShader("multi-tex", "multi-tex/vert.glsl", "multi-tex/frag.glsl", null);
+		this.shaderProgram = ctx.getResourceManager().getShader("multi-tex", "multi-tex/vert.glsl", "multi-tex/frag.glsl", null);
 		LOG.info("Using shader program {}", shaderProgram);
 	}
 
@@ -49,8 +49,8 @@ public class MultiTextureRenderer implements RenderedItem {
 		this.textureUnits = new TextureUnit[textureNames.length];
 		shaderProgram.use();
 		for (int i = 0; i < textureNames.length; i++) {
-			this.textures[i] = ctx.getResourceManager().GetTexture(textureNames[i]);
-			this.textureUnits[i] = ctx.getResourceManager().NextTextureUnit();
+			this.textures[i] = ctx.getResourceManager().getTexture(textureNames[i]);
+			this.textureUnits[i] = ctx.getResourceManager().nextTextureUnit();
 			this.textureUnits[i].bind(textures[i]);
 			this.textureUnits[i].useInShader(shaderProgram, "tex"+i);
 		}
@@ -58,9 +58,10 @@ public class MultiTextureRenderer implements RenderedItem {
 	}
 
 
-	private void initBuffers() {
+	private void initBuffers(RenderContext ctx) throws IOException {
 		renderedShape = Triangles.fullscreen();
-		renderedShape.setup(shaderProgram);
+		renderedShape.setShaderProgram(shaderProgram);
+        renderedShape.init(ctx);
 	}
 
 
@@ -71,7 +72,7 @@ public class MultiTextureRenderer implements RenderedItem {
 		double amount = (Math.sin(Math.toRadians(ctx.getTimer().elapsed() * 100)) + 1.0 ) / 2.0;
 		shaderProgram.uniforms().get("amount", Float.class).set((float) amount);
 
-		renderedShape.render();
+		renderedShape.doRender(ctx);
 
 		shaderProgram.unuse();
 	}

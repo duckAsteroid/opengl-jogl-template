@@ -61,9 +61,9 @@ class TextureTest {
 			// ACTUAL TEST STARTS HERE ------------------------------
 
 			subject = new Texture();
-			subject.Generate(Width, Height, 0);
+			subject.generate(Width, Height, 0);
 
-			Matrix3x2f normalisationMatrix = subject.normalisationMatrix();
+			Matrix3x2f normalisationMatrix = subject.getNormalisationMatrix();
 			assertNotNull(normalisationMatrix);
 
 			Scenario[] scenarios = {

@@ -6,9 +6,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * This provides the ability to measure elapsed time in the GL application.
  * The timer can be paused and resumed to aid debugging.
- * The timer is decoupled from the time source. Two sources are supported currently:
- * {@link TimeSource#glfwGetTimeInstance()} - using Open GL time
- * {@link TimeSource#systemCurrentTimeMillisInstance()} - using {@link System#currentTimeMillis()}
+ * The timer is decoupled from it's {@link TimeSource}
  */
 public class TimerImpl implements Timer {
 	// records the last known time when the timer is paused
@@ -26,7 +24,9 @@ public class TimerImpl implements Timer {
 	 * The timestamp of the last update
 	 */
 	private double lastUpdate;
+    // tracked so we can calculate the average update period
 	private long updateCount;
+    // tracked so we can calculate the average update period
 	private double updateDeltaSum;
 
 	public TimerImpl(Callable<Double> timeSource) {
@@ -64,7 +64,7 @@ public class TimerImpl implements Timer {
 	}
 
 	/**
-	 * Used to manually step forward by an amount (also in seconds)
+	 * Used to manually step the timer by an amount (also in seconds)
 	 * @param stepSize
 	 */
 	public void step(double stepSize) {
@@ -85,8 +85,11 @@ public class TimerImpl implements Timer {
 	public double now() {
 		try {
 			return timeSource.call();
+		} catch (InterruptedException ie) {
+		    Thread.currentThread().interrupt();
+		    throw new RuntimeException(ie);
 		} catch (Exception e) {
-			throw new RuntimeException(e);
+		    throw new RuntimeException("Failed to get time from timeSource", e);
 		}
 	}
 

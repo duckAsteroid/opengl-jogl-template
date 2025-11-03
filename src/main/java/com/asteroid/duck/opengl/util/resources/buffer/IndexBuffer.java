@@ -5,6 +5,7 @@ import com.asteroid.duck.opengl.util.resources.Resource;
 import org.lwjgl.BufferUtils;
 
 import java.nio.IntBuffer;
+import java.nio.ShortBuffer;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.stream.IntStream;
@@ -18,7 +19,7 @@ public class IndexBuffer implements Resource {
 	/**
 	 * The in memory copy of the index buffer
 	 */
-	private IntBuffer indexBuffer;
+	private ShortBuffer indexBuffer;
 	/**
 	 * The GL pointer to the index buffer
 	 */
@@ -41,8 +42,8 @@ public class IndexBuffer implements Resource {
 		return capacity;
 	}
 
-	public void init(RenderContext ctx) {
-		indexBuffer = BufferUtils.createIntBuffer(capacity);
+	public void init() {
+		indexBuffer = BufferUtils.createShortBuffer(capacity);
 		ibo = glGenBuffers();
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBuffer, GL_STATIC_DRAW);
@@ -56,7 +57,7 @@ public class IndexBuffer implements Resource {
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	}
 
-	public void update(int[] indices) {
+	public void update(short[] indices) {
 		indexBuffer.clear();
 		indexBuffer.put(indices);
 		indexBuffer.flip();
@@ -67,16 +68,16 @@ public class IndexBuffer implements Resource {
 		indexBuffer.clear();
 	}
 
-	public void put(int index, int[] indices) {
+	public void put(int index, short[] indices) {
 		indexBuffer.position(index);
 		indexBuffer.put(indices);
 	}
 
-	public void put(int[] indices) {
+	public void put(short[] indices) {
 		indexBuffer.put(indices);
 	}
 
-	public void put(int i) {
+	public void put(short i) {
 		indexBuffer.put(i);
 	}
 
@@ -85,9 +86,9 @@ public class IndexBuffer implements Resource {
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBuffer, GL_STATIC_DRAW);
 	}
 
-	public void update(Iterable<Integer> indices) {
+	public void update(Iterable<Short> indices) {
 		indexBuffer.clear();
-		for (Integer index : indices) {
+		for (Short index : indices) {
 			indexBuffer.put(index);
 		}
 		indexBuffer.flip();

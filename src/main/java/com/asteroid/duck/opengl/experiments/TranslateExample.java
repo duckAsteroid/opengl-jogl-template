@@ -23,13 +23,13 @@ public class TranslateExample extends CompositeRenderItem implements Experiment 
 		double updatePeriod = 1.0 / 35.0; // in seconds
 		ctx.setDesiredUpdatePeriod(updatePeriod);
 		// load the test card image
-		Texture texture = ctx.getResourceManager().GetTexture("testcard", "test-card.jpeg", ImageLoadingOptions.DEFAULT);
+		Texture texture = ctx.getResourceManager().getTexture("testcard", "test-card.jpeg", ImageLoadingOptions.DEFAULT);
 		// load the translation map - it's a matrix (screen sized) of 2 * 16 bit floats
-		Texture translateMap = ctx.getResourceManager().GetTexture("translate", "translate/bighalfwheel.1024x800.tab", ImageLoadingOptions.DEFAULT.withType(DataFormat.TWO_CHANNEL_16_BIT));
+		Texture translateMap = ctx.getResourceManager().getTexture("translate", "translate/bighalfwheel.1024x800.tab", ImageLoadingOptions.DEFAULT.withType(DataFormat.TWO_CHANNEL_16_BIT));
 		// offscreen texture
 		TextureOptions opts = new TextureOptions(DataFormat.GRAY, Filter.LINEAR, Wrap.REPEAT);
 		Texture offscreen = TextureFactory.createTexture(ctx.getWindow(), null, opts);
-		ctx.getResourceManager().PutTexture("yabadabado", offscreen);
+		ctx.getResourceManager().putTexture("yabadabado", offscreen);
 
 		// render the named image to the source texture every 5 seconds
 		ToggledRenderItem pictureRenderer = new ToggledRenderItem(new Frequency(1, 0.1d), new PassthruTextureRenderer("testcard"));

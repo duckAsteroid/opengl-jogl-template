@@ -71,16 +71,20 @@ public class Main extends GLWindow implements RenderContext {
         String javaVersion = System.getProperty("java.version");
         System.out.println("Running with Java version: " + javaVersion);
         Main.ARGS = args;
-        Main main = new Main( "(cShader Playground", 1024, 800);
+        Main main = new Main("(cShader Playground", 1024, 800);
         main.setClearScreen(false);
+        try {
 
-        ExperimentChooser chooser = new ExperimentChooser();
-        Experiment experiment = chooser.get();
-        main.setRenderedItem(experiment);
+            ExperimentChooser chooser = new ExperimentChooser();
+            Experiment experiment = chooser.get();
+            main.setRenderedItem(experiment);
 
-        //Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
-        main.displayLoop();
-        System.exit(0);
+            //Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
+            main.displayLoop();
+        } finally {
+            main.dispose();
+            System.exit(0);
+        }
     }
 
     public void registerKeys() {

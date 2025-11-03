@@ -1,5 +1,6 @@
 package com.asteroid.duck.opengl.util;
 
+import com.asteroid.duck.opengl.util.geom.Rectangle;
 import com.asteroid.duck.opengl.util.geom.Triangles;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
@@ -24,7 +25,7 @@ public abstract class AbstractPassthruRenderer implements RenderedItem {
 
 	protected Texture texture;
 	private TextureUnit textureUnit;
-	private Triangles renderedShape;
+	private Rectangle renderedShape;
 	private final List<BiConsumer<RenderContext, ShaderProgram>> variables = new ArrayList<>();
 
 	@Override
@@ -32,7 +33,7 @@ public abstract class AbstractPassthruRenderer implements RenderedItem {
 		this.shaderProgram = initShaderProgram(ctx);
 		this.texture = initTexture(ctx);
 		this.textureUnit = initTextureUnit(ctx);
-		this.renderedShape = initBuffers();
+		this.renderedShape = initBuffers(ctx);
 	}
 
 	public void addVariable(BiConsumer<RenderContext, ShaderProgram> variable) {
@@ -49,7 +50,7 @@ public abstract class AbstractPassthruRenderer implements RenderedItem {
 
 	protected TextureUnit initTextureUnit(RenderContext ctx) {
 		shaderProgram.use();
-		TextureUnit textureUnit = ctx.getResourceManager().NextTextureUnit();
+		TextureUnit textureUnit = ctx.getResourceManager().nextTextureUnit();
 		textureUnit.bind(texture);
 		textureUnit.useInShader(shaderProgram, "tex");
 		//shaderProgram.uniforms().get("dimensions", Vector2f.class).set(new Vector2f(texture.Width, texture.Height));
@@ -59,9 +60,9 @@ public abstract class AbstractPassthruRenderer implements RenderedItem {
 		return textureUnit;
 	}
 
-	protected Triangles initBuffers() {
-		Triangles renderedShape = Triangles.fullscreen();
-		renderedShape.setup(shaderProgram);
+	protected Rectangle initBuffers(RenderContext ctx) throws IOException {
+		Rectangle renderedShape = new Rectangle("aPos", "aTexCoord");
+		renderedShape.getVertexDataBuffer().setup(shaderProgram);
 		return renderedShape;
 	}
 
@@ -76,12 +77,12 @@ public abstract class AbstractPassthruRenderer implements RenderedItem {
 	}
 
 	public void doRenderWithShader(RenderContext ctx) {
-		renderedShape.render();
+		renderedShape.getVertexDataBuffer().render();
 	}
 
 	@Override
 	public void dispose() {
-		renderedShape.dispose();
+		renderedShape.destroy();
 		shaderProgram.destroy();
 		textureUnit.destroy();
 	}

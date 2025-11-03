@@ -54,7 +54,7 @@ public class TextureFactory extends AbstractResourceLoader<Texture> {
 			offscreen.setImageFormat(options.dataFormat().imageFormat());
 			offscreen.setDataType(options.dataFormat().dataType());
 		}
-		offscreen.Generate(screen.width + pad.width, screen.height + pad.height, 0);
+		offscreen.generate(screen.width + pad.width, screen.height + pad.height, 0);
 		return offscreen;
 	}
 
@@ -69,11 +69,11 @@ public class TextureFactory extends AbstractResourceLoader<Texture> {
 		options.dataFormat().verify(data);
 
 		if (data.size().height == 1) {
-			tex.Generate1D(data.size().width, data.buffer());
+			tex.generate1D(data.size().width, data.buffer());
 			return tex;
 		}
 		else {
-			tex.Generate(data.size().width, data.size().height, data.buffer());
+			tex.generate(data.size().width, data.size().height, data.buffer());
 		}
 		return tex;
 	}

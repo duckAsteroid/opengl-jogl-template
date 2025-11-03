@@ -171,7 +171,7 @@ public class TextureRenderer2 {
 		this.shaderProgram = ShaderProgram.compile(vertexShaderSource, fragmentShaderSource, null);
 
 		vertexDataBuffer = new VertexDataBuffer(structure, 6);
-		vertexDataBuffer.init(null);
+		vertexDataBuffer.init();
 		for (int i = 0; i < vertices.length; i++) {
 			vertexDataBuffer.set(i, vertices[i]);
 		}

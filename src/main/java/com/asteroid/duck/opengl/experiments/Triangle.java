@@ -21,9 +21,10 @@ public class Triangle extends CompositeRenderItem implements Experiment {
 	}
 
 	public static RenderedItem basicTriangle() {
-		return Triangles.centralTriangle().simpleRenderer(
-						new Vector4f(1.0f, 0.75f, 0.5f, 1.0f),
-						new Vector3f(5, 2, 1));
+		var triangle = Triangles.centralTriangle();
+        triangle.setColor(new Vector4f(1.0f, 0.75f, 0.5f, 1.0f));
+        triangle.setFreq(new Vector3f(5, 2, 1));
+        return triangle;
 	}
 
 	@Override
@@ -34,7 +35,7 @@ public class Triangle extends CompositeRenderItem implements Experiment {
 		Texture[] offscreen = new Texture[1];
 		for (int i = 0; i < offscreen.length; i++) {
 			offscreen[i] = TextureFactory.createTexture(screen, false);
-			ctx.getResourceManager().PutTexture("offscreen"+i, offscreen[i]);
+			ctx.getResourceManager().putTexture("offscreen"+i, offscreen[i]);
 		};
 
 		OffscreenTextureRenderer offscreenRenderer = new OffscreenTextureRenderer(triangle, offscreen[0]);

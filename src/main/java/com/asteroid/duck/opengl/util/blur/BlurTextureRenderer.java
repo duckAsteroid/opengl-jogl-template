@@ -40,7 +40,7 @@ public class BlurTextureRenderer extends AbstractPassthruRenderer {
 
 	@Override
 	protected Texture initTexture(RenderContext ctx) {
-		return ctx.getResourceManager().GetTexture(textureName);
+		return ctx.getResourceManager().getTexture(textureName);
 	}
 
 	@Override

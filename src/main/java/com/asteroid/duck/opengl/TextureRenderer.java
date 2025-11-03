@@ -208,7 +208,7 @@ public class TextureRenderer {
 
 		Texture loaded = texFac.LoadTexture(path.getFileName().toString(), ImageLoadingOptions.DEFAULT);
 		System.out.println("Loaded texture: " + loaded);
-		this.texture = loaded.id();
+		this.texture = loaded.getId();
 
 		return texture;
 	}

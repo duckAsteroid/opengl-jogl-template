@@ -60,7 +60,7 @@ class VertexDataBufferTest {
 				subject = new VertexDataBuffer(structure, SIZE);
 
 				// initialise
-				subject.init(null);
+				subject.init();
 
 
 				// add some data

@@ -11,7 +11,7 @@ public class BasicTexture extends PassthruTextureRenderer implements Experiment 
 
     @Override
     protected com.asteroid.duck.opengl.util.resources.texture.Texture initTexture(RenderContext ctx) {
-        return ctx.getResourceManager().GetTexture(textureName, textureName);
+        return ctx.getResourceManager().getTexture(textureName, textureName);
     }
 
     @Override

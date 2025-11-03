@@ -1,5 +1,6 @@
 package com.asteroid.duck.opengl.util.palette;
 
+import com.asteroid.duck.opengl.util.resources.ResourceListManager;
 import com.asteroid.duck.opengl.util.resources.ResourceManager;
 import com.asteroid.duck.opengl.util.resources.texture.io.ImageLoadingOptions;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
@@ -15,7 +16,7 @@ public class ColorPalette {
 		palette = mgr.getTextureFactory().LoadTexture(file, ImageLoadingOptions.DEFAULT.withSingleLine());
 		// TODO figure out a name
 		this.name = Path.of(file).getFileName().toString();
-		mgr.PutTexture(name, palette);
+		mgr.putTexture(name, palette);
 	}
 
 	public int size() {

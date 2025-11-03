@@ -46,7 +46,7 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 	public void init(RenderContext ctx) throws IOException {
 		//ctx.setClearScreen(true);
 		//ctx.setBackgroundColor(backgroundColor);
-		ctx.getResourceManager().GetTexture("test-card", "test-card.jpeg");
+		ctx.getResourceManager().getTexture("test-card", "test-card.jpeg");
 		backgroundTexture.init(ctx);
 		this.shader = ctx.getResourceManager().getShaderLoader().LoadSimpleShaderProgram("passthru2");
 		this.debugShader = ctx.getResourceManager().getShaderLoader().LoadSimpleShaderProgram("line");
@@ -55,7 +55,7 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 		var ftf = new FontTextureFactory(new Font("Times New Roman", Font.PLAIN,100), true);
 		fontTexture = ftf.createFontTexture();
 		var tex = fontTexture.getTexture();
-		TextureUnit textureUnit = ctx.getResourceManager().NextTextureUnit();
+		TextureUnit textureUnit = ctx.getResourceManager().nextTextureUnit();
 		textureUnit.bind(tex);
 
 		initText(ctx, new Point(10, 200), "Hello World!");
@@ -83,12 +83,12 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 		// create an index buffer to point at the vertices of the triangles
 		int[] indices = Vertice.standardSixVertices().mapToInt(fourCorners::indexOf).toArray();
 		this.indexBuffer = new IndexBuffer(indices.length * text.length());
-		indexBuffer.init(ctx);
+		indexBuffer.init();
 		indexBuffer.clear();
 		// vertex data structure to hold the screen position and texture position
 		VertexDataStructure structure = new VertexDataStructure(screenPosition, texturePosition);
 		this.fontDataBuffer = new VertexDataBuffer(structure, size);
-		fontDataBuffer.init(ctx);
+		fontDataBuffer.init();
 		fontDataBuffer.setup(shader);
 
 		// the screen size
@@ -99,7 +99,7 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 		// create a vertex data buffer to hold the debug lines
 		VertexDataStructure debugLineStructure = new VertexDataStructure(position);
 		debugLineBuffer = new VertexDataBuffer(debugLineStructure, 2 + (text.length() * 2));
-		debugLineBuffer.init(ctx);
+		debugLineBuffer.init();
 		// add the baseline
 		int debugIndex = 0;
 		debugLineBuffer.setElement(debugIndex++, position, new Vector2f(0f, cursor.y));
@@ -130,7 +130,7 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 			}
 			// add the indices for this glyph to the index buffer
 			for(int j = 0; j < indices.length; j++) {
-				indexBuffer.put((i * 4) + indices[j]);
+				indexBuffer.put((short)((i * 4) + indices[j]));
 			}
 			// advance the cursor for the next glyph
 			cursor.x += glyph.advance();

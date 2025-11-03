@@ -178,9 +178,8 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 	 * Initialise the vertex data buffer.
 	 * This sets up the VAO and VBO, and creates the memory buffer.
 	 * The memory buffer is allocated to the initial capacity of the buffer.
-	 * @param ctx the render context
 	 */
-	public void init(RenderContext ctx) {
+	public void init() {
 		// set up the VAO and VBO
 		vao = glGenVertexArrays();
 		glBindVertexArray(vao);
@@ -334,6 +333,10 @@ public class VertexDataBuffer extends AbstractList<Map<VertexElement, ?>> implem
 	public void render(int start, int count) {
 		glDrawArrays(GL_TRIANGLES, start, count);
 	}
+
+    public void render() {
+        render(0, capacity);
+    }
 
 	@Override
 	public void destroy() {

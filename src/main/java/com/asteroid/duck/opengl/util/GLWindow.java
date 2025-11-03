@@ -1,6 +1,7 @@
 package com.asteroid.duck.opengl.util;
 
 import com.asteroid.duck.opengl.util.keys.*;
+import com.asteroid.duck.opengl.util.resources.FileResourceManager;
 import com.asteroid.duck.opengl.util.resources.ResourceManager;
 import com.asteroid.duck.opengl.util.resources.texture.ImageData;
 import com.asteroid.duck.opengl.util.resources.texture.io.ImageLoadingOptions;
@@ -36,7 +37,7 @@ public abstract class GLWindow implements RenderContext {
 	private final long windowHandle;
 	private final String windowTitle;
 
-	private final ResourceManager resourceManager = new ResourceManager("src/main/");
+	private final ResourceManager resourceManager = new FileResourceManager("src/main/");
 	private final GLFWKeyCallback glfwKeyCallback;
 	private final GLFWFramebufferSizeCallback glfwFramebufferSizeCallback;
     private final GLFWWindowCloseCallback glfwWindowCloseCallback;
@@ -78,7 +79,7 @@ public abstract class GLWindow implements RenderContext {
 
         if (icon != null && OperatingSystem.CURRENT == OperatingSystem.WINDOWS) {
             try (GLFWImage.Buffer icons = GLFWImage.malloc(1)) {
-                ImageData imgData = resourceManager.LoadTextureData(icon, ImageLoadingOptions.DEFAULT.withNoFlip());
+                ImageData imgData = resourceManager.loadTextureData(icon, ImageLoadingOptions.DEFAULT.withNoFlip());
                 icons.position(0)
                         .width(imgData.size().width)
                         .height(imgData.size().height)
@@ -232,7 +233,7 @@ public abstract class GLWindow implements RenderContext {
 		if (glfwKeyCallback != null) glfwKeyCallback.close();
 		if (glfwFramebufferSizeCallback != null) glfwFramebufferSizeCallback.close();
         if (glfwWindowCloseCallback != null) glfwWindowCloseCallback.close();
-		resourceManager.clear();
+		resourceManager.destroy();
 		if (errorCallback != null) errorCallback.free();
 	}
 

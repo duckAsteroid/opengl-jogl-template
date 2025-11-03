@@ -22,7 +22,7 @@ public class PassthruTexture implements Experiment {
 	private TextureUnit textureUnit;
 	private Texture texture;
 	private VertexDataBuffer buffer;
-	private int divisor = 15;
+	private int divisor = 1;
 	private int simultaneous = 5;
 	private List<List<Map<VertexElement, Vector2f>>> squares = new ArrayList<>();
 	private final VertexElement screenPosition = new VertexElement(VertexElementType.VEC_2F, "screenPosition");
@@ -57,14 +57,14 @@ public class PassthruTexture implements Experiment {
 
 
 	private void initShader(RenderContext ctx) {
-		this.shaderProgram = ctx.getResourceManager().GetSimpleShader("passthru2");
+		this.shaderProgram = ctx.getResourceManager().getSimpleShader("passthru2");
 		System.out.println(shaderProgram.toString());
 	}
 
 	private void initTexture(RenderContext ctx) {
-		this.texture = ctx.getResourceManager().GetTexture("molly", "molly.jpg");
+		this.texture = ctx.getResourceManager().getTexture("molly", "molly.jpg");
 		shaderProgram.use();
-		this.textureUnit = ctx.getResourceManager().NextTextureUnit();
+		this.textureUnit = ctx.getResourceManager().nextTextureUnit();
 		textureUnit.bind(texture);
 		textureUnit.useInShader(shaderProgram, "tex");
 	}
@@ -76,7 +76,7 @@ public class PassthruTexture implements Experiment {
 						screenPosition,
 						texturePosition);
 		this.buffer = new VertexDataBuffer(structure, 6 * divisor * divisor);
-		this.buffer.init(ctx);
+		this.buffer.init();
 
 		this.shaderProgram.use();
 		buffer.setup(shaderProgram);

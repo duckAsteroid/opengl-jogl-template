@@ -2,6 +2,12 @@ package com.asteroid.duck.opengl.util.timer;
 
 import java.util.Objects;
 
+/**
+ * An accumulator continuously adds the "interval" to an accumulated value.
+ * It just constantly gets bigger (while the timer is not paused).
+ * The speed is just a multiplier for the interval used to accumulate.
+ * Bigger speed, means bigger numbers sooner.
+ */
 public class AccumulatorFunction {
     private final Timer source;
     private double speed = 1.0;
