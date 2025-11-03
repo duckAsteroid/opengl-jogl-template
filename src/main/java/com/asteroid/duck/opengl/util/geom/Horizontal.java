@@ -3,6 +3,7 @@ package com.asteroid.duck.opengl.util.geom;
 import org.joml.Vector4f;
 
 import java.awt.*;
+import java.awt.Rectangle;
 
 /**
  * The horizontal component of a @{@link Vertice}

@@ -2,7 +2,8 @@ package com.asteroid.duck.opengl.util.timer;
 
 import java.util.Objects;
 /**
- * Calculates the value of a wave function between -1 and 1
+ * Calculates the value of a sinusoidal wave function between -1 and 1.
+ * It uses a frequency in hertz (per second) and a phase offest in seconds.
  */
 public class WaveFunction {
     private final Timer source;

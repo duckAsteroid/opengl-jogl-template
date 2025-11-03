@@ -2,7 +2,6 @@ package com.asteroid.duck.opengl.experiments;
 
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.color.StandardColors;
-import com.asteroid.duck.opengl.util.geom.Triangles;
 import com.asteroid.duck.opengl.util.keys.KeyCombination;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexDataBuffer;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexDataStructure;
@@ -72,7 +71,7 @@ public class SimpleTriangle implements Experiment {
     @Override
     public void init(RenderContext ctx) throws IOException {
         accumulator = new AccumulatorFunction(ctx.getTimer());
-        accumulator.setMaxSpeed(10.0);
+        accumulator.setMaxSpeed(100.0);
         ctx.getKeyRegistry().registerKeyAction(KeyCombination.simple('Q'), () -> changeSpeed(2.0), "Much Faster");
         ctx.getKeyRegistry().registerKeyAction(KeyCombination.simpleWithMods('Q',"SHIFT"), () -> changeSpeed(1.1), "Bit Faster");
         ctx.getKeyRegistry().registerKeyAction(KeyCombination.simpleWithMods('A', "SHIFT"), () -> changeSpeed(0.9), "Bit Slower");
@@ -81,7 +80,7 @@ public class SimpleTriangle implements Experiment {
         VertexDataStructure structure = new VertexDataStructure(POSITION, COLOR);
         this.vbo = new VertexDataBuffer(structure, 3);
         this.vbo.setUpdateHint(VertexDataBuffer.UpdateHint.STATIC);
-        this.vbo.init(ctx);
+        this.vbo.init();
 
         // 1. Compile the shader program first
         this.program = ShaderProgram.compile(vertexShaderSource, fragmentShaderSource, null);
@@ -114,6 +113,7 @@ public class SimpleTriangle implements Experiment {
     private void changeSpeed(double v) {
         double speed = accumulator.getSpeed();
         accumulator.setSpeed(speed * v);
+        System.out.println("Speed: "+accumulator.getSpeed());
     }
 
     @Override

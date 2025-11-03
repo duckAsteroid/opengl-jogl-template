@@ -2,9 +2,12 @@ package com.asteroid.duck.opengl.util.geom;
 
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.RenderedItem;
+import com.asteroid.duck.opengl.util.color.StandardColors;
+import com.asteroid.duck.opengl.util.resources.buffer.*;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.timer.Timer;
 import com.asteroid.duck.opengl.util.timer.WaveFunction;
+import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.lwjgl.system.MemoryStack;
@@ -18,156 +21,100 @@ import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL30.*;
 
 /**
- * Represents a set of triangular vertices and the vao, vbo and ibo that can be used to render them.
+ * Represents a set of triangular vertices and the buffers that can be used to render them.
  */
-public class Triangles {
+public class Triangles implements RenderedItem {
 
-    private final int vao;
-	private final int vbo;
-	private final int ibo;
-	private final int triangleCount;
+    private final Vector2f[] vertices;
+    private final short[] indices;
+    private final int triangleCount;
 
-	public static Triangles fullscreen() {
-		// Define the vertices of the rectangle
-		// TL     1      TR
-		//
-		// -1     0      1
-		//
-		// BL    -1      BR
-		float[] vertices = {
-						-1.0f, -1.0f, // bottom left [0]
-						1.0f, -1.0f, // bottom right [1]
-						1.0f, 1.0f, // top right [2]
-						-1.0f, 1.0f // top left [3]
-		};
+    private VertexDataBuffer vbo;
+    private IndexBuffer ibo;
+    private ShaderProgram shaderProgram;
 
-		// TL     1      TR
-		//            /  |
-		// -1     0      1
-		//    /          |
-		// BL  -  -1  -  BR
-		// BL, BR, TR
+    private Vector4f color = StandardColors.RED.color;
+    private Vector3f freq = null;
 
-		// TL  -  1  -   TR
-		// |          /
-		// -1     0      1
-		// |   /
-		// BL     -1     BR
-		// BL, TR, TL
-		short[] indices = new short[]{
-						0, 1, 2, // triangle 1
-						0, 2, 3}; // triangle 2
-		return new Triangles(vertices, indices);
-	}
+    public static Vector2f[] from(float[] raw) {
+        Vector2f[] result = new Vector2f[raw.length / 2];
+        for (int i = 0; i < result.length; i++) {
+            result[i] = new Vector2f(raw[i * 2], raw[(i * 2) + 1]);
+        }
+        return result;
+    }
 
-	public static Triangles singleTriangle() {
-		// Define the vertices of the rectangle
-		// Y
-		// ^
-		// TL     1      TR
-		//
-		// -1     0      1
-		//
-		// BL    -1      BR   -> X
-		float[] vertices = {
-						-1f, -1f, // bottom left [0]
-						1f, -1f, // bottom right [1]
-						0.0f, 1f // top middle [2]
-		};
+    public static short[] shorten(int[] indices) {
+        short[] result = new short[indices.length];
+        for (int i = 0; i < result.length; i++) {
+            result[i] = (short) indices[i];
+        }
+        return result;
+    }
 
+	public Triangles(float[] vertices, int[] indices) {
+        this(from(vertices), shorten(indices));
+    }
 
-		short[] indices = new short[]{
-						0, 1, 2}; // triangle 1
-		return new Triangles(vertices, indices);
-	}
-
-	public static Triangles centralTriangle() {
-		// Define the vertices of the rectangle
-		// Y
-		// ^
-		// TL     1      TR
-		//
-		// -1     0      1
-		//
-		// BL    -1      BR   -> X
-		float[] vertices = {
-						-.5f, -.5f, // bottom left [0]
-						.5f, -.5f, // bottom right [1]
-						0.0f, .5f // top middle [2]
-		};
-
-
-		short[] indices = new short[]{
-						0, 2, 1}; // triangle 1
-		return new Triangles(vertices, indices);
-	}
-
-	public RenderedItem simpleRenderer(Vector4f color, Vector3f freq) {
-		return new RenderedItem() {
-			private ShaderProgram shaderProgram;
-			@Override
-			public void init(RenderContext ctx) throws IOException {
-				shaderProgram = ctx.getResourceManager().GetShader("simple", "simple/vertex.glsl", "simple/frag.glsl", null);
-				shaderProgram.use();
-				Triangles.this.setup(shaderProgram);
-			}
-
-			@Override
-			public void doRender(RenderContext ctx) {
-				shaderProgram.use();
-				Vector4f tempColor = color;
-				if (freq != null) {
-					double elapsed = ctx.getTimer().elapsed();
-					tempColor = new Vector4f();
-					tempColor.x = (float)WaveFunction.value(freq.x, color.x, elapsed);
-					tempColor.y = (float)WaveFunction.value(freq.y, color.y, elapsed);
-					tempColor.z = (float)WaveFunction.value(freq.z, color.z, elapsed);
-				}
-				shaderProgram.uniforms().get("color", Vector4f.class).set(tempColor);
-				Triangles.this.render();
-				shaderProgram.unuse();
-			}
-
-			@Override
-			public void dispose() {
-				Triangles.this.dispose();
-			}
-		};
-	}
-
-	public Triangles(float[] vertices, short[] indices) {
+    public Triangles(Vector2f[] vertices, short[] indices) {
         this.triangleCount = indices.length / 3;
-		try(MemoryStack stack = MemoryStack.stackPush()) {
-			vao = glGenVertexArrays();
-			glBindVertexArray(vao);
-
-			// Create a VBO and bind it
-			vbo = glGenBuffers();
-			glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-			// Store the vertex data in the VBO
-			FloatBuffer vertexBuffer = stack.floats(vertices);
-			glBufferData(GL_ARRAY_BUFFER, vertexBuffer, GL_STATIC_DRAW);
-
-			// Create an IBO and bind it
-			ibo = glGenBuffers();
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-
-			// Store the index data in the IBO - create two triangles
-			ShortBuffer indexBuffer = stack.shorts(indices);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBuffer, GL_STATIC_DRAW);
-		}
+        this.vertices = vertices;
+        this.indices = indices;
 	}
 
-	public void setup(ShaderProgram shaderProgram) {
+    public ShaderProgram getShaderProgram() {
+        return shaderProgram;
+    }
+
+    public void setShaderProgram(ShaderProgram shaderProgram) {
+        this.shaderProgram = shaderProgram;
+    }
+
+    public Vector4f getColor() {
+        return color;
+    }
+
+    public void setColor(Vector4f color) {
+        this.color = color;
+    }
+
+    public Vector3f getFreq() {
+        return freq;
+    }
+
+    public void setFreq(Vector3f freq) {
+        this.freq = freq;
+    }
+
+    @Override
+    public void init(RenderContext ctx) throws IOException {
+        initBuffers(ctx);
+        initShader(ctx);
+    }
+
+    private void initBuffers(RenderContext ctx) {
+        // Create a VBO and bind it
+        var structure = new  VertexDataStructure(new VertexElement(VertexElementType.VEC_2F, "position"));
+        vbo = new VertexDataBuffer(structure, vertices.length);
+        vbo.init();
+        for(int v = 0; v < vertices.length; v++) {
+            vbo.set(v, vertices[v]);
+        }
+        vbo.update(VertexDataBuffer.UpdateHint.STATIC);
+        // Create an IBO and bind it
+        ibo = new IndexBuffer(indices.length);
+        ibo.init();
+        ibo.put(indices);
+    }
+
+    private void initShader(RenderContext ctx) throws IOException {
+        if (shaderProgram == null) {
+            shaderProgram = ctx.getResourceManager().getShader("simple", "simple/vertex.glsl", "simple/frag.glsl", null);
+        }
+        // setup with VBO
+        shaderProgram.use();
 		// setup the vertex attribute pointer to tell GL what shape our vertices are (2 floats)
-		int position = shaderProgram.getAttributeLocation("position");
-		setVertexAttribPointer(position, 2, GL_FLOAT, false, 0, 0);
-	}
-
-	public void setVertexAttribPointer(int position, int size, int type, boolean normalized, int stride, long pointer) {
-		glVertexAttribPointer(position, size, type, normalized, stride, pointer);
-		glEnableVertexAttribArray(position);
+		vbo.setup(shaderProgram);
 	}
 
 	public int triangleCount() {
@@ -178,25 +125,105 @@ public class Triangles {
 		return triangleCount * 3;
 	}
 
-	public void render() {
-		glBindVertexArray(vao);
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-		glDrawElements(GL_TRIANGLES, vertices(), GL_UNSIGNED_SHORT, 0);
-	}
+    @Override
+    public void doRender(RenderContext ctx) {
+        shaderProgram.use();
+        if (shaderProgram.uniforms().has("color")) {
+            Vector4f tempColor = color;
+            if (freq != null) {
+                double elapsed = ctx.getTimer().elapsed();
+                tempColor = new Vector4f();
+                tempColor.x = (float) WaveFunction.value(freq.x, color.x, elapsed);
+                tempColor.y = (float) WaveFunction.value(freq.y, color.y, elapsed);
+                tempColor.z = (float) WaveFunction.value(freq.z, color.z, elapsed);
+            }
+            shaderProgram.uniforms().get("color", Vector4f.class).set(tempColor);
+        }
+        ibo.use();
+        vbo.render(0, ibo.capacity());
+        shaderProgram.unuse();
+        ibo.unuse();
+    }
 
 	public void dispose() {
-		glDeleteVertexArrays(vao);
-		glDeleteBuffers(vbo);
-		glDeleteBuffers(ibo);
+		vbo.destroy();
+		ibo.destroy();
 	}
 
-	@Override
-	public String toString() {
-		return "Triangles{" +
-						"vao=" + vao +
-						", vbo=" + vbo +
-						", ibo=" + ibo +
-						'}';
-	}
+
+    public static Triangles fullscreen() {
+        // Define the vertices of the rectangle
+        // TL     1      TR
+        //
+        // -1     0      1
+        //
+        // BL    -1      BR
+        float[] vertices = {
+                -1.0f, -1.0f, // bottom left [0]
+                1.0f, -1.0f, // bottom right [1]
+                1.0f, 1.0f, // top right [2]
+                -1.0f, 1.0f // top left [3]
+        };
+
+        // TL     1      TR
+        //            /  |
+        // -1     0      1
+        //    /          |
+        // BL  -  -1  -  BR
+        // BL, BR, TR
+
+        // TL  -  1  -   TR
+        // |          /
+        // -1     0      1
+        // |   /
+        // BL     -1     BR
+        // BL, TR, TL
+        int[] indices = new int[]{
+                0, 1, 2, // triangle 1
+                0, 2, 3}; // triangle 2
+        return new Triangles(vertices, indices);
+    }
+
+    public static Triangles singleTriangle() {
+        // Define the vertices of the rectangle
+        // Y
+        // ^
+        // TL     1      TR
+        //
+        // -1     0      1
+        //
+        // BL    -1      BR   -> X
+        float[] vertices = {
+                -1f, -1f, // bottom left [0]
+                1f, -1f, // bottom right [1]
+                0.0f, 1f // top middle [2]
+        };
+
+
+        int[] indices = new int[]{
+                0, 1, 2}; // triangle 1
+        return new Triangles(vertices, indices);
+    }
+
+    public static Triangles centralTriangle() {
+        // Define the vertices of the rectangle
+        // Y
+        // ^
+        // TL     1      TR
+        //
+        // -1     0      1
+        //
+        // BL    -1      BR   -> X
+        float[] vertices = {
+                -.5f, -.5f, // bottom left [0]
+                .5f, -.5f, // bottom right [1]
+                0.0f, .5f // top middle [2]
+        };
+
+
+        int[] indices = new int[]{
+                0, 2, 1}; // triangle 1
+        return new Triangles(vertices, indices);
+    }
+
 }

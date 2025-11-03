@@ -72,13 +72,17 @@ public class VdbVisualizer {
 	}
 
 	public static String dataString(Object dataValue) {
-		return switch (dataValue) {
-			case Float f -> floatToString(f);
-			case Vector2f v -> "[" + floatToString(v.x) + "," + floatToString(v.y) + "]";
-			case Vector3f v -> "[" + floatToString(v.x) + "," + floatToString(v.y) + "," + floatToString(v.z) + "]";
-			case Vector4f v -> "[" + floatToString(v.x) + "," + floatToString(v.y) + "," + floatToString(v.z) + "," + floatToString(v.w) + "]";
-			default -> String.valueOf(dataValue);
-		};
+        if (dataValue instanceof Float f) {
+            return floatToString(f);
+        } else if (dataValue instanceof Vector2f v) {
+            return "[" + floatToString(v.x) + "," + floatToString(v.y) + "]";
+        } else if (dataValue instanceof Vector3f v) {
+            return "[" + floatToString(v.x) + "," + floatToString(v.y) + "," + floatToString(v.z) + "]";
+        } else if (dataValue instanceof Vector4f v) {
+            return "[" + floatToString(v.x) + "," + floatToString(v.y) + "," + floatToString(v.z) + "," + floatToString(v.w) + "]";
+        } else {
+            return String.valueOf(dataValue);
+        }
 	}
 
 	public String headerString() {

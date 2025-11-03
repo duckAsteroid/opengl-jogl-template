@@ -20,7 +20,7 @@ java {
 }
 
 tasks.withType(JavaCompile) {
-    options.compilerArgs = ['-Xlint:unchecked', '-Xlint:deprecation', '--enable-preview']
+    options.compilerArgs = ['-Xlint:unchecked', '-Xlint:deprecation']
 }
 
 dependencies {
@@ -63,7 +63,7 @@ application {
 }
 
 run {
-    jvmArgs += ['-Dsun.java2d.uiScale=2']
+    jvmArgs += ["--enable-preview",'-Dsun.java2d.uiScale=2']
     environment += [
             '__NV_PRIME_RENDER_OFFLOAD': '1',
             '__GLX_VENDOR_LIBRARY_NAME': 'nvidia',
@@ -91,7 +91,7 @@ tasks.register("runTextureRenderer2", JavaExec) {
   jvmArgs = ["-javaagent:src/test/resources/lwjglx-debug-1.0.0.jar=tn;o=texture_renderer2.gl.log"]
   def myProps = ["simulate.audio": "TRUE"]
   systemProperties myProps
-  args = ["--interactive=false"] // Cthugha, TranslateExample, Triangle, PalettePicture, BlurPictureExample, BlurTest
+  args = ["--enable-preview","--interactive=false"] // Cthugha, TranslateExample, Triangle, PalettePicture, BlurPictureExample, BlurTest
 }
 
 tasks.register("debugRun", JavaExec) {
@@ -107,7 +107,7 @@ tasks.register("debugRun", JavaExec) {
           '__NV_PRIME_RENDER_OFFLOAD': '1',
           '__GLX_VENDOR_LIBRARY_NAME': 'nvidia',
           '__GL_THREADED_OPTIMIZATIONS': '0']
-  args = ["SimpleTriangle"] //BasicTexture, Cthugha, TranslateExample, Triangle, PalettePicture, BlurPictureExample, BlurTest
+  args = ["--interactive=false"] //BasicTexture,"SimpleTriangle" Cthugha, TranslateExample, Triangle, PalettePicture, BlurPictureExample, BlurTest
 }
 
 tasks.register("deleteCrashLogs", Delete) {

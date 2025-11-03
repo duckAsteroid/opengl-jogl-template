@@ -36,12 +36,12 @@ public class Uniforms {
 	protected int uniformLocation(String uniformName) {
 		Integer location = uniformLocationCache.computeIfAbsent(uniformName,
 				name -> glGetUniformLocation(shaderProgram.id, name));
-
-		if (location == -1) {
-			throw new NoSuchElementException("Could not find uniform with name '" + uniformName + "' in "+shaderProgram);
-		}
 		return location;
 	}
+
+    public boolean has(String name) {
+        return uniformLocation(name) >= 0;
+    }
 
 	@SuppressWarnings("unchecked")
 	public <T> Uniform<T> get(String name, Class<T> type) {
@@ -49,7 +49,9 @@ public class Uniforms {
 			throw new IllegalArgumentException("Uniform name cannot be null");
 		}
 		int loc = uniformLocation(name);
-
+        if (loc == -1) {
+            throw new NoSuchElementException("Could not find uniform with name '" + name + "' in "+shaderProgram);
+        }
 		if (type == Boolean.class || type == boolean.class) {
 			return (Uniform<T>) new Uniform<>(name, loc, this::setBoolean);
 		}

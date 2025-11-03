@@ -36,7 +36,7 @@ public class PassthruTextureRenderer extends AbstractPassthruRenderer implements
 
 	@Override
 	protected Texture initTexture(RenderContext ctx) {
-		return ctx.getResourceManager().GetTexture(textureName);
+		return ctx.getResourceManager().getTexture(textureName);
 	}
 
 	@Override

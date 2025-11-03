@@ -37,13 +37,13 @@ public class Cthugha extends CompositeRenderItem implements Experiment {
 		ctx.setDesiredUpdatePeriod(1.0 / frequency);
 		ctx.getKeyRegistry().registerKeyAction(KeyCombination.simple('F'), () -> updateFrequency(), "Modify update frequency");
 		// load the test card image
-		Texture texture = ctx.getResourceManager().GetTexture("testcard", "test-card.jpeg", ImageLoadingOptions.DEFAULT);
+		Texture texture = ctx.getResourceManager().getTexture("testcard", "test-card.jpeg", ImageLoadingOptions.DEFAULT);
 		// load the translation map - it's a matrix (screen sized) of 2 * 16 bit floats
-		Texture translateMap = ctx.getResourceManager().GetTexture("translate", "translate/bighalfwheel.1024x800.tab", ImageLoadingOptions.DEFAULT.withType(DataFormat.TWO_CHANNEL_16_BIT));
+		Texture translateMap = ctx.getResourceManager().getTexture("translate", "translate/bighalfwheel.1024x800.tab", ImageLoadingOptions.DEFAULT.withType(DataFormat.TWO_CHANNEL_16_BIT));
 		// offscreen texture
 		TextureOptions opts = new TextureOptions(DataFormat.RGBA, Filter.LINEAR, Wrap.REPEAT);
 		Texture offscreen = TextureFactory.createTexture(ctx.getWindow(), null, opts);
-		ctx.getResourceManager().PutTexture(OFFSCREEN_TEXTURE_NAME, offscreen);
+		ctx.getResourceManager().putTexture(OFFSCREEN_TEXTURE_NAME, offscreen);
 
 		// translate the offscreen texture
 		TranslateTextureRenderer translationStage = new TranslateTextureRenderer(OFFSCREEN_TEXTURE_NAME, "translate");
@@ -62,7 +62,7 @@ public class Cthugha extends CompositeRenderItem implements Experiment {
 	  addItem(waveRenderStage);
 
 		// palette
-		Texture palette = ctx.getResourceManager().GetTexture("palette", "palettes/FIRE2.MAP.png", ImageLoadingOptions.DEFAULT.withSingleLine());
+		Texture palette = ctx.getResourceManager().getTexture("palette", "palettes/FIRE2.MAP.png", ImageLoadingOptions.DEFAULT.withSingleLine());
 		PaletteRenderer paletteRenderer = new PaletteRenderer(OFFSCREEN_TEXTURE_NAME);
 
 		addItem(paletteRenderer);

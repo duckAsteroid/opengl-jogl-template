@@ -44,7 +44,7 @@ public class OffscreenBlurTextureRenderer extends CompositeRenderItem {
 		stage1.addVariable(ShaderVariable.floatVariable("multiplier", this::multiplier));
 
 		Texture offscreen = TextureFactory.createTexture(ctx.getWindow(), null, opts);
-		ctx.getResourceManager().PutTexture(TEXTURE_FBO, offscreen);
+		ctx.getResourceManager().putTexture(TEXTURE_FBO, offscreen);
 		OffscreenTextureRenderer offscreenRender = new OffscreenTextureRenderer(stage1, offscreen);
 		addItem(offscreenRender);
 

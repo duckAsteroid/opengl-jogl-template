@@ -105,7 +105,7 @@ public class Polyline implements RenderedItem {
 		glEnable(GL_LINE_SMOOTH);
 		glHint(GL_LINE_SMOOTH_HINT, GL_FASTEST);
 
-		shaderProgram = ctx.getResourceManager().GetShader("polyline", "polyline/vertex.glsl","polyline/frag.glsl", null);
+		shaderProgram = ctx.getResourceManager().getShader("polyline", "polyline/vertex.glsl","polyline/frag.glsl", null);
 
 		vao = glGenVertexArrays();
 		glBindVertexArray(vao);

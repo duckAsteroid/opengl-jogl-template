@@ -36,7 +36,7 @@ public class TextureUnit implements Resource, Comparable<TextureUnit> {
 	public void bind(Texture texture) {
 		boundTexture = texture;
 		glActiveTexture(shaderUnit);
-		texture.Bind();
+		texture.bind();
 	}
 
 	public int getIndex() {

@@ -35,8 +35,8 @@ public class TranslateTextureRenderer extends AbstractPassthruRenderer {
 		shaderProgram.use();
 
 		// setup the map texture so we can refer to it
-		Texture translationTableTexture = ctx.getResourceManager().GetTexture(translationTableTextureName);
-		this.translationTableTextureUnit = ctx.getResourceManager().NextTextureUnit();
+		Texture translationTableTexture = ctx.getResourceManager().getTexture(translationTableTextureName);
+		this.translationTableTextureUnit = ctx.getResourceManager().nextTextureUnit();
 		translationTableTextureUnit.bind(translationTableTexture);
 		translationTableTextureUnit.useInShader(shaderProgram, "map");
 
@@ -44,11 +44,11 @@ public class TranslateTextureRenderer extends AbstractPassthruRenderer {
 		addVariable(ShaderVariable.vec2fVariable("dimensions", this::dimensions));
 
 		// setup the source texture so we can refer to it
-		return ctx.getResourceManager().GetTexture(textureName);
+		return ctx.getResourceManager().getTexture(textureName);
 	}
 
 	private Vector2f dimensions() {
-		return new Vector2f(texture.Width, texture.Height);
+		return new Vector2f(texture.getWidth(), texture.getHeight());
 	}
 
 	@Override

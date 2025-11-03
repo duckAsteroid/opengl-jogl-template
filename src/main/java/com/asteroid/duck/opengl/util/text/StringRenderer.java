@@ -48,7 +48,7 @@ public class StringRenderer implements RenderedItem {
 	@Override
 	public void init(RenderContext ctx) throws IOException {
 		this.shaderProgram = ctx.getResourceManager().getShaderLoader().LoadSimpleShaderProgram("text");
-		buffer.init(ctx);
+		buffer.init();
 		buffer.setup(shaderProgram);
 	}
 

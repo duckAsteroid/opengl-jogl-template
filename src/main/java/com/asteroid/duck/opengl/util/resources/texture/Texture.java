@@ -20,11 +20,11 @@ public class Texture implements Resource {
 	// e.g. 2D or 1D
 	Dimensions dimensions;
 
-	private final int ID;
-	public int Width;
-	public int Height;
-	private int Internal_Format;
-	private int Image_Format;
+	private final int id;
+	private int width;
+	private int height;
+	private int internalFormat;
+	private int imageFormat;
 	private int dataType;
 	private Wrap wrap;
 	private Filter filter;
@@ -50,45 +50,44 @@ public class Texture implements Resource {
 	 * Logs the creation of the texture with the generated ID.
 	 */
 	public Texture() {
-		this.Width = 0;
-		this.Height = 0;
-		this.Internal_Format = GL_RGB;
-		this.Image_Format = GL_RGB;
+		this.width = 0;
+		this.height = 0;
+		this.internalFormat = GL_RGB;
+		this.imageFormat = GL_RGB;
 		this.wrap = Wrap.REPEAT;
 		this.filter = Filter.LINEAR;
 		this.dimensions = Dimensions.TWO_DIMENSION;
 		this.dataType = GL_UNSIGNED_BYTE;
-		ID = glGenTextures();
-		LOG.info("Created texture ID: {}", ID);
+		this.id = glGenTextures();
+		LOG.info("Created texture ID: {}", id);
 	}
 
 	/**
 	 * The width and height dimensions as a 2d vector
 	 */
-	public Vector2f dimensions() {
-		return new Vector2f(Width, Height);
+	public Vector2f getDimensions() {
+		return new Vector2f(width, height);
 	}
 
 	/**
 	 * A matrix that can be used to normalise texture pixel coordinates
 	 */
-	public Matrix3x2f normalisationMatrix() {
+	public Matrix3x2f getNormalisationMatrix() {
 		return new Matrix3x2f(
-						1f / Width, 0f,
-						0f, -1f / Height,
+						1f / width, 0f,
+						0f, -1f / height,
 						0f, 1f
-
 		);
 	}
 
 	// generate an empty texture (e.g. for rendering)
-	public void Generate(int width, int height, long pixels) {
-		this.Width = width;
-		this.Height = height;
+	public void generate(int width, int height, long pixels) {
+		this.width = width;
+		this.height = height;
 		if (dimensions != Dimensions.TWO_DIMENSION) throw new IllegalArgumentException("Texture type must be 2D");
 		// create texture
-		glBindTexture(dimensions.openGlCode(), this.ID);
-		glTexImage2D(dimensions.openGlCode(), 0, this.Internal_Format, width, height, 0, this.Image_Format, this.dataType, pixels);
+		glBindTexture(dimensions.openGlCode(), this.id);
+		glTexImage2D(dimensions.openGlCode(), 0, this.internalFormat, width, height, 0, this.imageFormat, this.dataType, pixels);
 		// set Texture wrap and filter modes
 		wrap.openGlParamsStream().forEach(param -> glTexParameteri(dimensions.openGlCode(), param, wrap.openGlCode()));
 		filter.openGlParamsStream().forEach(param -> glTexParameteri(dimensions.openGlCode(), param, filter.openGlCode()));
@@ -97,58 +96,58 @@ public class Texture implements Resource {
 		glBindTexture(dimensions.openGlCode(), 0);
 	}
 
-	public void Generate(int width, int height, ByteBuffer data) {
-		this.Width = width;
-		this.Height = height;
+	public void generate(int width, int height, ByteBuffer data) {
+		this.width = width;
+		this.height = height;
 		if (dimensions != Dimensions.TWO_DIMENSION) throw new IllegalArgumentException("Texture type must be 2D");
 		// create Texture
-		Bind();
+		bind();
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-		glTexImage2D(dimensions.openGlCode(), 0, this.Internal_Format, width, height, 0, this.Image_Format, this.dataType, data);
+		glTexImage2D(dimensions.openGlCode(), 0, this.internalFormat, width, height, 0, this.imageFormat, this.dataType, data);
 		// set Texture wrap and filter modes
 		wrap.openGlParamsStream().forEach(param -> glTexParameteri(dimensions.openGlCode(), param, wrap.openGlCode()));
 		filter.openGlParamsStream().forEach(param -> glTexParameteri(dimensions.openGlCode(), param, filter.openGlCode()));
 		// unbind texture
-		UnBind();
+		unbind();
 	}
 
-	public void Generate1D(int length, ByteBuffer data) {
-		this.Width = length;
-		this.Height = 1;
+	public void generate1D(int length, ByteBuffer data) {
+		this.width = length;
+		this.height = 1;
 		this.dimensions = Dimensions.ONE_DIMENSION;
 		this.wrap = Wrap.REPEAT;
 		// create Texture
-		Bind();
-		glTexImage1D(this.dimensions.openGlCode(), 0, this.Internal_Format, Width, 0, this.Image_Format, GL_UNSIGNED_BYTE, data);
+		bind();
+		glTexImage1D(this.dimensions.openGlCode(), 0, this.internalFormat, width, 0, this.imageFormat, GL_UNSIGNED_BYTE, data);
 		// set Texture wrap and filter modes
 		wrap.openGlParamsStream().forEach(param -> glTexParameteri(dimensions.openGlCode(), param, wrap.openGlCode()));
 		filter.openGlParamsStream().forEach(param -> glTexParameteri(dimensions.openGlCode(), param, filter.openGlCode()));
 		// unbind texture
-		UnBind();
+		unbind();
 	}
 
-	public int id() {
-		return ID;
+	public int getId() {
+		return id;
 	}
 
-	public void Bind() {
-		glBindTexture(dimensions.openGlCode(), ID);
+	public void bind() {
+		glBindTexture(dimensions.openGlCode(), id);
 	}
 
-	public void UnBind() {
+	public void unbind() {
 		glBindTexture(dimensions.openGlCode(), 0);
 	}
 
 	public void destroy() {
-		glDeleteTextures(ID);
+		glDeleteTextures(id);
 	}
 
 	public void setInternalFormat(int fmt) {
-		this.Internal_Format = fmt;
+		this.internalFormat = fmt;
 	}
 
 	public void setImageFormat(int fmt) {
-		this.Image_Format = fmt;
+		this.imageFormat = fmt;
 	}
 
 	public void setDataType(int fmt) {
@@ -164,13 +163,18 @@ public class Texture implements Resource {
 	}
 
 	public int getWidth() {
-		return Width;
+		return width;
+	}
+
+	public int getHeight() {
+		return height;
 	}
 
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		sb.append("Texture ID: ").append(ID).append("; w=").append(Width).append("; h=").append(Height);
+		sb.append("Texture ID: ").append(id).append("; w=").append(width).append("; h=").append(height);
 		return sb.toString();
 	}
+
 }
