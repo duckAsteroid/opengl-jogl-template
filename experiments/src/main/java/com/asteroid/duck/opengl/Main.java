@@ -91,16 +91,8 @@ public class Main extends GLWindow implements RenderContext {
             LOG.error("Error during main loop", e);
         }
         finally {
-            try {
-                if (main != null) main.dispose();
-            }
-            catch (RuntimeException e) {
-                LOG.error("Error during dispose", e);
-            }
-            finally {
-                LOG.info("Exiting...");
-                System.exit(0);
-            }
+            LOG.info("Exiting...");
+            System.exit(0);
         }
     }
 

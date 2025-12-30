@@ -1,7 +1,7 @@
 package com.asteroid.duck.opengl.util.resources.buffer.vbo;
 
 import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
-import com.asteroid.duck.opengl.util.resources.buffer.debug.VboVisualiser;
+import com.asteroid.duck.opengl.util.resources.buffer.debug.VertexBufferVisualiser;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.junit.jupiter.api.Test;
@@ -137,8 +137,8 @@ class VertexBufferObjectTest {
 		ByteBuffer memBuffer = MemoryUtil.memAlloc(oldVertices.length * Float.BYTES);
 		memBuffer.asFloatBuffer().put(oldVertices);
 		//System.out.println("Original:\n"+asString(memBuffer));
-		VboVisualiser visualizer = new VboVisualiser(vertexBufferObject);
-		System.out.println("VertexDataBuffer:\n"+visualizer.byteString());
+		VertexBufferVisualiser visualizer = new VertexBufferVisualiser(vao);
+		System.out.println(visualizer);
 
 		MemoryUtil.memFree(memBuffer);
 		MemoryUtil.memFree(vertexBufferObject.memBuffer());

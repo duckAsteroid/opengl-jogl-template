@@ -7,7 +7,7 @@ import com.asteroid.duck.opengl.util.CompositeRenderItem;
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.resources.buffer.BufferDrawMode;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
-import com.asteroid.duck.opengl.util.resources.buffer.debug.VboVisualiser;
+import com.asteroid.duck.opengl.util.resources.buffer.debug.VertexBufferVisualiser;
 import com.asteroid.duck.opengl.util.resources.buffer.ebo.ElementBufferObject;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.*;
 import com.asteroid.duck.opengl.util.resources.font.FontTexture;
@@ -153,18 +153,12 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 		System.out.println("\t"+ib.mapToObj(Integer::toString).collect(Collectors.joining(",", "[", "]")));
 
 		System.out.println("Font Data Buffer:");
-		VboVisualiser viz = new VboVisualiser(fontDataBuffer);
-		System.out.println("\t"+viz.verticeString());
-		System.out.println("\t"+viz.headerString());
-		System.out.println("\t"+viz.dataString());
-		System.out.println("\t"+viz.byteString());
+		VertexBufferVisualiser viz = new VertexBufferVisualiser(vao);
+		System.out.println(viz);
 
 		System.out.println("Debug Line Buffer:");
-		VboVisualiser debug = new VboVisualiser(this.debugLineBuffer);
-		System.out.println("\t"+debug.verticeString());
-		System.out.println("\t"+debug.headerString());
-		System.out.println("\t"+debug.dataString());
-		System.out.println("\t"+debug.byteString());
+		VertexBufferVisualiser debug = new VertexBufferVisualiser(this.debugVao);
+		System.out.println(debug);
 	}
 
 	@Override

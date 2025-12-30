@@ -5,7 +5,7 @@ import com.asteroid.duck.opengl.util.color.StandardColors;
 import com.asteroid.duck.opengl.util.keys.KeyCombination;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.*;
-import com.asteroid.duck.opengl.util.resources.buffer.debug.VboVisualiser;
+import com.asteroid.duck.opengl.util.resources.buffer.debug.VertexBufferVisualiser;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.shader.Uniform;
 import com.asteroid.duck.opengl.util.timer.function.AccumulatorFunction;
@@ -107,7 +107,7 @@ public class SimpleTriangle implements Experiment {
         vbo.update(UpdateHint.STATIC);
 
         // This is a great debugging tool, now it will show the data you just set
-        VboVisualiser viz = new VboVisualiser(vbo);
+        VertexBufferVisualiser viz = new VertexBufferVisualiser(vao);
         System.out.println(viz);
     }
 
