@@ -1,0 +1,108 @@
+plugins {
+  id 'application'
+}
+
+dependencies {
+    implementation project(':core')
+
+    // JOML for math
+    implementation "org.joml:joml:${jomlVersion}"
+
+    // LWJGL platform BOM and core libs; runtime natives set for linux by default
+    implementation platform("org.lwjgl:lwjgl-bom:${lwjglVersion}")
+    implementation "org.lwjgl:lwjgl"
+    runtimeOnly "org.lwjgl:lwjgl::${lwjglNatives}"
+    implementation "org.lwjgl:lwjgl-glfw"
+    runtimeOnly "org.lwjgl:lwjgl-glfw::${lwjglNatives}"
+    implementation "org.lwjgl:lwjgl-opengl"
+    runtimeOnly "org.lwjgl:lwjgl-opengl::${lwjglNatives}"
+
+}
+
+application {
+  // Default main; update if you move main class
+  mainClass = 'com.asteroid.duck.opengl.Main'
+  applicationDefaultJvmArgs = ["--enable-preview",'-Dsun.java2d.uiScale=2', "-Dorg.lwjgl.util.Debug=true", "-Dorg.lwjgl.util.NoChecks=false"]
+}
+
+tasks.named('run', JavaExec) {
+    environment += [
+            '__NV_PRIME_RENDER_OFFLOAD'  : '1',
+            '__GLX_VENDOR_LIBRARY_NAME'  : 'nvidia',
+            '__GL_THREADED_OPTIMIZATIONS': '0',
+            '_JAVA_AWT_WM_NONREPARENTING': '1',
+            'GLFW_PLATFORM': 'x11']
+}
+
+tasks.named('startScripts', CreateStartScripts) {
+    doLast {
+        def envVars = ['__NV_PRIME_RENDER_OFFLOAD=1',
+                       '__GLX_VENDOR_LIBRARY_NAME=nvidia',
+                       '__GL_THREADED_OPTIMIZATIONS=0']
+        def envVarsScript = envVars.collect { "export ${it}" }.join('\n')
+        def x2 = 'export APP_MODE=production\nexport LOG_LEVEL=debug'
+        // Inject them right after the shebang or near the top of the script
+        final HEADER = '#!/bin/sh'
+        unixScript.text = unixScript.text.replace(HEADER, HEADER + "\n\n${envVarsScript}")
+    }
+}
+
+
+// Move custom JavaExec tasks here (examples from previous root build)
+
+tasks.register("runTextureRenderer", JavaExec) {
+  dependsOn tasks.named('deleteCrashLogs')
+  group = ApplicationPlugin.APPLICATION_GROUP
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.asteroid.duck.opengl.TextureRenderer'
+  workingDir = project.rootDir
+  jvmArgs = ["-javaagent:src/test/resources/lwjglx-debug-1.0.0.jar=tn;o=texture_renderer.gl.log"]
+  def myProps = ["simulate.audio": "TRUE"]
+  systemProperties myProps
+  args = ["--interactive=false"]
+}
+
+tasks.register("runTextureRenderer2", JavaExec) {
+  dependsOn tasks.named('deleteCrashLogs')
+  group = ApplicationPlugin.APPLICATION_GROUP
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'com.asteroid.duck.opengl.TextureRenderer2'
+  workingDir = project.rootDir
+  jvmArgs = ["-javaagent:src/test/resources/lwjglx-debug-1.0.0.jar=tn;o=texture_renderer2.gl.log"]
+  def myProps = ["simulate.audio": "TRUE"]
+  systemProperties myProps
+  args = ["--enable-preview","--interactive=false"]
+}
+
+tasks.register("debugRun", JavaExec) {
+  dependsOn tasks.named('deleteCrashLogs')
+  group = ApplicationPlugin.APPLICATION_GROUP
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = application.mainClass
+  workingDir = project.projectDir
+
+    logger.log(LogLevel.LIFECYCLE, workingDir.toString())
+  jvmArgs = ["--enable-preview","-javaagent:src/test/libs/lwjglx-debug-1.0.0.jar=tn;o=debugRun.gl.log"]
+  def myProps = ["simulate.audio": "TRUE"]
+  systemProperties myProps
+  environment += [
+          '__NV_PRIME_RENDER_OFFLOAD': '1',
+          '__GLX_VENDOR_LIBRARY_NAME': 'nvidia',
+          '__GL_THREADED_OPTIMIZATIONS': '0']
+  args = ["--interactive=false", "BasicTexture"]
+}
+
+tasks.register("deleteCrashLogs", Delete) {
+  group = BasePlugin.BUILD_GROUP
+  description = "Clear out Java crash logs"
+  delete fileTree('.').include('hs_err_pid*.log')
+}
+
+tasks.register("graphicsCardLogger", JavaExec) {
+  classpath = sourceSets.main.runtimeClasspath
+  environment += [
+          '__NV_PRIME_RENDER_OFFLOAD': '1',
+          '__GLX_VENDOR_LIBRARY_NAME': 'nvidia',
+          '__GL_THREADED_OPTIMIZATIONS': '0']
+  mainClass = "com.asteroid.duck.opengl.util.GraphicsCardLogger"
+}

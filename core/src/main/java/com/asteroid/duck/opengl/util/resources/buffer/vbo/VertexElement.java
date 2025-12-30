@@ -1,0 +1,28 @@
+package com.asteroid.duck.opengl.util.resources.buffer.vbo;
+
+/**
+ * Represents a single "element" of data assigned to each vertex in a {@link VertexBufferObject}.
+ * @param type The type of data held in each element
+ * @param name The name of the variable used in the vertex shader
+ */
+public record VertexElement(VertexElementType<?> type, String name) {
+
+
+
+	/**
+	 * Checks if the given value is an instance of the type defined by this element.
+	 * If the value is null, it will not throw an exception.
+	 * @param value The value to check
+	 * @throws IllegalArgumentException if the value is not of the expected type
+	 */
+	public void checkInstanceOf(Object value) throws IllegalArgumentException {
+		if (value != null) {
+			Class<?> actualType = value.getClass();
+			Class<?> expectedType = type.getJavaType();
+			if (!expectedType.isAssignableFrom(actualType)) {
+				throw new IllegalArgumentException(name + ": "+actualType.getName() +" is not of type " + expectedType.getName());
+			}
+		}
+	}
+
+}

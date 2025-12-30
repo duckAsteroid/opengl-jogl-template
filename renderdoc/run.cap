@@ -1,11 +1,29 @@
 {
     "rdocCaptureSettings": 1,
     "settings": {
-        "autoStart": false,
-        "commandLine": "-jar build/libs/opengl-jogl-template-0.0.1-all.jar",
+        "autoStart": true,
+        "commandLine": "-Dorg.lwjgl.util.Debug=true -Dorg.lwjgl.util.NoChecks=false -Dsun.java2d.uiScale=2 --enable-preview -Dfile.encoding=UTF-8 -Duser.country=GB -Duser.language=en -Duser.variant -cp /home/chris/git/github.com/duckasteroid/opengl-jogl-template/experiments/build/classes/java/main:/home/chris/git/github.com/duckasteroid/opengl-jogl-template/experiments/build/resources/main:/home/chris/git/github.com/duckasteroid/opengl-jogl-template/core/build/libs/core-0.0.1.jar:/home/chris/.gradle/caches/modules-2/files-2.1/org.joml/joml/1.10.8/fc0a71dad90a2cf41d82a76156a0e700af8e4f8d/joml-1.10.8.jar:/home/chris/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-glfw/3.3.6/7119f7d0eeb1e5502ff0ca71d2b4d47317da015/lwjgl-glfw-3.3.6.jar:/home/chris/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-glfw/3.3.6/797e0965709ad180d9b00c88a086dbda15002203/lwjgl-glfw-3.3.6-natives-linux.jar:/home/chris/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-opengl/3.3.6/ac2532612a4df374e9a9282bcf8ce2573018ebbb/lwjgl-opengl-3.3.6.jar:/home/chris/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl-opengl/3.3.6/b8dc6467fe232d552793c53dc56f9fa8a385299c/lwjgl-opengl-3.3.6-natives-linux.jar:/home/chris/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl/3.3.6/ce7721d30cfaf47feaed10213e0c43eb55c49d68/lwjgl-3.3.6.jar:/home/chris/.gradle/caches/modules-2/files-2.1/org.lwjgl/lwjgl/3.3.6/dc7db8fc4f1e6563867f9155b9a42d9c73d8992f/lwjgl-3.3.6-natives-linux.jar:/home/chris/.gradle/caches/modules-2/files-2.1/ch.qos.logback/logback-classic/1.5.20/3db675c8bc2f791612721d177ba54021eed3ade9/logback-classic-1.5.20.jar:/home/chris/.gradle/caches/modules-2/files-2.1/org.slf4j/slf4j-api/2.1.0-alpha1/4e2525fc4327cc553c52e3937427c7cf2114735f/slf4j-api-2.1.0-alpha1.jar:/home/chris/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk8/1.8.20/73576ddf378c5b4f1f6b449fe6b119b8183fc078/kotlin-stdlib-jdk8-1.8.20.jar:/home/chris/.gradle/caches/modules-2/files-2.1/ch.qos.logback/logback-core/1.5.20/c5e87126a18d729240c683db179a9387b2daa632/logback-core-1.5.20.jar:/home/chris/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk7/1.8.20/3aa51faf20aae8b31e1a4bc54f8370673d7b7df4/kotlin-stdlib-jdk7-1.8.20.jar:/home/chris/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/1.8.20/e72fc5e03ec6c064c678a6bd0d955c88d55b0c4a/kotlin-stdlib-1.8.20.jar:/home/chris/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-common/1.8.20/5eddaaf234c8c49d03eebeb6a14feb7f90faca71/kotlin-stdlib-common-1.8.20.jar:/home/chris/.gradle/caches/modules-2/files-2.1/org.jetbrains/annotations/13.0/919f0dfe192fb4e063e7dacadee7f8bb9a2672a9/annotations-13.0.jar com.asteroid.duck.opengl.Main BasicTexture ",
         "environment": [
+            {
+                "separator": "Platform style",
+                "type": "Set",
+                "value": "1",
+                "variable": "__NV_PRIME_RENDER_OFFLOAD"
+            },
+            {
+                "separator": "Platform style",
+                "type": "Set",
+                "value": "nvidia",
+                "variable": "__GLX_VENDOR_LIBRARY_NAME"
+            },
+            {
+                "separator": "Platform style",
+                "type": "Set",
+                "value": "0",
+                "variable": "__GL_THREADED_OPTIMIZATIONS"
+            }
         ],
-        "executable": "C:\\Program Files\\jvms\\store\\21.0.4\\jdk-21.0.4\\bin\\java.exe",
+        "executable": "/home/chris/.jdks/temurin-17.0.16/bin/java",
         "inject": false,
         "numQueuedFrames": 1,
         "options": {
@@ -18,11 +36,11 @@
             "debugOutputMute": true,
             "delayForDebugger": 0,
             "hookIntoChildren": false,
-            "refAllResources": true,
+            "refAllResources": false,
             "softMemoryLimit": 0,
-            "verifyBufferAccess": true
+            "verifyBufferAccess": false
         },
-        "queuedFrameCap": 3,
-        "workingDir": "D:/git/github.com/duckasteroid/opengl-jogl-template"
+        "queuedFrameCap": 0,
+        "workingDir": "/home/chris/git/github.com/duckasteroid/opengl-jogl-template/experiments"
     }
 }

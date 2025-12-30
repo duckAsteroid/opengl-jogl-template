@@ -1,126 +1,50 @@
 plugins {
-  id 'java'
-  id 'application'
   id "com.github.ben-manes.versions" version "0.53.0"
   id 'com.gradleup.shadow' version '9.2.2'
 }
 
-group = 'com.asteroid.duck'
-version = '0.0.1'
 description = 'A template application for OpenGL (via JOGL) projects and experiments'
 
-repositories {
-  mavenCentral()
+ext {
+    javaLanguageVersion = 17
+    lwjglVersion = '3.3.6'
+    lwjglNatives = 'natives-linux'
+    jomlVersion = '1.10.8'
 }
 
-java {
-  toolchain {
-    languageVersion.set(JavaLanguageVersion.of(17))
+allprojects {
+  group = 'com.asteroid.duck'
+  version = '0.0.1'
+}
+
+
+subprojects {
+  apply plugin: 'java'
+
+  java {
+    toolchain {
+      languageVersion.set(JavaLanguageVersion.of(javaLanguageVersion))
+    }
   }
-}
 
-tasks.withType(JavaCompile) {
+  tasks.withType(JavaCompile) {
     options.compilerArgs = ['-Xlint:unchecked', '-Xlint:deprecation']
-}
+  }
 
-dependencies {
-  // Logging libraries
-  implementation 'org.slf4j:slf4j-api:2.1.0-alpha1'
-  runtimeOnly 'ch.qos.logback:logback-classic:1.5.20'
-  //runtimeOnly 'org.slf4j:slf4j-simple:2.0.12'
+  test {
+    jvmArgs = ['-Xshare:off']
+    useJUnitPlatform()
+  }
+    repositories {
+        mavenCentral()
+    }
 
-  // Lightweight Java Game Libraries (LWJGL)
-  implementation platform("org.lwjgl:lwjgl-bom:3.3.6")
-  implementation "org.lwjgl:lwjgl"
-  runtimeOnly "org.lwjgl:lwjgl::natives-linux"
-
-  // glfw for windows
-  implementation "org.lwjgl:lwjgl-glfw"
-  runtimeOnly "org.lwjgl:lwjgl-glfw::natives-linux"
-
-  // open GL
-  implementation "org.lwjgl:lwjgl-opengl"
-  runtimeOnly "org.lwjgl:lwjgl-opengl::natives-linux"
-
-  // help for GL Vector types
-  implementation "org.joml:joml:1.10.8"
-
-  // JUnit
-  testImplementation 'org.junit.jupiter:junit-jupiter:6.0.0'
-  // Mocking in tests
-  testImplementation 'org.mockito:mockito-inline:5.2.0'
-
-}
-
-test {
-  // Mockito creates warning if we use CDS, so disable for tests
-  jvmArgs = ["-Xshare:off"]
-  useJUnitPlatform()
-}
-
-application {
-  mainClass = 'com.asteroid.duck.opengl.Main'
-}
-
-run {
-    jvmArgs += ["--enable-preview",'-Dsun.java2d.uiScale=2']
-    environment += [
-            '__NV_PRIME_RENDER_OFFLOAD': '1',
-            '__GLX_VENDOR_LIBRARY_NAME': 'nvidia',
-            '__GL_THREADED_OPTIMIZATIONS': '0']
-}
-
-tasks.register("runTextureRenderer", JavaExec) {
-  dependsOn deleteCrashLogs
-  group = ApplicationPlugin.APPLICATION_GROUP
-  classpath = sourceSets.main.runtimeClasspath
-  mainClass = 'com.asteroid.duck.opengl.TextureRenderer'
-  workingDir = project.rootDir
-  jvmArgs = ["-javaagent:src/test/resources/lwjglx-debug-1.0.0.jar=tn;o=texture_renderer.gl.log"]
-  def myProps = ["simulate.audio": "TRUE"]
-  systemProperties myProps
-  args = ["--interactive=false"] // Cthugha, TranslateExample, Triangle, PalettePicture, BlurPictureExample, BlurTest
-}
-
-tasks.register("runTextureRenderer2", JavaExec) {
-  dependsOn deleteCrashLogs
-  group = ApplicationPlugin.APPLICATION_GROUP
-  classpath = sourceSets.main.runtimeClasspath
-  mainClass = 'com.asteroid.duck.opengl.TextureRenderer2'
-  workingDir = project.rootDir
-  jvmArgs = ["-javaagent:src/test/resources/lwjglx-debug-1.0.0.jar=tn;o=texture_renderer2.gl.log"]
-  def myProps = ["simulate.audio": "TRUE"]
-  systemProperties myProps
-  args = ["--enable-preview","--interactive=false"] // Cthugha, TranslateExample, Triangle, PalettePicture, BlurPictureExample, BlurTest
-}
-
-tasks.register("debugRun", JavaExec) {
-  dependsOn deleteCrashLogs
-  group = ApplicationPlugin.APPLICATION_GROUP
-  classpath = sourceSets.main.runtimeClasspath
-  mainClass = application.mainClass
-  workingDir = project.rootDir
-  jvmArgs = ["--enable-preview","-javaagent:src/test/resources/lwjglx-debug-1.0.0.jar=tn;o=debugRun.gl.log"]
-  def myProps = ["simulate.audio": "TRUE"]
-  systemProperties myProps
-  environment += [
-          '__NV_PRIME_RENDER_OFFLOAD': '1',
-          '__GLX_VENDOR_LIBRARY_NAME': 'nvidia',
-          '__GL_THREADED_OPTIMIZATIONS': '0']
-  args = ["--interactive=false"] //BasicTexture,"SimpleTriangle" Cthugha, TranslateExample, Triangle, PalettePicture, BlurPictureExample, BlurTest
-}
-
-tasks.register("deleteCrashLogs", Delete) {
-  group = BasePlugin.BUILD_GROUP
-  description = "Clear out Java crash logs"
-  delete fileTree('.').include('hs_err_pid*.log')
-}
-
-tasks.register("graphicsCardLogger", JavaExec) {
-  classpath = sourceSets.main.runtimeClasspath
-  environment += [
-          '__NV_PRIME_RENDER_OFFLOAD': '1',
-          '__GLX_VENDOR_LIBRARY_NAME': 'nvidia',
-          '__GL_THREADED_OPTIMIZATIONS': '0']
-  mainClass = "com.asteroid.duck.opengl.util.GraphicsCardLogger"
+    dependencies {
+        // Use a valid JUnit 5 release so Gradle's JUnit Platform can load the launcher and engine
+        testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
+        testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
+        // Ensure the JUnit Platform launcher is on the test runtime classpath for Gradle
+        testImplementation 'org.junit.platform:junit-platform-launcher:1.10.0'
+        testImplementation 'org.mockito:mockito-inline:5.2.0'
+    }
 }
