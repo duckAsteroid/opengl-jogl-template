@@ -104,6 +104,18 @@ public class ElementBufferObject extends AbstractBoundResource {
 		indexBuffer.put(i);
 	}
 
+	public int size() {
+		return indexBuffer.capacity();
+	}
+
+	public short get(int index) {
+		return indexBuffer.get(index);
+	}
+
+	public IntStream intStream() {
+		return IntStream.range(0, capacity).map(indexBuffer::get);
+	}
+
 	@Override
 	public void dispose() {
 		if (ebo != null) {

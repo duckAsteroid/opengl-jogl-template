@@ -3,7 +3,7 @@ package com.asteroid.duck.opengl.experiments;
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.geom.Vertice;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
-import com.asteroid.duck.opengl.util.resources.buffer.debug.VboVisualiser;
+import com.asteroid.duck.opengl.util.resources.buffer.debug.VertexBufferVisualiser;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.*;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
@@ -97,7 +97,7 @@ public class SimpleTexture implements Experiment {
         }
         vbo.update(UpdateHint.STATIC);
 
-        VboVisualiser visualiser = new VboVisualiser(vbo);
+        VertexBufferVisualiser visualiser = new VertexBufferVisualiser(vao);
         System.out.println(visualiser);
         return vao;
     }
