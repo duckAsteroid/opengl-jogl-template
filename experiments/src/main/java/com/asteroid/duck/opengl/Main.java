@@ -8,7 +8,7 @@ import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.RenderedItem;
 import com.asteroid.duck.opengl.util.keys.KeyRegistry;
 import com.asteroid.duck.opengl.util.resources.manager.ResourceManagerImpl;
-import com.asteroid.duck.opengl.util.resources.io.ClasspathResourceLoader;
+import com.asteroid.duck.opengl.util.resources.io.ClasspathLoader;
 import com.asteroid.duck.opengl.util.timer.TimeSource;
 import com.asteroid.duck.opengl.util.timer.Timer;
 import com.asteroid.duck.opengl.util.timer.TimerImpl;
@@ -44,7 +44,7 @@ public class Main extends GLWindow implements RenderContext {
     private Double desiredUpdatePeriod = null;
 
     public Main(RenderedItem item, String title, int width, int height) {
-        super(new ResourceManagerImpl(new ClasspathResourceLoader(item.getClass(),"/")),title, width, height, "icon16.png");
+        super(new ResourceManagerImpl(new ClasspathLoader(item.getClass(),"/")),title, width, height, "icon16.png");
         this.renderedItem = item;
     }
 

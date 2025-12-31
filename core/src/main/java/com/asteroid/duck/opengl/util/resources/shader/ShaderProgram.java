@@ -32,12 +32,19 @@ public class ShaderProgram implements Resource {
 	private static final Logger LOG = LoggerFactory.getLogger(ShaderProgram.class);
 	final int id;
 
+	private final ShaderSource vertex;
+	private final ShaderSource fragment;
+	private final ShaderSource geometry;
+
 	private final Map<VariableType, Map<String, Variable>> variableCache = new HashMap<>();
 
 	private final Uniforms uniforms;
 
-	private ShaderProgram(int id) {
+	private ShaderProgram(int id, ShaderSource vertex, ShaderSource fragment, ShaderSource geometry) {
 		this.id = id;
+		this.vertex = vertex;
+		this.fragment = fragment;
+		this.geometry = geometry;
 		this.uniforms = new Uniforms(this);
 	}
 
@@ -47,24 +54,29 @@ public class ShaderProgram implements Resource {
 
 
 
-	public static ShaderProgram compile(String vertexSource, String fragmentSource, String geometrySource) {
+	public static ShaderProgram compile(ShaderSource vertexSource, ShaderSource fragmentSource, ShaderSource geometrySource) {
+		Objects.requireNonNull(vertexSource, "Source for vertex shader must not be null");
+		if (vertexSource.isSourceBlank()) throw new IllegalArgumentException("Source for vertex shader must not be blank");
+		Objects.requireNonNull(fragmentSource, "Source for fragment shader must not be null");
+		if (fragmentSource.isSourceBlank()) throw new IllegalArgumentException("Source for fragment shader must not be blank");
+
 		int sVertex, sFragment, gShader = -1;
-		final boolean hasGeometry = geometrySource != null && !geometrySource.isBlank();
+		final boolean hasGeometry = geometrySource != null && !geometrySource.isSourceBlank();
 		// vertex Shader
 		sVertex = glCreateShader(GL_VERTEX_SHADER);
-		glShaderSource(sVertex, vertexSource);
+		glShaderSource(sVertex, vertexSource.source());
 		glCompileShader(sVertex);
 		checkCompileErrors(sVertex,  CompilationChecker.SHADER);
 		// fragment Shader
 		sFragment = glCreateShader(GL_FRAGMENT_SHADER);
-		glShaderSource(sFragment, fragmentSource);
+		glShaderSource(sFragment, fragmentSource.source());
 		glCompileShader(sFragment);
 		checkCompileErrors(sFragment,  CompilationChecker.SHADER);
 		// if geometry shader source code is given, also compile geometry shader
 		if (hasGeometry)
 		{
 			gShader = glCreateShader(GL_GEOMETRY_SHADER);
-			glShaderSource(gShader, geometrySource);
+			glShaderSource(gShader, geometrySource.source());
 			glCompileShader(gShader);
 			checkCompileErrors(gShader, CompilationChecker.SHADER);
 		}
@@ -85,7 +97,7 @@ public class ShaderProgram implements Resource {
 		if (LOG.isDebugEnabled()) {
 			LOG.debug("Loaded shader {}", id);
 		}
-		return new ShaderProgram(id);
+		return new ShaderProgram(id, vertexSource, fragmentSource, geometrySource);
 	}
 
 
@@ -212,10 +224,20 @@ public class ShaderProgram implements Resource {
 
 	@Override
 	public String toString() {
+		StringBuilder sb = new StringBuilder("ShaderProgram");
+		sb.append("(id=").append(id).append("):\n");
+		sb.append('\t').append("vertex=").append(vertex.location()).append("\n");
+		sb.append('\t').append("fragment=").append(fragment.location()).append("\n");
+		if (geometry != null && !geometry.isSourceBlank()) {
+			sb.append('\t').append("geometry=").append(geometry.location()).append("\n");
+		}
+		sb.append("----------------------------\n");
 		Map<String, Variable> vars = get(VariableType.UNIFORM);
 		String uniforms = vars.values().stream().sorted().map(Objects::toString).collect(Collectors.joining(", ", "uniforms={", "}; "));
+		sb.append('\t').append(uniforms).append("\n");
 		vars = get(VariableType.ATTRIBUTE);
 		String attributes = vars.values().stream().sorted().map(Objects::toString).collect(Collectors.joining(", ","attributes={", "}; "));
-		return "ShaderProgram(id="+id+"): " + uniforms + attributes;
+		sb.append('\t').append(attributes).append("\n");
+		return sb.toString();
 	}
 }

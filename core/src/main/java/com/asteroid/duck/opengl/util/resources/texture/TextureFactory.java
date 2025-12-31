@@ -1,6 +1,6 @@
 package com.asteroid.duck.opengl.util.resources.texture;
 
-import com.asteroid.duck.opengl.util.resources.io.ResourceLoader;
+import com.asteroid.duck.opengl.util.resources.io.Loader;
 import com.asteroid.duck.opengl.util.resources.texture.io.ImageLoadingOptions;
 import com.asteroid.duck.opengl.util.resources.texture.io.JavaImageLoader;
 import com.asteroid.duck.opengl.util.resources.texture.io.RawLoader;
@@ -26,10 +26,10 @@ public class TextureFactory {
 		ByteBuffer pixelData(BufferedImage bufferedImage);
 	}
 
-	private final ResourceLoader resourceLoader;
+	private final Loader loader;
 
-	public TextureFactory(ResourceLoader root) {
-		this.resourceLoader = root;
+	public TextureFactory(Loader root) {
+		this.loader = root;
 	}
 
 	public static Texture createTexture(Rectangle screen, boolean is32f) {
@@ -86,9 +86,9 @@ public class TextureFactory {
 
 	public ImageData loadTextureData(String texturePath, ImageLoadingOptions options) throws IOException {
 		if (IMAGE_FORMATS.stream().anyMatch(texturePath::endsWith)) {
-			return new JavaImageLoader(resourceLoader).load(texturePath, options);
+			return new JavaImageLoader(loader).load(texturePath, options);
 		}
-		return new RawLoader(extractDimensions(texturePath), resourceLoader).load(texturePath, options);
+		return new RawLoader(extractDimensions(texturePath), loader).load(texturePath, options);
 	}
 
 	private Dimension extractDimensions(String texturePath) {

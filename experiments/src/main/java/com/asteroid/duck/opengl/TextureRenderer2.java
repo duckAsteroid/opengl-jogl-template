@@ -4,6 +4,7 @@ import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.*;
 import com.asteroid.duck.opengl.util.resources.io.PathBasedLoader;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
+import com.asteroid.duck.opengl.util.resources.shader.ShaderSource;
 import com.asteroid.duck.opengl.util.resources.texture.io.ImageLoadingOptions;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import com.asteroid.duck.opengl.util.resources.texture.TextureFactory;
@@ -168,7 +169,10 @@ public class TextureRenderer2 {
         System.out.println("OpenGL Version: " + GL11.glGetString(GL11.GL_VERSION));
         System.out.println("GLSL Version: " + GL11.glGetString(GL20.GL_SHADING_LANGUAGE_VERSION));
 
-		this.shaderProgram = ShaderProgram.compile(vertexShaderSource, fragmentShaderSource, null);
+		this.shaderProgram = ShaderProgram.compile(
+				ShaderSource.fromClass(vertexShaderSource, TextureRenderer2.class),
+				ShaderSource.fromClass(fragmentShaderSource, TextureRenderer2.class)
+				, null);
 
 		vertexBufferObject = vao.createVbo(structure, 6);
 		vertexBufferObject.init();

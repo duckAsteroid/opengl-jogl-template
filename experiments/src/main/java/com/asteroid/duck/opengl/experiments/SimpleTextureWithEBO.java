@@ -7,6 +7,7 @@ import com.asteroid.duck.opengl.util.resources.buffer.debug.VertexBufferVisualis
 import com.asteroid.duck.opengl.util.resources.buffer.ebo.ElementBufferObject;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.*;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
+import com.asteroid.duck.opengl.util.resources.shader.ShaderSource;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
 import org.joml.Vector2f;
@@ -14,6 +15,9 @@ import org.joml.Vector4f;
 
 import java.io.IOException;
 
+/**
+ * This is essentially a duplicate of {@link SimpleTexture} - except it uses an element
+ */
 public class SimpleTextureWithEBO implements Experiment {
     @Override
     public String getDescription() {
@@ -68,7 +72,10 @@ public class SimpleTextureWithEBO implements Experiment {
             """;
     @Override
     public void init(RenderContext ctx) throws IOException {
-        this.shader = ShaderProgram.compile(VERTEX_SHADER, FRAG_SHADER, null);
+        this.shader = ShaderProgram.compile(
+                ShaderSource.fromClass(VERTEX_SHADER, SimpleTextureWithEBO.class),
+                ShaderSource.fromClass(FRAG_SHADER, SimpleTextureWithEBO.class)
+                , null);
         shader.use();
         this.texture = initTexture(ctx);
         this.textureUnit = initTextureUnit(ctx);
@@ -99,6 +106,10 @@ public class SimpleTextureWithEBO implements Experiment {
             vbo.set(i, screen, texture);
         }
         vbo.update(UpdateHint.STATIC);
+
+        // *****************************************************************************
+        // THIS IS THE KEY DIFFERENCE! It uses a vertex index buffer to avoid duplicating vertex data!
+        // *****************************************************************************
 
         var sixVertices = Vertice.standardSixVertices().toList();
         ElementBufferObject ebo = vao.createEbo(sixVertices.size());

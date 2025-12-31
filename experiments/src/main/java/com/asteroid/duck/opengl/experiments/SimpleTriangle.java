@@ -7,6 +7,7 @@ import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.*;
 import com.asteroid.duck.opengl.util.resources.buffer.debug.VertexBufferVisualiser;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
+import com.asteroid.duck.opengl.util.resources.shader.ShaderSource;
 import com.asteroid.duck.opengl.util.resources.shader.Uniform;
 import com.asteroid.duck.opengl.util.timer.function.AccumulatorFunction;
 import org.joml.Vector2f;
@@ -84,7 +85,10 @@ public class SimpleTriangle implements Experiment {
         this.vbo.init();
 
         // 1. Compile the shader program first
-        this.program = ShaderProgram.compile(vertexShaderSource, fragmentShaderSource, null);
+        this.program = ShaderProgram.compile(
+                ShaderSource.fromClass(vertexShaderSource, SimpleTriangle.class),
+                ShaderSource.fromClass(fragmentShaderSource, SimpleTriangle.class),
+                null);
         // 2. Setup the VBO with the program to configure attributes
         vbo.setup(program);
 

@@ -6,13 +6,18 @@ import java.io.InputStream;
 /**
  * Resource loader that loads resources from the classpath relative to a given base class.
  */
-public class ClasspathResourceLoader implements ResourceLoader {
+public class ClasspathLoader implements Loader {
     private final Class<?> baseClass;
     private final String basePath;
 
-    public ClasspathResourceLoader(Class<?> baseClass, String basePath) {
+    public ClasspathLoader(Class<?> baseClass, String basePath) {
         this.baseClass = baseClass;
         this.basePath = basePath.endsWith("/") ? basePath : basePath + "/";
+    }
+
+    @Override
+    public String describe(String relativePath) {
+        return "Classpath["+baseClass.getName()+":"+basePath + relativePath+"]";
     }
 
     private InputStream tryOpen(String relativePath) {
@@ -40,7 +45,7 @@ public class ClasspathResourceLoader implements ResourceLoader {
     }
 
     @Override
-    public ResourceLoader atPath(String relativePath) {
-        return new ClasspathResourceLoader(baseClass, basePath + relativePath);
+    public Loader atPath(String relativePath) {
+        return new ClasspathLoader(baseClass, basePath + relativePath);
     }
 }

@@ -153,7 +153,7 @@ public class Polyline implements RenderedItem {
 
 		Rectangle window = ctx.getWindow();
 		shaderProgram.use();
-		shaderProgram.uniforms().get("resolution", Vector2f.class).set(new Vector2f(window.width, window.height));
+		//shaderProgram.uniforms().get("resolution", Vector2f.class).set(new Vector2f(window.width, window.height));
 		shaderProgram.uniforms().get("lineColor", Vector4f.class).set(lineColour);
 
 

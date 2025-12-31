@@ -26,6 +26,7 @@ application {
 }
 
 tasks.named('run', JavaExec) {
+    systemProperty "slf4j.internal.verbosity", "WARN"
     environment += [
             '__NV_PRIME_RENDER_OFFLOAD'  : '1',
             '__GLX_VENDOR_LIBRARY_NAME'  : 'nvidia',
@@ -83,13 +84,16 @@ tasks.register("debugRun", JavaExec) {
 
     logger.log(LogLevel.LIFECYCLE, workingDir.toString())
   jvmArgs = ["--enable-preview","-javaagent:src/test/libs/lwjglx-debug-1.0.0.jar=tn;o=debugRun.gl.log"]
-  def myProps = ["simulate.audio": "TRUE"]
+  def myProps = [
+          "simulate.audio": "TRUE",
+          "slf4j.internal.verbosity": "WARN"
+  ]
   systemProperties myProps
   environment += [
           '__NV_PRIME_RENDER_OFFLOAD': '1',
           '__GLX_VENDOR_LIBRARY_NAME': 'nvidia',
           '__GL_THREADED_OPTIMIZATIONS': '0']
-  args = ["--interactive=false", "BasicTexture"]
+  //args = ["--interactive=false", "BasicTexture"]
 }
 
 tasks.register("deleteCrashLogs", Delete) {
