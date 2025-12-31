@@ -2,6 +2,7 @@ package com.asteroid.duck.opengl;
 
 import com.asteroid.duck.opengl.util.resources.io.PathBasedLoader;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
+import com.asteroid.duck.opengl.util.resources.shader.ShaderSource;
 import com.asteroid.duck.opengl.util.resources.texture.io.ImageLoadingOptions;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import com.asteroid.duck.opengl.util.resources.texture.TextureFactory;
@@ -133,7 +134,10 @@ public class TextureRenderer {
 
 		GL.createCapabilities();
 
-		ShaderProgram prog = ShaderProgram.compile(vertexShaderSource, fragmentShaderSource, null);
+		ShaderProgram prog = ShaderProgram.compile(
+				ShaderSource.fromClass(vertexShaderSource, TextureRenderer.class),
+				ShaderSource.fromClass(fragmentShaderSource, TextureRenderer.class),
+				null);
 		shaderProgram = prog.id();
 
 		vao = glGenVertexArrays();

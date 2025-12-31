@@ -6,6 +6,7 @@ import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
 import com.asteroid.duck.opengl.util.resources.buffer.debug.VertexBufferVisualiser;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.*;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
+import com.asteroid.duck.opengl.util.resources.shader.ShaderSource;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
 import org.joml.Vector2f;
@@ -13,6 +14,11 @@ import org.joml.Vector4f;
 
 import java.io.IOException;
 
+/**
+ * This class renders a texture full screen using a 6 vertex buffer directly.
+ * This duplicates vertice information since 2 vertices are included twice.
+ * But it is the most primitive approach to rendering a texture.
+ */
 public class SimpleTexture implements Experiment {
     @Override
     public String getDescription() {
@@ -67,7 +73,10 @@ public class SimpleTexture implements Experiment {
             """;
     @Override
     public void init(RenderContext ctx) throws IOException {
-        this.shader = ShaderProgram.compile(VERTEX_SHADER, FRAG_SHADER, null);
+        this.shader = ShaderProgram.compile(
+                ShaderSource.fromClass(VERTEX_SHADER, SimpleTexture.class),
+                ShaderSource.fromClass(FRAG_SHADER, SimpleTexture.class)
+                , null);
         shader.use();
         this.texture = initTexture(ctx);
         this.textureUnit = initTextureUnit(ctx);

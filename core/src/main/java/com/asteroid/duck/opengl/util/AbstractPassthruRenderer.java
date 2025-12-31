@@ -50,7 +50,6 @@ public abstract class AbstractPassthruRenderer implements RenderedItem {
 
 	protected Rectangle initBuffers(RenderContext ctx) throws IOException {
 		Rectangle renderedShape = new Rectangle("screenPosition", "texturePosition");
-
 		renderedShape.getVertexDataBuffer().setup(shaderProgram);
 		return renderedShape;
 	}

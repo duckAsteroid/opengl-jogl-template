@@ -1,14 +1,12 @@
 package com.asteroid.duck.opengl.util.resources.texture.io;
 
-import com.asteroid.duck.opengl.util.resources.io.ResourceLoader;
+import com.asteroid.duck.opengl.util.resources.io.Loader;
 import com.asteroid.duck.opengl.util.resources.texture.ImageData;
 import org.lwjgl.BufferUtils;
 
 import java.awt.*;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 /**
  * A class that implements the TextureDataLoader interface and loads texture data from a raw file.
@@ -19,13 +17,13 @@ public class RawLoader implements TextureDataLoader {
      * The size of the texture data.
      */
     private final Dimension size;
-    private final ResourceLoader loader;
+    private final Loader loader;
     /**
      * Constructs a new RawLoader with the given size.
      *
      * @param size The size of the texture data.
      */
-    public RawLoader(Dimension size, ResourceLoader loader) {
+    public RawLoader(Dimension size, Loader loader) {
         this.size = size;
         this.loader = loader;
     }

@@ -3,10 +3,7 @@ package com.asteroid.duck.opengl.util.geom;
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
 import com.asteroid.duck.opengl.util.resources.buffer.ebo.ElementBufferObject;
-import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexBufferObject;
-import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexDataStructure;
-import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexElement;
-import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexElementType;
+import com.asteroid.duck.opengl.util.resources.buffer.vbo.*;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
 
@@ -33,33 +30,39 @@ public class Rectangle {
     private final VertexBufferObject vbo;
 
     public Rectangle(String scrnPosVertexAttrName, String texPosVertexAttrName) {
+        require(scrnPosVertexAttrName, "Screen position vertex attribute name");
+        var scrnPos = new VertexElement(VertexElementType.VEC_2F, scrnPosVertexAttrName);
 
+        require(texPosVertexAttrName, "Texture position vertex attribute name");
+        var texPos = new VertexElement(VertexElementType.VEC_2F, texPosVertexAttrName);
         // setup our VBO with screen and texture positions for 4 corners of a square
-        List<VertexElement> elements = Stream.of(scrnPosVertexAttrName, texPosVertexAttrName)
-                .filter(Objects::nonNull)
-                .map(name -> new VertexElement(VertexElementType.VEC_2F, name))
-                .toList();
-
+        List<VertexElement> elements = List.of(scrnPos, texPos);
         this.structure = new VertexDataStructure(elements);
-        final var scrnPos = elements.get(0);
-        final var texPos = elements.size() > 1 ? elements.get(1) : null;
         this.vbo = vao.createVbo(structure, 4);
         this.vao.init(null);
+        // put the four corners into the VBO
         final List<Vertice> fourCorners = Vertice.standardFourVertices().toList();
         for(int i = 0; i < fourCorners.size(); i++) {
             Vertice corner = fourCorners.get(i);
             Vector2f screenPosition = corner.from(SCREEN_NORMAL);
-            vbo.setElement(i, scrnPos, screenPosition);
-            if (texPos != null) {
-                Vector2f texPosition = corner.from(TEXTURE_NORMAL);
-                vbo.setElement(i, texPos, texPosition);
-            }
+            Vector2f texPosition = corner.from(TEXTURE_NORMAL);
+            vbo.set(i, screenPosition, texPosition);
         }
+        // commit the data to the VBO
+        vbo.update(UpdateHint.STATIC);
 
+        // create an element buffer to "index" the four corners
         this.ebo =vao.createEbo(6);
         ebo.init();
         List<Short> indices = Vertice.standardSixVertices().map(v -> (short) fourCorners.indexOf(v)).toList();
         ebo.update(indices);
+    }
+
+    private static void require(String value, String message) {
+        Objects.requireNonNull(value, message);
+        if(value.isBlank()) {
+            throw new IllegalArgumentException(message + " cannot be emtpy");
+        }
     }
 
     public ElementBufferObject getIndexBuffer() {
@@ -69,8 +72,6 @@ public class Rectangle {
     public VertexBufferObject getVertexDataBuffer() {
         return vbo;
     }
-
-
 
     public void destroy() {
         vbo.dispose();

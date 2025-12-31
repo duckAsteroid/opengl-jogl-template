@@ -1,7 +1,7 @@
 package com.asteroid.duck.opengl.util.resources.manager;
 
 import com.asteroid.duck.opengl.util.resources.Resource;
-import com.asteroid.duck.opengl.util.resources.io.ResourceLoader;
+import com.asteroid.duck.opengl.util.resources.io.Loader;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderLoader;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.texture.ImageData;
@@ -49,7 +49,7 @@ public class ResourceManagerImpl implements Resource, ResourceManager {
 		}
 	}
 
-	public ResourceManagerImpl(ResourceLoader loader) {
+	public ResourceManagerImpl(Loader loader) {
 
 		this.textureFactory = new TextureFactory(loader.atPath("textures"));
 		this.shaderLoader = new ShaderLoader(loader.atPath("glsl"));

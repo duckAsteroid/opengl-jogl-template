@@ -1,6 +1,6 @@
 package com.asteroid.duck.opengl.util.resources.shader;
 
-import com.asteroid.duck.opengl.util.resources.io.ResourceLoader;
+import com.asteroid.duck.opengl.util.resources.io.Loader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -8,7 +8,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -16,9 +15,9 @@ import java.util.Optional;
 public class ShaderLoader  {
 	private static final Logger LOG = LoggerFactory.getLogger(ShaderLoader.class);
 	private final static boolean performIncludesProcessing = !Boolean.getBoolean("shader.ignore.includes");
-	private final ResourceLoader loader;
+	private final Loader loader;
 
-	public ShaderLoader(ResourceLoader root) {
+	public ShaderLoader(Loader root) {
 		this.loader = root;
 	}
 
@@ -38,10 +37,10 @@ public class ShaderLoader  {
 		if (LOG.isDebugEnabled()) {
 			LOG.debug("Loading vert={}, frag={}, geom={}", vertexPath, fragmentPath, geometryPath);
 		}
-		return ShaderProgram.compile(loadFrom(vertexPath).orElseThrow(), loadFrom(fragmentPath).orElseThrow(), loadFrom(geometryPath).orElse(""));
+		return ShaderProgram.compile(loadFrom(vertexPath).orElseThrow(), loadFrom(fragmentPath).orElseThrow(), loadFrom(geometryPath).orElse(null));
 	}
 
-	private Optional<String> loadFrom(String path) throws IOException {
+	private Optional<ShaderSource> loadFrom(String path) throws IOException {
 		if (path != null && !path.isBlank()) {
 			try(var is = new BufferedReader(new InputStreamReader(loader.open(path),StandardCharsets.UTF_8))) {
 				List<String> lines = new ArrayList<>(is.lines().toList());
@@ -55,9 +54,9 @@ public class ShaderLoader  {
 
 				// check if we loaded anything at all!
 				if (result.toString().isBlank()) return Optional.empty();
-
-				result.append("\n// Source: ").append(path);
-				return Optional.of(result.toString());
+				var location = loader.describe(path);
+				result.append("\n// Source: ").append(location);
+				return Optional.of(new ShaderSource(result.toString(), location));
 			}
 		}
 
