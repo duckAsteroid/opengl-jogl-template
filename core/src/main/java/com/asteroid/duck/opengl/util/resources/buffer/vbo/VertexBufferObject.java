@@ -196,7 +196,7 @@ public class VertexBufferObject extends AbstractList<Map<VertexElement, ?>> impl
 		// FIXME check the shader is compatible with the vertex data structure
 		for(VertexElement element : vertexDataStructure) {
 			int position = shader.getAttributeLocation(element.name());
-			log.debug("Setting up vertex attribute '{}' at position {}", element.name(), position);
+			log.debug("Setting up vertex attribute '{}' at position {} in {}", element.name(), position, shader.shortDebugName());
 			setVertexAttribPointer(
 							position,
 							element.type().dimensions(),

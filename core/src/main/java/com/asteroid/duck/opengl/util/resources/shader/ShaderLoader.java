@@ -56,6 +56,9 @@ public class ShaderLoader  {
 				if (result.toString().isBlank()) return Optional.empty();
 				var location = loader.describe(path);
 				result.append("\n// Source: ").append(location);
+				if (LOG.isTraceEnabled()) {
+					LOG.trace("Loaded shader source from {}", location);
+				}
 				return Optional.of(new ShaderSource(result.toString(), location));
 			}
 		}

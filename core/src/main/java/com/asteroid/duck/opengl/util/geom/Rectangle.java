@@ -2,10 +2,13 @@ package com.asteroid.duck.opengl.util.geom;
 
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
+import com.asteroid.duck.opengl.util.resources.buffer.debug.VertexBufferVisualiser;
 import com.asteroid.duck.opengl.util.resources.buffer.ebo.ElementBufferObject;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.*;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Objects;
@@ -15,6 +18,7 @@ import java.util.stream.Stream;
  * A vertex data buffer that contains a rectangle made from two triangles.
  */
 public class Rectangle {
+    private static final Logger LOG = LoggerFactory.getLogger(Rectangle.class);
     /**
      * Screen normal coordinates are from -1,-1 (bottom left) to +1, +1 (top right)
      */
@@ -26,7 +30,6 @@ public class Rectangle {
 
     private final VertexArrayObject vao = new VertexArrayObject();
     private final ElementBufferObject ebo;
-    private final VertexDataStructure structure;
     private final VertexBufferObject vbo;
 
     public Rectangle(String scrnPosVertexAttrName, String texPosVertexAttrName) {
@@ -37,7 +40,7 @@ public class Rectangle {
         var texPos = new VertexElement(VertexElementType.VEC_2F, texPosVertexAttrName);
         // setup our VBO with screen and texture positions for 4 corners of a square
         List<VertexElement> elements = List.of(scrnPos, texPos);
-        this.structure = new VertexDataStructure(elements);
+        VertexDataStructure structure = new VertexDataStructure(elements);
         this.vbo = vao.createVbo(structure, 4);
         this.vao.init(null);
         // put the four corners into the VBO
@@ -56,6 +59,11 @@ public class Rectangle {
         ebo.init();
         List<Short> indices = Vertice.standardSixVertices().map(v -> (short) fourCorners.indexOf(v)).toList();
         ebo.update(indices);
+        vao.unbind();
+
+        if (LOG.isTraceEnabled()) {
+            LOG.trace("Rectangle VAO: {}", new VertexBufferVisualiser(vao));
+        }
     }
 
     private static void require(String value, String message) {
@@ -65,11 +73,15 @@ public class Rectangle {
         }
     }
 
-    public ElementBufferObject getIndexBuffer() {
+    public VertexArrayObject getVertexArrayObject() {
+        return vao;
+    }
+
+    public ElementBufferObject getElementBufferObject() {
         return ebo;
     }
 
-    public VertexBufferObject getVertexDataBuffer() {
+    public VertexBufferObject getVertexBufferObject() {
         return vbo;
     }
 
@@ -80,5 +92,12 @@ public class Rectangle {
 
     public void render(RenderContext ctx) {
         vao.doRender(ctx);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder("Rectangle:\n");
+        sb.append('\t').append(new VertexBufferVisualiser(vao)).append('\n');
+        return sb.toString();
     }
 }

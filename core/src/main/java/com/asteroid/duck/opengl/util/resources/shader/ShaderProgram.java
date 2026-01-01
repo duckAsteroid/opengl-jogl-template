@@ -222,10 +222,19 @@ public class ShaderProgram implements Resource {
 		glDeleteProgram(id);
 	}
 
+	private StringBuilder debugBuilder() {
+		StringBuilder sb = new StringBuilder("ShaderProgram");
+		sb.append("(id=").append(id).append(")");
+		return sb;
+	}
+
+	public String shortDebugName() {
+		return debugBuilder().toString();
+	}
+
 	@Override
 	public String toString() {
-		StringBuilder sb = new StringBuilder("ShaderProgram");
-		sb.append("(id=").append(id).append("):\n");
+		var sb = debugBuilder().append(":\n");
 		sb.append('\t').append("vertex=").append(vertex.location()).append("\n");
 		sb.append('\t').append("fragment=").append(fragment.location()).append("\n");
 		if (geometry != null && !geometry.isSourceBlank()) {

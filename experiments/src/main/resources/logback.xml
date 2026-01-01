@@ -1,0 +1,19 @@
+<configuration>
+    <!-- 1. Appender: Defines where logs go (e.g., Console, File) -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <!-- Pattern for log format -->
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 2. Logger: Fine-tune logging for specific packages -->
+    <logger name="com.asteroid.duck" level="trace" additivity="false">
+        <appender-ref ref="STDOUT" />
+    </logger>
+
+    <!-- 3. Root Logger: The default logger for everything else -->
+    <root level="info">
+        <appender-ref ref="STDOUT" />
+    </root>
+</configuration>

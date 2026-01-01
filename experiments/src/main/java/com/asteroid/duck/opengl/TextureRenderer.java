@@ -1,5 +1,6 @@
 package com.asteroid.duck.opengl;
 
+import com.asteroid.duck.opengl.util.resources.io.ClasspathLoader;
 import com.asteroid.duck.opengl.util.resources.io.PathBasedLoader;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderSource;
@@ -9,6 +10,7 @@ import com.asteroid.duck.opengl.util.resources.texture.TextureFactory;
 import org.lwjgl.glfw.*;
 import org.lwjgl.opengl.*;
 import org.lwjgl.system.MemoryUtil;
+import org.lwjgl.system.Platform;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -77,7 +79,10 @@ public class TextureRenderer {
 		cleanup();
 	}
 
+	boolean ready = false;
+
 	private void init() throws IOException {
+
 		for (int i = 0; i < updateLocations.length; i++) {
 			System.out.println(vertices[updateLocations[i]]);
 		}
@@ -104,35 +109,40 @@ public class TextureRenderer {
 		glfwSetFramebufferSizeCallback(window, new GLFWFramebufferSizeCallback() {
 			@Override
 			public void invoke(long window, int width, int height) {
-				glViewport(0, 0, width, height);
+				if (ready && width > 0 && height > 0) {
+					glViewport(0, 0, width, height);
 
-				// Calculate the aspect ratio
-				float aspectRatio = (float) width / height;
+					// Calculate the aspect ratio
+					float aspectRatio = (float) width / height;
 
-				// Adjust the vertex data based on the aspect ratio
-				/*
-				for (int i = 0; i < vertices.length; i += 8) {
-					// Adjust x-coordinate while keeping in NDC
-					vertices[i] = vertices[i] * aspectRatio;
-				}*/
+					// Adjust the vertex data based on the aspect ratio
+					/*
+					for (int i = 0; i < vertices.length; i += 8) {
+						// Adjust x-coordinate while keeping in NDC
+						vertices[i] = vertices[i] * aspectRatio;
+					}*/
 
-				// Update the vertex buffer with the modified data
-				// ... (same as before) ...
+					// Update the vertex buffer with the modified data
+					// ... (same as before) ...
+				}
 			}
 		});
 
 		GLFWVidMode vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-		glfwSetWindowPos(
-						window,
-						(vidmode.width() - 800) / 2,
-						(vidmode.height() - 600) / 2
-		);
+		if (Platform.get() != Platform.LINUX) {
+			glfwSetWindowPos(
+					window,
+					(vidmode.width() - 800) / 2,
+					(vidmode.height() - 600) / 2
+			);
+		}
 
 		glfwMakeContextCurrent(window);
 		glfwSwapInterval(1);
 		glfwShowWindow(window);
 
 		GL.createCapabilities();
+		ready = true;
 
 		ShaderProgram prog = ShaderProgram.compile(
 				ShaderSource.fromClass(vertexShaderSource, TextureRenderer.class),
@@ -165,7 +175,7 @@ public class TextureRenderer {
 		glVertexAttribPointer(attribLocation, 2, GL_FLOAT, false, 8 * Float.BYTES, 6 * Float.BYTES);
 		glEnableVertexAttribArray(attribLocation);
 
-		texture = loadTexture("src/main/resources/textures/molly.jpg"); // texture
+		texture = loadTexture("molly.jpg"); // texture
 
 	}
 
@@ -206,12 +216,10 @@ public class TextureRenderer {
 	}
 
 	private int loadTexture(String sPath) throws IOException {
-		Path path = Path.of(sPath);
-		Path dir = path.getParent();
+		ClasspathLoader loader = new ClasspathLoader(TextureRenderer.class, "/textures/");
+		TextureFactory texFac = new TextureFactory(loader);
 
-		TextureFactory texFac = new TextureFactory(new PathBasedLoader(dir));
-
-		Texture loaded = texFac.LoadTexture(path.getFileName().toString(), ImageLoadingOptions.DEFAULT);
+		Texture loaded = texFac.LoadTexture(sPath, ImageLoadingOptions.DEFAULT);
 		System.out.println("Loaded texture: " + loaded);
 		this.texture = loaded.getId();
 

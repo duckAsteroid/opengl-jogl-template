@@ -94,6 +94,9 @@ public class ResourceManagerImpl implements Resource, ResourceManager {
 
 	public Texture getTexture(String name, String path, ImageLoadingOptions options) {
 		if (!textures.contains(name)) {
+			if(LOG.isTraceEnabled()) {
+                LOG.trace("Trying to load resource {}", name);
+			}
 			Texture tex = null;
 			if (path != null) {
 				try {
@@ -113,6 +116,9 @@ public class ResourceManagerImpl implements Resource, ResourceManager {
 
 	public ShaderProgram getShader(String name, String vertexPath, String fragPath, String geomPath) {
 		if (!shaders.contains(name)) {
+			if (LOG.isTraceEnabled()) {
+                LOG.trace("Loading shader: {}", name);
+			}
 			try {
 				ShaderProgram shader = shaderLoader.LoadShaderProgram(vertexPath, fragPath, geomPath);
 				shaders.put(name, shader);
@@ -132,6 +138,9 @@ public class ResourceManagerImpl implements Resource, ResourceManager {
 		unallocatedTextureUnits.remove(index);
 		TextureUnit unit = TextureUnit.index(index, this::replaceTextureUnit);
 		textureUnits.put(Integer.toHexString(unit.getIndex()), unit);
+		if (LOG.isTraceEnabled()) {
+			LOG.trace("Allocated next texture unit: {}", unit);
+		}
 		return unit;
 	}
 

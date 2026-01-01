@@ -29,7 +29,7 @@ public class VertexBufferVisualiser {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-		sb.append("VertexArrayObject:\n");
+		sb.append("VertexArrayObject [").append("bound=").append(vao.isBound()).append("]:\n");
 		if (vao.hasVbo()) {
 			VertexBufferObject vbo = vao.getVbo();
 			sb.append('\t').append("VBO:\n");

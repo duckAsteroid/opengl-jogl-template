@@ -10,3 +10,4 @@ com.asteroid.duck.opengl.experiments.PassthruTexture
 com.asteroid.duck.opengl.experiments.SimpleTexture
 com.asteroid.duck.opengl.experiments.SimpleTextureWithEBO
 com.asteroid.duck.opengl.experiments.SimpleTriangle
+com.asteroid.duck.opengl.experiments.Test

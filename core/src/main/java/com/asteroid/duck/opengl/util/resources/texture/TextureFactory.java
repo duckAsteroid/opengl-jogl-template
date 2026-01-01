@@ -4,6 +4,8 @@ import com.asteroid.duck.opengl.util.resources.io.Loader;
 import com.asteroid.duck.opengl.util.resources.texture.io.ImageLoadingOptions;
 import com.asteroid.duck.opengl.util.resources.texture.io.JavaImageLoader;
 import com.asteroid.duck.opengl.util.resources.texture.io.RawLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -12,7 +14,7 @@ import java.nio.ByteBuffer;
 import java.util.Set;
 
 public class TextureFactory {
-
+	private static final Logger log = LoggerFactory.getLogger(TextureFactory.class);
 	private static final Set<String> IMAGE_FORMATS = Set.of("png", "jpg", "jpeg");
 
 	interface FormatHelper {
@@ -86,7 +88,13 @@ public class TextureFactory {
 
 	public ImageData loadTextureData(String texturePath, ImageLoadingOptions options) throws IOException {
 		if (IMAGE_FORMATS.stream().anyMatch(texturePath::endsWith)) {
+			if (log.isTraceEnabled()) {
+				log.trace("Loading image from {} using JavaImageLoader", texturePath);
+			}
 			return new JavaImageLoader(loader).load(texturePath, options);
+		}
+		if (log.isTraceEnabled()) {
+			log.trace("Loading image from {} using RawImageLoader", texturePath);
 		}
 		return new RawLoader(extractDimensions(texturePath), loader).load(texturePath, options);
 	}

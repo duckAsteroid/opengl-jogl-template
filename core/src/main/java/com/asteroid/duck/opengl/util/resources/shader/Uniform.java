@@ -1,5 +1,8 @@
 package com.asteroid.duck.opengl.util.resources.shader;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.function.BiConsumer;
 
 /**
@@ -8,6 +11,8 @@ import java.util.function.BiConsumer;
  * @param <T> The java type of the uniform
  */
 public class Uniform<T> {
+	private static final Logger LOG = LoggerFactory.getLogger(Uniform.class);
+	private final Uniforms owner;
 	private final String name;
 	private final int location;
 	private final BiConsumer<Integer, T> setter;
@@ -18,7 +23,8 @@ public class Uniform<T> {
 	 * @param location the location of the uniform in the shader program
 	 * @param setter a function that can set the uniform's value, taking location and the new value
 	 */
-	Uniform(String name, int location, BiConsumer<Integer, T> setter) {
+	Uniform(Uniforms owner, String name, int location, BiConsumer<Integer, T> setter) {
+		this.owner = owner;
 		this.name = name;
 		this.location = location;
 		this.setter = setter;
@@ -37,6 +43,9 @@ public class Uniform<T> {
 	 * @param value the new value
 	 */
 	public void set(T value) {
+		if(LOG.isTraceEnabled()) {
+			LOG.trace("Setting uniform '{}' @ {} in {} to value: {}", name, location, owner.getShaderProgram().shortDebugName(), value);
+		}
 		setter.accept(location, value);
 	}
 }

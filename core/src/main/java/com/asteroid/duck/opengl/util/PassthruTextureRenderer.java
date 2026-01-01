@@ -27,7 +27,7 @@ public class PassthruTextureRenderer extends AbstractPassthruRenderer implements
 	}
 
 	protected ShaderProgram initShaderProgram(RenderContext ctx) throws IOException {
-		return ctx.getResourceManager().getSimpleShader(shaderName);
+		return ctx.getResourceManager().getShaderLoader().LoadSimpleShaderProgram(shaderName);
 	}
 
 	@Override

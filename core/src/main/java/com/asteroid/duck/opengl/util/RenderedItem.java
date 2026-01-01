@@ -5,7 +5,11 @@ import com.asteroid.duck.opengl.util.resources.Resource;
 import java.io.IOException;
 
 /**
- * Something that gets a chance to render during the main render loop
+ * The interface to some resource that gets a chance to:
+ * <ol>
+ * 	<li>Initialise before rendering starts</li>
+ * 	<li>Render during the main render loop</li>
+ * </ol>
  */
 public interface RenderedItem extends Resource {
 	void init(RenderContext ctx) throws IOException;

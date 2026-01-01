@@ -39,7 +39,11 @@ public class Uniforms {
 		return location;
 	}
 
-    public boolean has(String name) {
+	ShaderProgram getShaderProgram() {
+		return shaderProgram;
+	}
+
+	public boolean has(String name) {
         return uniformLocation(name) >= 0;
     }
 
@@ -53,25 +57,25 @@ public class Uniforms {
             throw new NoSuchElementException("Could not find uniform with name '" + name + "' in "+shaderProgram);
         }
 		if (Boolean.class.equals(type) || boolean.class.equals(type)) {
-			return (Uniform<T>) new Uniform<>(name, loc, this::setBoolean);
+			return (Uniform<T>) new Uniform<>(this, name, loc, this::setBoolean);
 		}
 		if (Float.class.equals(type) || float.class.equals(type)) {
-			return (Uniform<T>) new Uniform<>(name, loc, this::setFloat);
+			return (Uniform<T>) new Uniform<>(this, name, loc, this::setFloat);
 		}
 		if (Integer.class.equals(type) || int.class.equals(type)) {
-			return (Uniform<T>) new Uniform<>(name, loc, this::setInteger);
+			return (Uniform<T>) new Uniform<>(this, name, loc, this::setInteger);
 		}
 		if (Vector2f.class.isAssignableFrom(type)) {
-			return (Uniform<T>) new Uniform<>(name, loc, this::setVector2f);
+			return (Uniform<T>) new Uniform<>(this, name, loc, this::setVector2f);
 		}
 		if (Vector3f.class.isAssignableFrom(type)) {
-			return (Uniform<T>) new Uniform<>(name, loc, this::setVector3f);
+			return (Uniform<T>) new Uniform<>(this, name, loc, this::setVector3f);
 		}
 		if (Vector4f.class.isAssignableFrom(type)) {
-			return (Uniform<T>) new Uniform<>(name, loc, this::setVector4f);
+			return (Uniform<T>) new Uniform<>(this, name, loc, this::setVector4f);
 		}
 		if (Matrix4f.class.isAssignableFrom(type)) {
-			return (Uniform<T>) new Uniform<>(name, loc, this::setMatrix4f);
+			return (Uniform<T>) new Uniform<>(this, name, loc, this::setMatrix4f);
 		}
 
 		throw new IllegalArgumentException("Unsupported uniform type: " + type.getName());

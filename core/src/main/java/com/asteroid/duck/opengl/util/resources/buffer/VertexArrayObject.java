@@ -109,6 +109,7 @@ public class VertexArrayObject extends AbstractBoundResource implements Rendered
         else {
             log.warn("Neither EBO or VBO initialised");
         }
+        unbind();
     }
 
     @Override

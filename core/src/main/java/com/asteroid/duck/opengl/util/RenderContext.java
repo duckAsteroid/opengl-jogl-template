@@ -34,7 +34,7 @@ public interface RenderContext {
 
 	/**
      * A resource manager for handling resources like
-     * {@link Texture}s
+     * {@link Texture}s, {@link com.asteroid.duck.opengl.util.resources.shader.ShaderProgram}s etc
      *
      * @return the resource manager instance
      */
