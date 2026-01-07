@@ -3,9 +3,9 @@ package com.asteroid.duck.opengl.util.palette;
 import com.asteroid.duck.opengl.util.AbstractPassthruRenderer;
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
-import com.asteroid.duck.opengl.util.resources.texture.ImageData;
+import com.asteroid.duck.opengl.util.resources.texture.io.TextureData;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
-import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
+import com.asteroid.duck.opengl.util.resources.textureunit.TextureUnit;
 import org.lwjgl.BufferUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +41,7 @@ public class PaletteRenderer extends AbstractPassthruRenderer {
 		this.paletteName = paletteName;
 	}
 
-	public static ImageData greyScale() {
+	public static TextureData greyScale() {
 		ByteBuffer raw = BufferUtils.createByteBuffer(256 * 4);
 		for (int i = 0; i < 256; i++) {
 			raw.put((byte) i);
@@ -50,10 +50,10 @@ public class PaletteRenderer extends AbstractPassthruRenderer {
 			raw.put((byte) 255); // A
 		}
 		raw.flip();
-		return new ImageData(raw, new Dimension(256, 1));
+		return new TextureData(raw, new Dimension(256, 1));
 	}
 
-	public static ImageData rbgTestScale() {
+	public static TextureData rbgTestScale() {
 		ByteBuffer raw = BufferUtils.createByteBuffer(256 * 4);
 		int g = 128;
 		int b = 255;
@@ -67,13 +67,13 @@ public class PaletteRenderer extends AbstractPassthruRenderer {
 			raw.put((byte) 255); // A
 		}
 		raw.flip();
-		return new ImageData(raw, new Dimension(256, 1));
+		return new TextureData(raw, new Dimension(256, 1));
 	}
 
 	// Dump a PNG with the rgbTestScale in it
 	public static void main(String[] args) throws IOException {
 		BufferedImage image = new BufferedImage(256, 1, BufferedImage.TYPE_INT_ARGB);
-		ImageData data = rbgTestScale();
+		TextureData data = rbgTestScale();
 		// Iterate over the byte array, 4 bytes at a time
 		ByteBuffer raw = data.buffer();
 		IntBuffer intBuffer = raw.asIntBuffer();

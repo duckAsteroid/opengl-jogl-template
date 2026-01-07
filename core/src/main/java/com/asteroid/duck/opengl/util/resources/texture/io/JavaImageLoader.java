@@ -1,7 +1,6 @@
 package com.asteroid.duck.opengl.util.resources.texture.io;
 
 import com.asteroid.duck.opengl.util.resources.io.Loader;
-import com.asteroid.duck.opengl.util.resources.texture.ImageData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,7 +12,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 
 /**
- * Uses Java ImageIO to load {@link ImageData} data from disk.
+ * Uses Java ImageIO to load {@link TextureData} data from disk.
  * First, create a BufferedImage of the correct raster type.
  * Draw the image onto that raster image and then return the raw raster bytes.
  */
@@ -24,7 +23,7 @@ public class JavaImageLoader implements TextureDataLoader {
 		this.loader = loader;
 	}
 	@Override
-	public ImageData load(String path, ImageLoadingOptions options) throws IOException {
+	public TextureData load(String path, ImageLoadingOptions options) throws IOException {
 		try(InputStream inputStream = loader.open(path)) {
 			BufferedImage bufferedImage = ImageIO.read(inputStream);
 			if (options.singleLine()) {
@@ -49,7 +48,7 @@ public class JavaImageLoader implements TextureDataLoader {
 			if (log.isTraceEnabled()) {
 				log.trace("Loaded {} bytes of image data ({})", imageBuffer.limit(), options);
 			}
-			return new ImageData(imageBuffer, dims);
+			return new TextureData(imageBuffer, dims);
 		}
 	}
 }

@@ -1,7 +1,8 @@
-package com.asteroid.duck.opengl.util.resources.texture;
+package com.asteroid.duck.opengl.util.resources.textureunit;
 
 import com.asteroid.duck.opengl.util.resources.Resource;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
+import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,7 +14,10 @@ import static org.lwjgl.opengl.GL13.glActiveTexture;
 import static org.lwjgl.opengl.GL20.GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS;
 
 /**
- * Texture units are the slots textures are loaded into that can be bound into shaders
+ * Texture units are the slots textures are loaded into that can be bound into shaders.
+ * Shaders refer to textures (typically in a {@link com.asteroid.duck.opengl.util.resources.shader.Uniform})
+ * by the index of the texture unit the texture is bound to.
+ * <p>Clients can change the bound texture at any time</p>
  */
 public class TextureUnit implements Resource, Comparable<TextureUnit> {
 	private static final Logger LOG = LoggerFactory.getLogger(TextureUnit.class);
@@ -49,7 +53,8 @@ public class TextureUnit implements Resource, Comparable<TextureUnit> {
 	 */
 	private Texture boundTexture;
 	/**
-	 * This function (callback) is called when the TextureUnit is disposed of
+	 * This function (callback) is called when the TextureUnit is disposed of.
+	 * Like a lightweight (one) listener for disposal events.
 	 */
 	private final Consumer<TextureUnit> disposalFunction;
 

@@ -1,6 +1,7 @@
 package com.asteroid.duck.opengl.util.resources.texture;
 
 import com.asteroid.duck.opengl.util.resources.io.Loader;
+import com.asteroid.duck.opengl.util.resources.texture.io.TextureData;
 import com.asteroid.duck.opengl.util.resources.texture.io.ImageLoadingOptions;
 import com.asteroid.duck.opengl.util.resources.texture.io.JavaImageLoader;
 import com.asteroid.duck.opengl.util.resources.texture.io.RawLoader;
@@ -24,7 +25,7 @@ public class TextureFactory {
 
 		int dataType();
 
-		void verify(ImageData data) throws IllegalArgumentException;
+		void verify(TextureData data) throws IllegalArgumentException;
 		ByteBuffer pixelData(BufferedImage bufferedImage);
 	}
 
@@ -62,7 +63,7 @@ public class TextureFactory {
 	}
 
 
-	public static Texture createTexture(ImageLoadingOptions options, ImageData data) {
+	public static Texture createTexture(ImageLoadingOptions options, TextureData data) {
 		Texture tex = new Texture();
 
 		tex.setInternalFormat( options.dataFormat().internalFormat());
@@ -82,11 +83,11 @@ public class TextureFactory {
 	}
 
 	public Texture LoadTexture(String texturePath, ImageLoadingOptions options) throws IOException {
-			ImageData imageData = loadTextureData(texturePath, options);
-			return createTexture(options, imageData);
+			TextureData textureData = loadTextureData(texturePath, options);
+			return createTexture(options, textureData);
 	}
 
-	public ImageData loadTextureData(String texturePath, ImageLoadingOptions options) throws IOException {
+	public TextureData loadTextureData(String texturePath, ImageLoadingOptions options) throws IOException {
 		if (IMAGE_FORMATS.stream().anyMatch(texturePath::endsWith)) {
 			if (log.isTraceEnabled()) {
 				log.trace("Loading image from {} using JavaImageLoader", texturePath);

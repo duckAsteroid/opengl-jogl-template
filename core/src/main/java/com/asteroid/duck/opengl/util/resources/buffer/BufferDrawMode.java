@@ -1,11 +1,13 @@
 package com.asteroid.duck.opengl.util.resources.buffer;
 
+import com.asteroid.duck.opengl.util.GLCoded;
+
 import static org.lwjgl.opengl.GL11.*;
 
 /**
  * Defines the drawing mode to use when rendering the vertex data.
  */
-public enum BufferDrawMode {
+public enum BufferDrawMode implements GLCoded {
     /**
      * Interprets each vertex as a single point.
      */
@@ -26,7 +28,7 @@ public enum BufferDrawMode {
         this.glCode = glCode;
     }
 
-    public int getGlCode() {
+    public int openGlCode() {
         return glCode;
     }
 }

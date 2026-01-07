@@ -3,7 +3,7 @@ package com.asteroid.duck.opengl.util.resources.texture.io;
 import com.asteroid.duck.opengl.util.resources.texture.DataFormat;
 
 /**
- * Represents various options for loading images into textures.
+ * Represents various options for how we load images file data into textures.
  *
  * @param flipY If true, the image will be flipped vertically during loading.
  * @param singleLine If true, the image will be loaded as a single line texture.

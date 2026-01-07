@@ -40,3 +40,6 @@ I am writing here what I was doing, and what would do next each time I leave the
 Test does not work because it shares the same program (same source) - it does not
 reset the texture unit uniform between calls so the two passthru texture objects end
 up rendering the same (last) texture (image).
+
+Health warning PassthruTextureRenderer does not "pool" shaders - each instance creates a new shader : or they get
+hellish confused about who renders which a texture unit

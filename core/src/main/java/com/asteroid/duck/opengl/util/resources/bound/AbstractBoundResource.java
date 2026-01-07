@@ -1,5 +1,6 @@
-package com.asteroid.duck.opengl.util.resources;
+package com.asteroid.duck.opengl.util.resources.bound;
 
+import com.asteroid.duck.opengl.util.resources.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

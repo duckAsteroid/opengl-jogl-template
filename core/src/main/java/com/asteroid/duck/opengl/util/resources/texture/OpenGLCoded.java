@@ -1,5 +1,7 @@
 package com.asteroid.duck.opengl.util.resources.texture;
 
+import com.asteroid.duck.opengl.util.GLCoded;
+
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
@@ -7,13 +9,7 @@ import java.util.stream.IntStream;
  * An interface that represents an OpenGL object that has an integer code.
  * This interface provides methods to retrieve the OpenGL code and parameters associated with the object.
  */
-public interface OpenGLCoded extends Supplier<Integer> {
-	/**
-	 * Returns the OpenGL code associated with this object.
-	 *
-	 * @return the OpenGL code
-	 */
-	int openGlCode();
+public interface OpenGLCoded extends GLCoded {
 
 	/**
 	 * Returns an array of OpenGL parameters associated with this object.

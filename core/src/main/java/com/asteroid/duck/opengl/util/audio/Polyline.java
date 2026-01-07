@@ -43,7 +43,7 @@ public class Polyline implements RenderedItem {
 	private Vector4f lineColour = new Vector4f(1.0f,0.0f,0.0f,1.0f);
 
 	private Vector4f backgroundColour = new Vector4f(0.4f, 0.4f, 0.4f, 1.0f);
-	private boolean clear = false;
+	private boolean clear = true;
 
 	private int fillPoints(FloatBuffer pointBuffer) {
 		// how many samples are available?

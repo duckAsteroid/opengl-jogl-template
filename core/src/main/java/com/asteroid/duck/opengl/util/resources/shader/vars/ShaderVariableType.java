@@ -1,5 +1,7 @@
 package com.asteroid.duck.opengl.util.resources.shader.vars;
 
+import com.asteroid.duck.opengl.util.GLCoded;
+
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL21.*;
@@ -10,7 +12,7 @@ import static org.lwjgl.opengl.GL46.*;
  * An enum over the Open GL shader (uniform/attribute) variable data types:
  * <a href="https://registry.khronos.org/OpenGL-Refpages/gl4/html/glGetActiveUniform.xhtml">Original table</a>
  */
-public enum ShaderVariableType {
+public enum ShaderVariableType implements GLCoded {
 	FLOAT(GL_FLOAT,"float"),
 	FLOAT_VEC2(GL_FLOAT_VEC2,"vec2"),
 	FLOAT_VEC3(GL_FLOAT_VEC3,"vec3"),
@@ -138,7 +140,7 @@ public enum ShaderVariableType {
 		return glslTypeName;
 	}
 
-	public int getValue() {
+	public int openGlCode() {
 		return value;
 	}
 

@@ -1,6 +1,6 @@
 package com.asteroid.duck.opengl.util.resources.buffer.ebo;
 
-import com.asteroid.duck.opengl.util.resources.AbstractBoundResource;
+import com.asteroid.duck.opengl.util.resources.bound.AbstractBoundResource;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
 import com.asteroid.duck.opengl.util.resources.buffer.BufferDrawMode;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexBufferObject;

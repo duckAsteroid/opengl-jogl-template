@@ -4,10 +4,10 @@ import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.resources.Resource;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderLoader;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
-import com.asteroid.duck.opengl.util.resources.texture.ImageData;
+import com.asteroid.duck.opengl.util.resources.texture.io.TextureData;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import com.asteroid.duck.opengl.util.resources.texture.TextureFactory;
-import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
+import com.asteroid.duck.opengl.util.resources.textureunit.TextureUnit;
 import com.asteroid.duck.opengl.util.resources.texture.io.ImageLoadingOptions;
 
 import java.io.IOException;
@@ -27,7 +27,7 @@ public interface ResourceManager extends Resource {
 	void putTexture(String name, Texture texture);
 	Texture getTexture(String name, String path);
 	Texture getTexture(String name, String path, ImageLoadingOptions options);
-	ImageData loadTextureData(String image, ImageLoadingOptions options) throws IOException;
+	TextureData loadTextureData(String image, ImageLoadingOptions options) throws IOException;
 	TextureFactory getTextureFactory();
 
 	// shader access

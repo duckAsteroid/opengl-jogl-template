@@ -1,11 +1,13 @@
 package com.asteroid.duck.opengl.util.resources.buffer.vbo;
 
+import com.asteroid.duck.opengl.util.GLCoded;
+
 import static org.lwjgl.opengl.GL15.*;
 
 /**
  * A hint to the GL driver about how the data in the buffer will be used and updated.
  */
-public enum UpdateHint {
+public enum UpdateHint implements GLCoded {
     /**
      * The data store contents will be modified once and used many times.
      */
@@ -25,7 +27,7 @@ public enum UpdateHint {
         this.glCode = glCode;
     }
 
-    public int getGlCode() {
+    public int openGlCode() {
         return glCode;
     }
 }

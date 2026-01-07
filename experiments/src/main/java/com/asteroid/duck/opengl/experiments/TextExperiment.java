@@ -13,15 +13,13 @@ import com.asteroid.duck.opengl.util.resources.buffer.vbo.*;
 import com.asteroid.duck.opengl.util.resources.font.FontTexture;
 import com.asteroid.duck.opengl.util.resources.font.FontTextureFactory;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
-import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
+import com.asteroid.duck.opengl.util.resources.textureunit.TextureUnit;
 import org.joml.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.*;
 import java.io.IOException;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class TextExperiment extends CompositeRenderItem implements Experiment {
 	private static final Logger LOG = LoggerFactory.getLogger(TextExperiment.class);

@@ -1,6 +1,6 @@
 package com.asteroid.duck.opengl.experiments;
 
-import com.asteroid.duck.opengl.util.resources.texture.ImageData;
+import com.asteroid.duck.opengl.util.resources.texture.io.TextureData;
 
 import java.awt.*;
 import java.nio.ByteBuffer;
@@ -42,7 +42,7 @@ public class Utils {
 		};
 	}
 
-	public static ImageData createTestData(Dimension size, TestType type) {
+	public static TextureData createTestData(Dimension size, TestType type) {
 		ByteBuffer imageData = ByteBuffer.allocateDirect(size.width * size.height);
 		for (int y = 0; y < size.height; y++) {
 			for (int x = 0; x < size.width; x++) {
@@ -51,7 +51,7 @@ public class Utils {
 			}
 		}
 		imageData.flip();
-		return new ImageData(imageData, size);
+		return new TextureData(imageData, size);
 	}
 
 

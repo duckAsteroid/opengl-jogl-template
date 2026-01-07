@@ -7,7 +7,7 @@ import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.*;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
-import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
+import com.asteroid.duck.opengl.util.resources.textureunit.TextureUnit;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
 

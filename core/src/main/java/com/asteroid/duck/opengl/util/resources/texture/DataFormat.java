@@ -1,5 +1,7 @@
 package com.asteroid.duck.opengl.util.resources.texture;
 
+import com.asteroid.duck.opengl.util.resources.texture.io.TextureData;
+
 import java.awt.*;
 import java.awt.color.ColorSpace;
 import java.awt.image.*;
@@ -101,7 +103,7 @@ public enum DataFormat implements TextureFactory.FormatHelper {
 	}
 
 	@Override
-	public void verify(ImageData data) throws IllegalArgumentException {
+	public void verify(TextureData data) throws IllegalArgumentException {
 		int expectedSize = data.totalPixelCount() * bytesPerPixel;
 		if (expectedSize != data.buffer().remaining()) {
 			throw new IllegalArgumentException("Buffer size was "+ data.buffer().remaining() + ", expected " +expectedSize);

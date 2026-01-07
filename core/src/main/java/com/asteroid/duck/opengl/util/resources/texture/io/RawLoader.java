@@ -1,7 +1,6 @@
 package com.asteroid.duck.opengl.util.resources.texture.io;
 
 import com.asteroid.duck.opengl.util.resources.io.Loader;
-import com.asteroid.duck.opengl.util.resources.texture.ImageData;
 import org.lwjgl.BufferUtils;
 
 import java.awt.*;
@@ -37,13 +36,13 @@ public class RawLoader implements TextureDataLoader {
      * @throws IOException If an error occurs while reading the file.
      */
     @Override
-    public ImageData load(String path, ImageLoadingOptions options) throws IOException {
+    public TextureData load(String path, ImageLoadingOptions options) throws IOException {
         try(var is = loader.open(path)) {
             byte[] bytes = is.readAllBytes();
             ByteBuffer buffer = BufferUtils.createByteBuffer(bytes.length);
             buffer.put(bytes);
             buffer.flip();
-            return new ImageData(buffer, size);
+            return new TextureData(buffer, size);
         }
     }
 }

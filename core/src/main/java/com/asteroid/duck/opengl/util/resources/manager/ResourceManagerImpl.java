@@ -4,10 +4,10 @@ import com.asteroid.duck.opengl.util.resources.Resource;
 import com.asteroid.duck.opengl.util.resources.io.Loader;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderLoader;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
-import com.asteroid.duck.opengl.util.resources.texture.ImageData;
+import com.asteroid.duck.opengl.util.resources.texture.io.TextureData;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import com.asteroid.duck.opengl.util.resources.texture.TextureFactory;
-import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
+import com.asteroid.duck.opengl.util.resources.textureunit.TextureUnit;
 import com.asteroid.duck.opengl.util.resources.texture.io.ImageLoadingOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -110,7 +110,7 @@ public class ResourceManagerImpl implements Resource, ResourceManager {
 		return textures.get(name);
 	}
 
-	public ImageData loadTextureData(String image, ImageLoadingOptions options) throws IOException {
+	public TextureData loadTextureData(String image, ImageLoadingOptions options) throws IOException {
 		return textureFactory.loadTextureData(image, options);
 	}
 

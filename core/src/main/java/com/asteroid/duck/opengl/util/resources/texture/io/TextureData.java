@@ -1,4 +1,4 @@
-package com.asteroid.duck.opengl.util.resources.texture;
+package com.asteroid.duck.opengl.util.resources.texture.io;
 
 import java.awt.*;
 import java.nio.ByteBuffer;
@@ -9,7 +9,7 @@ import java.nio.ByteBuffer;
  * @param buffer The pixel buffer containing the image data.
  * @param size   The dimensions of the image.
  */
-public record ImageData(ByteBuffer buffer, Dimension size) {
+public record TextureData(ByteBuffer buffer, Dimension size) {
 
     /**
      * Calculates the total number of pixels in the image.

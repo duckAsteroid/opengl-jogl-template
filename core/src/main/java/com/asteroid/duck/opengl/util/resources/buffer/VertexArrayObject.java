@@ -2,7 +2,7 @@ package com.asteroid.duck.opengl.util.resources.buffer;
 
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.RenderedItem;
-import com.asteroid.duck.opengl.util.resources.AbstractBoundResource;
+import com.asteroid.duck.opengl.util.resources.bound.AbstractBoundResource;
 import com.asteroid.duck.opengl.util.resources.buffer.ebo.ElementBufferObject;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexBufferObject;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexDataStructure;
