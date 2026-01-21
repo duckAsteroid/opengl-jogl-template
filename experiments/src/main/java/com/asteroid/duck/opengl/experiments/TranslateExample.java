@@ -36,12 +36,12 @@ public class TranslateExample extends CompositeRenderItem implements Experiment 
 
 		// translate the offscreen texture
 		TranslateTextureRenderer translationStage = new TranslateTextureRenderer("yabadabado", "translate");
-    OffscreenTextureRenderer offscreenTrans = new OffscreenTextureRenderer(translationStage, offscreen);
-    add(offscreenTrans);
+    	OffscreenTextureRenderer offscreenTrans = new OffscreenTextureRenderer(translationStage, offscreen);
+    	add(offscreenTrans);
 
 		// render the offscreen to the screen
 		PassthruTextureRenderer screenRenderer = new PassthruTextureRenderer("yabadabado");
-    add(screenRenderer);
+    	add(screenRenderer);
 
 		super.init(ctx);
 	}
