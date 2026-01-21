@@ -12,6 +12,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
+/**
+ * A renderer that translates a texture using a translation table (a special texture).
+ * A translation table is a 2D texture where each pixel's value indicates the coordinates
+ * in the source texture to sample from.
+ */
 public class TranslateTextureRenderer extends AbstractPassthruRenderer {
 	private static final Logger LOG = LoggerFactory.getLogger(TranslateTextureRenderer.class);
 
@@ -20,7 +25,6 @@ public class TranslateTextureRenderer extends AbstractPassthruRenderer {
 	private final String translationTableTextureName;
 	private TextureUnit translationTableTextureUnit;
 
-	private Triangles renderedShape;
 	private final ShaderVariables variables = new ShaderVariables();
 
 	public TranslateTextureRenderer(String textureName, String translationTableTextureName) {

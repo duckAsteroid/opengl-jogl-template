@@ -3,9 +3,9 @@ package com.asteroid.duck.opengl.experiments;
 import com.asteroid.duck.opengl.util.PassthruTextureRenderer;
 import com.asteroid.duck.opengl.util.color.StandardColors;
 import com.asteroid.duck.opengl.util.geom.Vertice;
-import com.asteroid.duck.opengl.util.CompositeRenderItem;
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.resources.buffer.BufferDrawMode;
+import com.asteroid.duck.opengl.util.resources.buffer.UpdateHint;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
 import com.asteroid.duck.opengl.util.resources.buffer.debug.VertexBufferVisualiser;
 import com.asteroid.duck.opengl.util.resources.buffer.ebo.ElementBufferObject;
@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory;
 import java.awt.*;
 import java.io.IOException;
 
-public class TextExperiment extends CompositeRenderItem implements Experiment {
+public class TextExperiment  implements Experiment {
 	private static final Logger LOG = LoggerFactory.getLogger(TextExperiment.class);
 	private FontTexture fontTexture;
 	private final VertexArrayObject vao = new VertexArrayObject();
@@ -41,7 +41,7 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 
 	@Override
 	public String getDescription() {
-		return "Attempts to render a single character to the screen";
+		return "Attempts to render a single character string to the screen";
 	}
 
 	@Override

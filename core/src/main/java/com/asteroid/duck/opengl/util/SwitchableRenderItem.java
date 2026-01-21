@@ -1,7 +1,7 @@
 package com.asteroid.duck.opengl.util;
 
 /**
- * A {@link CompositeRenderItem} that selects one of it's children to render
+ * A {@link CompositeRenderItem} that selects one of its children to render
  */
 public class SwitchableRenderItem extends CompositeRenderItem {
 	private int selectedItem = 0;
@@ -9,21 +9,29 @@ public class SwitchableRenderItem extends CompositeRenderItem {
 	@Override
 	public void doRender(RenderContext ctx) {
 		if (!items().isEmpty()) {
-			if (selectedItem < 0) {
-				selectedItem = items().size() -1;
-			}
-			if (selectedItem >= items().size()) {
-				selectedItem = 0;
-			}
 			items().get(selectedItem).doRender(ctx);
 		}
 	}
 
+	public int getSelectedItem() {
+		return selectedItem;
+	}
+
+	public void setSelectedItem(int item) {
+		selectedItem = item;
+		if (selectedItem < 0) {
+			selectedItem = items().size() -1;
+		}
+		if (selectedItem >= items().size()) {
+			selectedItem = 0;
+		}
+	}
+
 	public void next() {
-		selectedItem++;
+		setSelectedItem(getSelectedItem() + 1);
 	}
 
 	public void previous() {
-    selectedItem--;
-  }
+    	setSelectedItem(getSelectedItem() - 1);
+  	}
 }

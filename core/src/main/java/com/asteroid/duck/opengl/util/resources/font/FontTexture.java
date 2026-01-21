@@ -12,9 +12,10 @@ import com.asteroid.duck.opengl.util.resources.texture.Texture;
  * A wrapper around a glyph-image based font. The glyphs (character images) are stored in a GPU
  * texture, and the various locations + sizes of each letter are described in a map of
  * {@link GlyphData} objects.
- *
+ * <p>
  * Based on (but different to)
  * <a href="https://github.com/SilverTiger/lwjgl3-tutorial/blob/master/src/silvertiger/tutorial/lwjgl/text/Font.java">this</a>
+ * </p>
  */
 
 public class FontTexture implements Resource {

@@ -104,9 +104,11 @@ public class VertexArrayObject  implements RenderedItem {
     @Override
     public void doRender(RenderContext ctx) {
         bind(ctx);
+        // if we have an EBO (i.e. a set of indices) use glDrawElements
         if (ebo != null) {
             glDrawElements(drawMode.glCode, ebo.capacity(), ebo.getType(), 0);
         }
+        // otherwise if we have a VBO glDrawArrays
         else if (vbo != null) {
             glDrawArrays(drawMode.glCode, 0, vbo.size());
         }

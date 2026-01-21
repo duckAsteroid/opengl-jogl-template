@@ -1,4 +1,4 @@
-package com.asteroid.duck.opengl.util.resources.buffer.vbo;
+package com.asteroid.duck.opengl.util.resources.buffer;
 
 import com.asteroid.duck.opengl.util.GLCoded;
 

@@ -4,6 +4,7 @@ import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.resources.Resource;
 import com.asteroid.duck.opengl.util.resources.bound.BindingException;
 import com.asteroid.duck.opengl.util.resources.buffer.BufferDrawMode;
+import com.asteroid.duck.opengl.util.resources.buffer.UpdateHint;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexBufferObject;
 import org.lwjgl.BufferUtils;
@@ -37,6 +38,8 @@ public class ElementBufferObject implements Resource {
 
 	public static final int GL_TYPE = GL_UNSIGNED_INT;
 
+	private UpdateHint updateHint = UpdateHint.STATIC;
+
 	public ElementBufferObject(VertexArrayObject owner, int capacity) {
 		Objects.requireNonNull(owner, "Vertex array object must not be null");
 		this.owner = owner;
@@ -44,6 +47,17 @@ public class ElementBufferObject implements Resource {
 			throw new IllegalArgumentException("Capacity must be greater than zero.");
 		}
 		this.capacity = capacity;
+	}
+
+	public UpdateHint getUpdateHint() {
+		return updateHint;
+	}
+
+	public void setUpdateHint(UpdateHint updateHint) {
+		if (updateHint == null) {
+			updateHint = UpdateHint.STATIC;
+		}
+		this.updateHint = updateHint;
 	}
 
 	public int id() throws BindingException {
@@ -60,7 +74,7 @@ public class ElementBufferObject implements Resource {
 		indexBuffer = BufferUtils.createShortBuffer(capacity);
 		ebo = glGenBuffers();
 		bind(ctx);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBuffer, GL_STATIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBuffer, updateHint.openGlCode());
 	}
 
 	protected void bind(RenderContext ctx) {
@@ -77,12 +91,12 @@ public class ElementBufferObject implements Resource {
 		indexBuffer.clear();
 		indexBuffer.put(indices);
 		indexBuffer.flip();
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBuffer, GL_STATIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBuffer, updateHint.openGlCode());
 	}
 
 	public void update() {
 		indexBuffer.flip();
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBuffer, GL_STATIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBuffer, updateHint.openGlCode());
 	}
 
 	public void update(Iterable<Short> indices) {
@@ -91,7 +105,7 @@ public class ElementBufferObject implements Resource {
 			indexBuffer.put(index);
 		}
 		indexBuffer.flip();
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBuffer, GL_STATIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBuffer, updateHint.openGlCode());
 	}
 
 	public void clear() {

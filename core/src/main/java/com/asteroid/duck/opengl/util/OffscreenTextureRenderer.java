@@ -6,10 +6,10 @@ import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import java.io.IOException;
 
 /**
- * Wraps another {@link RenderedItem} and renders it to {@link Texture} using a {@link FrameBuffer}.
+ * Wraps another {@link RenderedItem} and renders it to an offscreen {@link Texture} using a {@link FrameBuffer}.
  */
 public class OffscreenTextureRenderer implements RenderedItem {
-	// wrap another rendered item and render it to texture using a FBO
+	// wrap another rendered item and render it to texture using an FBO
 	private final RenderedItem renderedItem;
 	private final FrameBuffer  fbo;
 

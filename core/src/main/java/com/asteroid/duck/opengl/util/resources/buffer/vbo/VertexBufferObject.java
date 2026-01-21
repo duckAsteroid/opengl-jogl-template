@@ -3,6 +3,7 @@ package com.asteroid.duck.opengl.util.resources.buffer.vbo;
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.resources.Resource;
 import com.asteroid.duck.opengl.util.resources.buffer.BufferDrawMode;
+import com.asteroid.duck.opengl.util.resources.buffer.UpdateHint;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import org.lwjgl.system.MemoryUtil;
@@ -14,7 +15,6 @@ import java.util.*;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import static org.lwjgl.opengl.GL11.glDrawArrays;
 import static org.lwjgl.opengl.GL15.*;
 import static org.lwjgl.opengl.GL20.*;
 import static org.lwjgl.opengl.GL30.glGenVertexArrays;
@@ -184,7 +184,7 @@ public class VertexBufferObject extends AbstractList<Map<VertexElement, ?>> impl
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		createBuffer();
 		// initialise the buffer with the memory buffer
-		glBufferData(GL_ARRAY_BUFFER, memBuffer, updateHint.glCode);
+		glBufferData(GL_ARRAY_BUFFER, memBuffer, updateHint.openGlCode());
 	}
 
 	/**
@@ -318,7 +318,7 @@ public class VertexBufferObject extends AbstractList<Map<VertexElement, ?>> impl
 		if (hint == null) {
 			hint = UpdateHint.STATIC;
 		}
-		glBufferData(GL_ARRAY_BUFFER, memBuffer, hint.glCode);
+		glBufferData(GL_ARRAY_BUFFER, memBuffer, hint.openGlCode());
 	}
 
 
