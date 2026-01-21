@@ -175,13 +175,13 @@ public class TextureRenderer2 {
 				, null);
 
 		vertexBufferObject = vao.createVbo(structure, 6);
-		vertexBufferObject.init();
+		vertexBufferObject.init(null);
 		for (int i = 0; i < vertices.length; i++) {
 			vertexBufferObject.set(i, vertices[i]);
 		}
 		updateBufferData(1.0f);
 
-		shaderProgram.use();
+		shaderProgram.use(null);
 		vertexBufferObject.setup(shaderProgram);
 
 		texture = loadTexture("src/main/resources/textures/molly.jpg"); // texture
@@ -213,10 +213,10 @@ public class TextureRenderer2 {
 			double elapsedTime = GLFW.glfwGetTime() - startTime;
 
 			final double frequency = 0.5;
-			vao.bind();
+			vao.bind(null);
 			updateBufferData((float)Math.abs(Math.sin(frequency * (2 * Math.PI * elapsedTime))));
 
-			shaderProgram.use();
+			shaderProgram.use(null);
 
 			textureUnit.bind(texture);
 			//textureUnit.useInShader(shaderProgram, "ourTexture");

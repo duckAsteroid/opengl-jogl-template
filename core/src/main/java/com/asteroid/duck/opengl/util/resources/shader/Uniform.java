@@ -48,4 +48,9 @@ public class Uniform<T> {
 		}
 		setter.accept(location, value);
 	}
+
+	public Runnable setLater(T value) {
+		owner.getShaderProgram();
+		return () -> set(value);
+	}
 }

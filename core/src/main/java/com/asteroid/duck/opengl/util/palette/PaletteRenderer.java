@@ -107,9 +107,8 @@ public class PaletteRenderer extends AbstractPassthruRenderer {
 	@Override
 	public void init(RenderContext ctx) throws IOException {
 		super.init(ctx);
-		shaderProgram.use();
+		shaderProgram.use(ctx);
 		this.paletteUnit.useInShader(shaderProgram, "palette");
-		shaderProgram.unuse();
 	}
 
 	@Override

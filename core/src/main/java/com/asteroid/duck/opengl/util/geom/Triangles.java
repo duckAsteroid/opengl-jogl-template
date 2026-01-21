@@ -91,14 +91,14 @@ public class Triangles implements RenderedItem {
         // Create a VBO and bind it
         var structure = new VertexDataStructure(new VertexElement(VertexElementType.VEC_2F, "position"));
         vbo = vao.createVbo(structure, vertices.length);
-        vbo.init();
+        vbo.init(ctx);
         for(int v = 0; v < vertices.length; v++) {
             vbo.set(v, vertices[v]);
         }
         vbo.update(UpdateHint.STATIC);
         // Create an EBO and bind it
         ebo = vao.createEbo(indices.length);
-        ebo.init();
+        ebo.init(ctx);
         ebo.put(indices);
     }
 
@@ -107,7 +107,7 @@ public class Triangles implements RenderedItem {
             shaderProgram = ctx.getResourceManager().getShader("simple", "simple/vertex.glsl", "simple/frag.glsl", null);
         }
         // setup with VBO
-        shaderProgram.use();
+        shaderProgram.use(ctx);
 		// setup the vertex attribute pointer to tell GL what shape our vertices are (2 floats)
 		vbo.setup(shaderProgram);
 	}
@@ -122,7 +122,7 @@ public class Triangles implements RenderedItem {
 
     @Override
     public void doRender(RenderContext ctx) {
-        shaderProgram.use();
+        shaderProgram.use(ctx);
         if (shaderProgram.uniforms().has("color")) {
             Vector4f tempColor = color;
             if (freq != null) {
@@ -135,7 +135,6 @@ public class Triangles implements RenderedItem {
             shaderProgram.uniforms().get("color", Vector4f.class).set(tempColor);
         }
         vao.doRender(ctx);
-        shaderProgram.unuse();
     }
 
 	public void dispose() {

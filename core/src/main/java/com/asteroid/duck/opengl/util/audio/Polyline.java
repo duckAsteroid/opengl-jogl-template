@@ -2,7 +2,11 @@ package com.asteroid.duck.opengl.util.audio;
 
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.RenderedItem;
+import com.asteroid.duck.opengl.util.color.StandardColors;
 import com.asteroid.duck.opengl.util.keys.KeyRegistry;
+import com.asteroid.duck.opengl.util.resources.buffer.BufferDrawMode;
+import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
+import com.asteroid.duck.opengl.util.resources.buffer.vbo.*;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
@@ -15,6 +19,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.function.Consumer;
 
 import static com.asteroid.duck.opengl.util.audio.LineAcquirer.IDEAL;
 import static org.lwjgl.opengl.GL11.*;
@@ -29,21 +37,23 @@ import static org.lwjgl.opengl.GL30.glGenVertexArrays;
  */
 public class Polyline implements RenderedItem {
 	private ShaderProgram shaderProgram = null;
-	private int vbo;
-	private int vao;
-
-	private MemoryStack mem;
+	private VertexArrayObject vao = new VertexArrayObject();
+	private VertexBufferObject vbo;
 	private FloatBuffer pointBuffer;
+	// Buffer for raw audio data read from AudioDataSource
 	private ByteBuffer audioBuffer;
 	private RollingFloatBuffer rollingFloatBuffer;
 	private AudioDataSource openLine;
 	private int bytesPerSample;
 
 	private float lineWidth = 4.0f;
-	private Vector4f lineColour = new Vector4f(1.0f,0.0f,0.0f,1.0f);
+	private Vector4f lineColour = StandardColors.RED.get();
 
-	private Vector4f backgroundColour = new Vector4f(0.4f, 0.4f, 0.4f, 1.0f);
+	private Vector4f backgroundColour = StandardColors.BLACK.get();
+
 	private boolean clear = true;
+
+	private List<Consumer<RenderContext>> renderActions = Collections.synchronizedList(new LinkedList<>());
 
 	private int fillPoints(FloatBuffer pointBuffer) {
 		// how many samples are available?
@@ -60,27 +70,19 @@ public class Polyline implements RenderedItem {
 
 		pointBuffer.clear();
 		rollingFloatBuffer.read(pointBuffer);
-
 		pointBuffer.flip();
 
 		return pointBuffer.remaining() / 2;
 	}
 
-	public static final boolean isEqual(double expected, float actual) {
-		final double error = 0.001;
-		double min = expected - error;
-		double max = expected + error;
-		return actual > min && actual < max;
-	}
 
 	@Override
 	public void init(RenderContext ctx) throws IOException {
-		addKeyHandlers(ctx.getKeyRegistry());
+		addKeyHandlers(ctx);
 		ctx.setDesiredUpdateFrequency(30.0);
 
-		mem = MemoryStack.stackPush();
-		int BUFFER_SIZE = ctx.getWindow().width;
-		pointBuffer = mem.mallocFloat(BUFFER_SIZE * 2);
+
+		final int BUFFER_SIZE = ctx.getWindow().width;
 		rollingFloatBuffer = new RollingFloatBuffer(BUFFER_SIZE);
 		rollingFloatBuffer.setMax(15000);
 
@@ -105,18 +107,23 @@ public class Polyline implements RenderedItem {
 
 		shaderProgram = ctx.getResourceManager().getShader("polyline", "polyline/vertex.glsl","polyline/frag.glsl", null);
 
-		vao = glGenVertexArrays();
-		glBindVertexArray(vao);
+		vao.init(ctx);
+		vao.setDrawMode(BufferDrawMode.LINE_STRIP);
+		VertexElement vertex = new VertexElement(VertexElementType.VEC_2F, "vertex");
+		VertexDataStructure structure = new VertexDataStructure(vertex);
+		vbo = vao.createVbo(structure, BUFFER_SIZE);
+		vbo.init(ctx);
+		pointBuffer = vbo.memBuffer().asFloatBuffer();
 
-		vbo = glGenBuffers();
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		shaderProgram.use(ctx);
 
-		int vertexAttribLocation = shaderProgram.getAttributeLocation("vertex");
-		glVertexAttribPointer(vertexAttribLocation, 2, GL_FLOAT, false, 0, 0);
-		glEnableVertexAttribArray(vertexAttribLocation);
+		vbo.setup(shaderProgram);
+
+		shaderProgram.uniforms().get("lineColor", Vector4f.class).set(lineColour);
 	}
 
-	private void addKeyHandlers(KeyRegistry ctx) {
+	private void addKeyHandlers(final RenderContext renderContext) {
+		var ctx = renderContext.getKeyRegistry();
 		ctx.registerKeyAction(GLFW.GLFW_KEY_UP, () -> rollingFloatBuffer.incMax(100), "Increase max by 100");
 		ctx.registerKeyAction(GLFW.GLFW_KEY_UP, GLFW.GLFW_MOD_SHIFT, () -> rollingFloatBuffer.incMax(1000), "Increase max by 1000");
 		ctx.registerKeyAction(GLFW.GLFW_KEY_DOWN, () -> rollingFloatBuffer.decMax(100), "Decrease max by 100");
@@ -124,6 +131,17 @@ public class Polyline implements RenderedItem {
 		ctx.registerKeyAction(GLFW.GLFW_KEY_Q, this::increaseLineWidth, "Increase line width");
 		ctx.registerKeyAction(GLFW.GLFW_KEY_A, this::decreaseLineWidth, "Decrease line width");
 		ctx.registerKeyAction(GLFW.GLFW_KEY_C, this::toggleClear, "Toggle clear screen on render");
+		ctx.registerKeyAction(GLFW.GLFW_KEY_L, () -> this.randomLineColour(renderContext), "Random line colour");
+	}
+
+	final StandardColors[] colors = StandardColors.values();
+
+	private void randomLineColour(RenderContext ctx) {
+		int rnd = ctx.getRandom().nextInt(colors.length);
+		StandardColors color = colors[rnd];
+		System.out.println("Setting line color to " + color.name());
+		this.lineColour = color.get();
+		shaderProgram.uniforms().get("lineColor", Vector4f.class).set(lineColour);
 	}
 
 
@@ -152,22 +170,13 @@ public class Polyline implements RenderedItem {
 		}
 
 		Rectangle window = ctx.getWindow();
-		shaderProgram.use();
+		shaderProgram.use(ctx);
 		//shaderProgram.uniforms().get("resolution", Vector2f.class).set(new Vector2f(window.width, window.height));
-		shaderProgram.uniforms().get("lineColor", Vector4f.class).set(lineColour);
 
 
-
-		glBindVertexArray(vao);
-		//glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-		glBufferData(GL_ARRAY_BUFFER, pointBuffer, GL_DYNAMIC_DRAW);
+		vbo.update(UpdateHint.DYNAMIC);
 		glLineWidth(lineWidth);
-
-		glDrawArrays(GL_LINE_STRIP, 0, points);
-
-		glBindVertexArray(0);
-		//glBindBuffer(GL_ARRAY_BUFFER, 0);
+		vao.doRender(ctx);
 	}
 
 	@Override
@@ -175,8 +184,7 @@ public class Polyline implements RenderedItem {
 		openLine.stop();
 		openLine.close();
 		shaderProgram.dispose();
-		glDeleteBuffers(vbo);
-		mem.close();
+		vao.dispose();
 	}
 
 	public Vector4f getLineColour() {

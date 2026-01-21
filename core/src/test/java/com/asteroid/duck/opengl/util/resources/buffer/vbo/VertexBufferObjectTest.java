@@ -56,7 +56,7 @@ class VertexBufferObjectTest {
 				subject = vao.createVbo(structure, SIZE);
 
 				// initialise
-				subject.init();
+				subject.init(null);
 
 
 				// add some data

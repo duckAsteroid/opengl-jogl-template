@@ -62,7 +62,7 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 
 		initText(ctx, new Point(10, 200), "Hello World!");
 		// setup the shader
-		shader.use();
+		shader.use(ctx);
 		textureUnit.useInShader(shader, "tex");
 
 		// put the ortho matrix into the shader
@@ -72,7 +72,7 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 		shader.uniforms().get("textColor", Vector4f.class).set(StandardColors.LIGHTBLUE.color);
 
 		// setup the debug shader
-		debugShader.use();
+		debugShader.use(ctx);
 		debugShader.uniforms().get("projection", Matrix4f.class).set(ortho);
 		debugShader.uniforms().get("lineColor", Vector4f.class).set(StandardColors.REBECCAPURPLE.color);
 	}
@@ -86,15 +86,14 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 		// create an index buffer to point at the vertices of the triangles
 		int[] indices = Vertice.standardSixVertices().mapToInt(fourCorners::indexOf).toArray();
 		this.elementBufferObject = vao.createEbo(indices.length * text.length());
-		elementBufferObject.init();
+		elementBufferObject.init(ctx);
 		elementBufferObject.clear();
 		// vertex data structure to hold the screen position and texture position
 		VertexDataStructure structure = new VertexDataStructure(screenPosition, texturePosition);
 		this.fontDataBuffer = vao.createVbo(structure, size);
-		fontDataBuffer.init();
-		shader.use();
+		fontDataBuffer.init(ctx);
+		shader.use(ctx);
 		fontDataBuffer.setup(shader);
-		vao.unbind();
 
 		// the screen size
 		float width = ctx.getWindow().width;
@@ -105,12 +104,12 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 		debugVao.init(ctx);
 		VertexDataStructure debugLineStructure = new VertexDataStructure(position);
 		debugLineBuffer = debugVao.createVbo(debugLineStructure, 2 + (text.length() * 2));
-		debugLineBuffer.init();
+		debugLineBuffer.init(ctx);
 		// add the baseline
 		int debugIndex = 0;
 		debugLineBuffer.setElement(debugIndex++, position, new Vector2f(0f, cursor.y));
 		debugLineBuffer.setElement(debugIndex++, position, new Vector2f(width, cursor.y));
-		debugShader.use();
+		debugShader.use(ctx);
 		debugLineBuffer.setup(debugShader);
 
 		for(int i = 0; i < text.length(); i++) {
@@ -149,13 +148,11 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 		}
 		debugVao.setDrawMode(BufferDrawMode.LINES);
 		debugLineBuffer.update(UpdateHint.DYNAMIC);
-		debugVao.unbind();
 
-		vao.bind();
+		vao.bind(ctx);
 		fontDataBuffer.update(UpdateHint.DYNAMIC);
 
 		elementBufferObject.update();
-		vao.unbind();
 
 		dumpBuffers();
 	}
@@ -171,17 +168,14 @@ public class TextExperiment extends CompositeRenderItem implements Experiment {
 	public void doRender(RenderContext ctx) {
 		backgroundTexture.doRender(ctx);
 
-		debugShader.use();
-		debugVao.bind();
+		debugShader.use(ctx);
+		debugVao.bind(ctx);
 		debugVao.doRender(ctx);
-		debugVao.unbind();
-		debugShader.unuse();
 
-		shader.use();
-		vao.bind();
+		shader.use(ctx);
+		vao.bind(ctx);
 		vao.doRender(ctx);
-		vao.unbind();
-		shader.unuse();
+
 	}
 
 	@Override

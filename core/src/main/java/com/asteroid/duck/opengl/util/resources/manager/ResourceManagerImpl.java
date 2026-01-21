@@ -1,6 +1,8 @@
 package com.asteroid.duck.opengl.util.resources.manager;
 
 import com.asteroid.duck.opengl.util.resources.Resource;
+import com.asteroid.duck.opengl.util.resources.bound.Binder;
+import com.asteroid.duck.opengl.util.resources.bound.ExclusivityGroup;
 import com.asteroid.duck.opengl.util.resources.io.Loader;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderLoader;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
@@ -13,7 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.SortedSet;
+import java.util.*;
 import java.util.stream.Stream;
 
 /**
@@ -37,7 +39,19 @@ public class ResourceManagerImpl implements Resource, ResourceManager {
 	private final NamedResourceManager<ShaderProgram> shaders = new NamedResourceManager<>();
 	private final NamedResourceManager<TextureUnit> textureUnits = new NamedResourceManager<>();
 
-	private final SortedSet<Integer> unallocatedTextureUnits = new java.util.TreeSet<>();
+	private final SortedSet<Integer> unallocatedTextureUnits = new TreeSet<>();
+
+	// exclusivity groups by resource type
+	private final Map<Class<?>, ExclusivityGroup<?>> exclusivityGroups = new HashMap<>();
+
+	public ResourceManagerImpl(Loader loader) {
+		this.textureFactory = new TextureFactory(loader.atPath("textures"));
+		this.shaderLoader = new ShaderLoader(loader.atPath("glsl"));
+		// populate the texture-unit pool
+		initTextureUnits();
+		loadBinders();
+	}
+
 
 	/**
 	 * Initialize or reset the texture-unit pool to 0..31.
@@ -49,14 +63,24 @@ public class ResourceManagerImpl implements Resource, ResourceManager {
 		}
 	}
 
-	public ResourceManagerImpl(Loader loader) {
 
-		this.textureFactory = new TextureFactory(loader.atPath("textures"));
-		this.shaderLoader = new ShaderLoader(loader.atPath("glsl"));
-		// populate the texture-unit pool
-		initTextureUnits();
+	private void loadBinders() {
+		@SuppressWarnings("rawtypes")
+		ServiceLoader<Binder> loader = ServiceLoader.load(Binder.class);
+		for (Binder<?> binder : loader) {
+			var type = binder.resourceType();
+			var name = binder.resourceType().getName();
+			if (exclusivityGroups.containsKey(type)) {
+				LOG.warn("Multiple binders found for resource type {}", name);
+			} else {
+				ExclusivityGroup<?> group = new ExclusivityGroup<>(this, binder);
+				exclusivityGroups.put(type, group);
+				if (LOG.isDebugEnabled()) {
+					LOG.debug("Loaded binder and exclusivity group for resource type {}", name);
+				}
+			}
+		}
 	}
-
 
 	/**
 	 * Returns the TextureFactory used by this manager.
@@ -157,6 +181,17 @@ public class ResourceManagerImpl implements Resource, ResourceManager {
 		return textureUnits.entries().map(java.util.Map.Entry::getValue);
 	}
 
+
+	@Override
+	public <T extends Resource> ExclusivityGroup<T> exclusivityGroup(Class<T> type) {
+		@SuppressWarnings("unchecked")
+		ExclusivityGroup<T> group = (ExclusivityGroup<T>) exclusivityGroups.get(type);
+		if (group == null) {
+			throw new IllegalArgumentException("No exclusivity group for resource type " + type.getName());
+		}
+		return group;
+	}
+
 	/**
 	 * Destroy and clear all managed resources. After calling this method the manager will have no cached resources.
 	 *
@@ -172,4 +207,6 @@ public class ResourceManagerImpl implements Resource, ResourceManager {
 
 		initTextureUnits();
 	}
+
+
 }

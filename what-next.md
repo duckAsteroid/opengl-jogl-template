@@ -1,6 +1,27 @@
 This file is here to keep notes on what this branch is all about - so
 I can pick it up more quickly when work/time/life permits!
 
+# Last Thing:
+
+Last update: 2026-01-07
+
+I was working on having ShaderVariable create some kind of "action"
+that could be run in the render loop. I was also going to have them
+ensure the correct shader was bound before updating uniforms. 
+
+For this I started implementing a "BoundResource" interface that shaders
+would implement. This would allow the render loop to check if the shader
+was already bound before binding it again. We also had ExclusivityGroups 
+to allow only one resource of a given group to be bound at a time.
+And to avoud binding the same resource again if it was already bound.
+
+The idea being the uniform update action would "request a bound shader" and the
+context would bind it if it was not already bound.
+
+The "setLater" on uniform could create these actions and the shadervariables
+would then become more like a shader update actions handler (get rid of all the typed stuff there and
+use unifomrs)
+
 # Render Debug onscreen
 
 So long ago now (I lose track) I was working on the internals of the Cthugha app.

@@ -34,7 +34,7 @@ public class TranslateTextureRenderer extends AbstractPassthruRenderer {
 	}
 
 	protected Texture initTexture(RenderContext ctx) {
-		shaderProgram.use();
+		shaderProgram.use(ctx);
 
 		// setup the map texture so we can refer to it
 		Texture translationTableTexture = ctx.getResourceManager().getTexture(translationTableTextureName);

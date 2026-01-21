@@ -76,7 +76,7 @@ public class SimpleTextureWithEBO implements Experiment {
                 ShaderSource.fromClass(VERTEX_SHADER, SimpleTextureWithEBO.class),
                 ShaderSource.fromClass(FRAG_SHADER, SimpleTextureWithEBO.class)
                 , null);
-        shader.use();
+        shader.use(ctx);
         this.texture = initTexture(ctx);
         this.textureUnit = initTextureUnit(ctx);
         this.vao = initBuffers(ctx);
@@ -97,7 +97,7 @@ public class SimpleTextureWithEBO implements Experiment {
 
         var fourVertices = Vertice.standardFourVertices().toList();
         VertexBufferObject vbo = vao.createVbo(vertexDataStructure, fourVertices.size());
-        vbo.init();
+        vbo.init(ctx);
 
         for (int i = 0; i < fourVertices.size(); i++) {
             Vertice v = fourVertices.get(i);
@@ -113,7 +113,7 @@ public class SimpleTextureWithEBO implements Experiment {
 
         var sixVertices = Vertice.standardSixVertices().toList();
         ElementBufferObject ebo = vao.createEbo(sixVertices.size());
-        ebo.init();
+        ebo.init(ctx);
         for (int i = 0; i < sixVertices.size(); i++) {
             Vertice v = sixVertices.get(i);
             int index = fourVertices.indexOf(v);
@@ -140,7 +140,7 @@ public class SimpleTextureWithEBO implements Experiment {
 
     @Override
     public void doRender(RenderContext ctx) {
-        vao.bind();
+        vao.bind(ctx);
         vao.doRender(ctx);
     }
 

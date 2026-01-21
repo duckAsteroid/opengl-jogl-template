@@ -8,6 +8,7 @@ import org.joml.Matrix4f;
 import org.joml.Vector4f;
 
 import java.awt.*;
+import java.util.Random;
 
 /**
  * The interface that OpenGL rendered components can use to interact with the context (typically the
@@ -92,4 +93,9 @@ public interface RenderContext {
 	 */
 	Matrix4f ortho();
 
+	/**
+	 * A random number generator instance for use by rendered components
+	 * @return the random instance
+	 */
+    Random getRandom();
 }

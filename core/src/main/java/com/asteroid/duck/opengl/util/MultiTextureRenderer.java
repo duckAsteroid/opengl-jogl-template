@@ -47,14 +47,13 @@ public class MultiTextureRenderer implements RenderedItem {
 	private void initTextures(RenderContext ctx) {
 		this.textures = new Texture[textureNames.length];
 		this.textureUnits = new TextureUnit[textureNames.length];
-		shaderProgram.use();
+		shaderProgram.use(ctx);
 		for (int i = 0; i < textureNames.length; i++) {
 			this.textures[i] = ctx.getResourceManager().getTexture(textureNames[i]);
 			this.textureUnits[i] = ctx.getResourceManager().nextTextureUnit();
 			this.textureUnits[i].bind(textures[i]);
 			this.textureUnits[i].useInShader(shaderProgram, "tex"+i);
 		}
-		shaderProgram.unuse();
 	}
 
 
@@ -68,13 +67,11 @@ public class MultiTextureRenderer implements RenderedItem {
 	@Override
 	public void doRender(RenderContext ctx) {
 
-		shaderProgram.use();
+		shaderProgram.use(ctx);
 		double amount = (Math.sin(Math.toRadians(ctx.getTimer().elapsed() * 100)) + 1.0 ) / 2.0;
 		shaderProgram.uniforms().get("amount", Float.class).set((float) amount);
 
 		renderedShape.doRender(ctx);
-
-		shaderProgram.unuse();
 	}
 
 	@Override

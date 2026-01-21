@@ -62,7 +62,7 @@ public class TessellatedTexture implements Experiment {
 
 	private void initTexture(RenderContext ctx) {
 		this.texture = ctx.getResourceManager().getTexture("molly", "molly.jpg");
-		shaderProgram.use();
+		shaderProgram.use(ctx);
 		this.textureUnit = ctx.getResourceManager().nextTextureUnit();
 		textureUnit.bind(texture);
 		textureUnit.useInShader(shaderProgram, "tex");
@@ -75,9 +75,9 @@ public class TessellatedTexture implements Experiment {
 						screenPosition,
 						texturePosition);
 		this.buffer = vao.createVbo(structure, 6 * divisor * divisor);
-		this.buffer.init();
+		this.buffer.init(ctx);
 
-		this.shaderProgram.use();
+		this.shaderProgram.use(ctx);
 		buffer.setup(shaderProgram);
 		initSquares();
 		updateBufferData();
@@ -117,7 +117,7 @@ public class TessellatedTexture implements Experiment {
 	@Override
 	public void doRender(RenderContext ctx) {
 		updateBufferData();
-		shaderProgram.use();
+		shaderProgram.use(ctx);
 		vao.doRender(ctx);
 	}
 

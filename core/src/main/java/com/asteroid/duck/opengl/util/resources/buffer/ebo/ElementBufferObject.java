@@ -1,8 +1,10 @@
 package com.asteroid.duck.opengl.util.resources.buffer.ebo;
 
-import com.asteroid.duck.opengl.util.resources.bound.AbstractBoundResource;
-import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
+import com.asteroid.duck.opengl.util.RenderContext;
+import com.asteroid.duck.opengl.util.resources.Resource;
+import com.asteroid.duck.opengl.util.resources.bound.BindingException;
 import com.asteroid.duck.opengl.util.resources.buffer.BufferDrawMode;
+import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexBufferObject;
 import org.lwjgl.BufferUtils;
 
@@ -16,7 +18,7 @@ import static org.lwjgl.opengl.GL15.*;
  * Represents a buffer of element indexes that can be used to refer to indices in an
  * {@link VertexBufferObject}
  */
-public class ElementBufferObject extends AbstractBoundResource {
+public class ElementBufferObject implements Resource {
 	private final VertexArrayObject owner;
 	/**
 	 * The in memory copy of the index buffer
@@ -44,26 +46,31 @@ public class ElementBufferObject extends AbstractBoundResource {
 		this.capacity = capacity;
 	}
 
+	public int id() throws BindingException {
+		if (ebo == null) throw new BindingException("Not initialised");
+		return ebo;
+	}
+
 	public int capacity() {
 		return capacity;
 	}
 
 
-	public void init() {
+	public void init(RenderContext ctx) {
 		indexBuffer = BufferUtils.createShortBuffer(capacity);
 		ebo = glGenBuffers();
-		bind();
+		bind(ctx);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBuffer, GL_STATIC_DRAW);
 	}
 
-	protected void bindImpl() throws BindingException {
-		if (ebo == null) throw new BindingException("Not initialised");
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+	protected void bind(RenderContext ctx) {
+		var binder = ctx.getResourceManager().exclusivityGroup(ElementBufferObject.class);
+		binder.bind(this);
 	}
 
-	protected void unbindImpl() throws BindingException {
-		if (ebo == null) throw new BindingException("Not initialised");
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	protected void unbind(RenderContext ctx) throws BindingException {
+		var binder = ctx.getResourceManager().exclusivityGroup(ElementBufferObject.class);
+		binder.unbind(this);
 	}
 
 	public void update(short[] indices) {
@@ -164,4 +171,6 @@ public class ElementBufferObject extends AbstractBoundResource {
 	public int getType() {
 		return GL_UNSIGNED_SHORT;
 	}
+
+
 }

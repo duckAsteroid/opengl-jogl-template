@@ -1,5 +1,6 @@
 package com.asteroid.duck.opengl.util.resources.shader;
 
+import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.resources.Resource;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexDataStructure;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexElement;
@@ -136,15 +137,6 @@ public class ShaderProgram implements Resource {
 		}
 	}
 
-	public ShaderProgram use() {
-		glUseProgram(id);
-		return this;
-	}
-
-	public void unuse() {
-		glUseProgram(0);
-	}
-
 	/**
 	 * Access to the uniform variables of this shader program
 	 * @return an object to get/set uniforms
@@ -215,6 +207,11 @@ public class ShaderProgram implements Resource {
 			throw new IllegalArgumentException(String.format("Attribute '%s' not found in shader program %s", attributeName, id));
 		}
 		return location;
+	}
+
+	public void use(RenderContext ctx) {
+		var binder = ctx.getResourceManager().exclusivityGroup(ShaderProgram.class);
+		binder.bind(this);
 	}
 
 	public void dispose() {

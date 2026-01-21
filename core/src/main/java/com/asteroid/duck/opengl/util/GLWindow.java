@@ -19,6 +19,7 @@ import java.awt.*;
 import java.io.IOException;
 import java.nio.IntBuffer;
 import java.util.Optional;
+import java.util.Random;
 import java.util.Set;
 
 import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
@@ -50,6 +51,7 @@ public abstract class GLWindow implements RenderContext {
 	private Vector4f backgroundColor = new Vector4f(0.0f);
 	private boolean clearScreen = true;
     private boolean windowClosing = false;
+	private final Random random = new Random();
 
 	public GLWindow(ResourceManager resourceManager, String title, int width, int height, String icon) {
         this.resourceManager = resourceManager;
@@ -120,7 +122,12 @@ public abstract class GLWindow implements RenderContext {
         System.out.println("GPU Renderer: " + gpuName);
     }
 
-    @Override
+	@Override
+	public Random getRandom() {
+		return random;
+	}
+
+	@Override
 	public ResourceManager getResourceManager() {
 		return resourceManager;
 	}

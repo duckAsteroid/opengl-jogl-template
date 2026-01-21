@@ -1,5 +1,6 @@
-package com.asteroid.duck.opengl.util.resources;
+package com.asteroid.duck.opengl.util.resources.framebuffer;
 
+import com.asteroid.duck.opengl.util.resources.Resource;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 
 import static org.lwjgl.opengl.GL30.*;

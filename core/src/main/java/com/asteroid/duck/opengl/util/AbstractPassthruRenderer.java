@@ -37,7 +37,7 @@ public abstract class AbstractPassthruRenderer implements RenderedItem {
 	protected abstract ShaderProgram initShaderProgram(RenderContext ctx) throws IOException;
 
 	protected TextureUnit initTextureUnit(RenderContext ctx) {
-		shaderProgram.use();
+		shaderProgram.use(ctx);
 		TextureUnit textureUnit = ctx.getResourceManager().nextTextureUnit();
 		textureUnit.bind(texture);
 		textureUnit.useInShader(shaderProgram, "tex");
@@ -45,10 +45,9 @@ public abstract class AbstractPassthruRenderer implements RenderedItem {
 	}
 
 	protected Rectangle initBuffers(RenderContext ctx) throws IOException {
-		Rectangle renderedShape = new Rectangle("screenPosition", "texturePosition");
-		renderedShape.getVertexArrayObject().bind();
+		Rectangle renderedShape = new Rectangle(ctx, "screenPosition", "texturePosition");
+		renderedShape.getVertexArrayObject().bind(ctx);
 		renderedShape.getVertexBufferObject().setup(shaderProgram);
-		renderedShape.getVertexArrayObject().unbind();
 		if (LOG.isTraceEnabled()) {
             LOG.trace("Initialised: {}", renderedShape);
 		}
@@ -57,9 +56,8 @@ public abstract class AbstractPassthruRenderer implements RenderedItem {
 
 	@Override
 	public void doRender(RenderContext ctx) {
-		shaderProgram.use();
+		shaderProgram.use(ctx);
 		doRenderWithShader(ctx);
-		shaderProgram.unuse();
 	}
 
 	public void doRenderWithShader(RenderContext ctx) {

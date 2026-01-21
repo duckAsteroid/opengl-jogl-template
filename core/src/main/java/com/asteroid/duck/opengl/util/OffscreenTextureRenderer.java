@@ -1,6 +1,6 @@
 package com.asteroid.duck.opengl.util;
 
-import com.asteroid.duck.opengl.util.resources.FrameBuffer;
+import com.asteroid.duck.opengl.util.resources.framebuffer.FrameBuffer;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 
 import java.io.IOException;

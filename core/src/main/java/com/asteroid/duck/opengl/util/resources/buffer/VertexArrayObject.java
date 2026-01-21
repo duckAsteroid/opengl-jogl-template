@@ -2,7 +2,8 @@ package com.asteroid.duck.opengl.util.resources.buffer;
 
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.RenderedItem;
-import com.asteroid.duck.opengl.util.resources.bound.AbstractBoundResource;
+
+import com.asteroid.duck.opengl.util.resources.bound.BindingException;
 import com.asteroid.duck.opengl.util.resources.buffer.ebo.ElementBufferObject;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexBufferObject;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexDataStructure;
@@ -16,7 +17,7 @@ import static org.lwjgl.opengl.GL30.*;
  * can own child: {@link VertexBufferObject VBO}
  * and {@link com.asteroid.duck.opengl.util.resources.buffer.ebo.ElementBufferObject EBO}
  */
-public class VertexArrayObject extends AbstractBoundResource implements RenderedItem {
+public class VertexArrayObject  implements RenderedItem {
     private static final Logger log = LoggerFactory.getLogger(VertexArrayObject.class);
 
     private Integer vao = null;
@@ -44,6 +45,11 @@ public class VertexArrayObject extends AbstractBoundResource implements Rendered
 
     public VertexBufferObject getVbo() {
         return vbo;
+    }
+
+    public int id() throws BindingException {
+        if (vao == null) throw new BindingException("Not initialised");
+        return vao;
     }
 
     public VertexBufferObject createVbo(VertexDataStructure structure, int capacity) {
@@ -76,30 +82,28 @@ public class VertexArrayObject extends AbstractBoundResource implements Rendered
 
     public void init(RenderContext ctx) {
         vao = glGenVertexArrays();
-        bind();
+        bind(ctx);
         if (vbo != null) {
-            vbo.init();
+            vbo.init(ctx);
         }
         if (ebo != null) {
-            ebo.init();
+            ebo.init(ctx);
         }
     }
 
-    @Override
-    protected void bindImpl() throws BindingException {
-        if (vao == null) throw new BindingException("Not initialised");
-        glBindVertexArray(vao);
+    public void bind(RenderContext ctx) {
+        var binding = ctx.getResourceManager().exclusivityGroup(VertexArrayObject.class);
+        binding.bind(this);
     }
 
-    @Override
-    protected void unbindImpl() throws BindingException {
-        if (vao == null) throw new BindingException("Not initialised");
-        glBindVertexArray(0);
+    protected void unbind(RenderContext ctx) throws BindingException {
+        var binding = ctx.getResourceManager().exclusivityGroup(VertexArrayObject.class);
+        binding.unbind(this);
     }
 
     @Override
     public void doRender(RenderContext ctx) {
-        bind();
+        bind(ctx);
         if (ebo != null) {
             glDrawElements(drawMode.glCode, ebo.capacity(), ebo.getType(), 0);
         }
@@ -109,7 +113,6 @@ public class VertexArrayObject extends AbstractBoundResource implements Rendered
         else {
             log.warn("Neither EBO or VBO initialised");
         }
-        unbind();
     }
 
     @Override

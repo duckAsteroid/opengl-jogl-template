@@ -32,7 +32,7 @@ public class Rectangle {
     private final ElementBufferObject ebo;
     private final VertexBufferObject vbo;
 
-    public Rectangle(String scrnPosVertexAttrName, String texPosVertexAttrName) {
+    public Rectangle(RenderContext ctx, String scrnPosVertexAttrName, String texPosVertexAttrName) {
         require(scrnPosVertexAttrName, "Screen position vertex attribute name");
         var scrnPos = new VertexElement(VertexElementType.VEC_2F, scrnPosVertexAttrName);
 
@@ -42,7 +42,7 @@ public class Rectangle {
         List<VertexElement> elements = List.of(scrnPos, texPos);
         VertexDataStructure structure = new VertexDataStructure(elements);
         this.vbo = vao.createVbo(structure, 4);
-        this.vao.init(null);
+        this.vao.init(ctx);
         // put the four corners into the VBO
         final List<Vertice> fourCorners = Vertice.standardFourVertices().toList();
         for(int i = 0; i < fourCorners.size(); i++) {
@@ -56,10 +56,9 @@ public class Rectangle {
 
         // create an element buffer to "index" the four corners
         this.ebo =vao.createEbo(6);
-        ebo.init();
+        ebo.init(ctx);
         List<Short> indices = Vertice.standardSixVertices().map(v -> (short) fourCorners.indexOf(v)).toList();
         ebo.update(indices);
-        vao.unbind();
 
         if (LOG.isTraceEnabled()) {
             LOG.trace("Rectangle VAO: {}", new VertexBufferVisualiser(vao));

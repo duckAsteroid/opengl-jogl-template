@@ -1,5 +1,6 @@
 package com.asteroid.duck.opengl.util.resources.buffer.vbo;
 
+import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.resources.Resource;
 import com.asteroid.duck.opengl.util.resources.buffer.BufferDrawMode;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
@@ -164,9 +165,10 @@ public class VertexBufferObject extends AbstractList<Map<VertexElement, ?>> impl
 	}
 
 	/**
-	 * Unit test helper to get the byte buffer that contains the vertex data.
+	 * Get the raw underlying memory that contains the vertex data as a ByteBuffer.
+	 * @return the memory buffer
 	 */
-	ByteBuffer memBuffer() {
+	public ByteBuffer memBuffer() {
 		return memBuffer;
 	}
 
@@ -175,8 +177,8 @@ public class VertexBufferObject extends AbstractList<Map<VertexElement, ?>> impl
 	 * This sets up the VAO and VBO, and creates the memory buffer.
 	 * The memory buffer is allocated to the initial capacity of the buffer.
 	 */
-	public void init() {
-		owner.bind();
+	public void init(RenderContext ctx) {
+		owner.bind(ctx);
 		// Create a VBO and bind it
 		vbo = glGenBuffers();
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);

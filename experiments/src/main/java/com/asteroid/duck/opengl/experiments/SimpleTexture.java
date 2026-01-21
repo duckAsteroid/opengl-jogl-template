@@ -77,7 +77,7 @@ public class SimpleTexture implements Experiment {
                 ShaderSource.fromClass(VERTEX_SHADER, SimpleTexture.class),
                 ShaderSource.fromClass(FRAG_SHADER, SimpleTexture.class)
                 , null);
-        shader.use();
+        shader.use(ctx);
         this.texture = initTexture(ctx);
         this.textureUnit = initTextureUnit(ctx);
         this.vao = initBuffers(ctx);
@@ -96,7 +96,7 @@ public class SimpleTexture implements Experiment {
                 new VertexElement(VertexElementType.VEC_2F, "screenPosition"),
                 new VertexElement(VertexElementType.VEC_2F, "texturePosition"));
         VertexBufferObject vbo = vao.createVbo(vertexDataStructure, 6);
-        vbo.init();
+        vbo.init(ctx);
         var vertices = Vertice.standardSixVertices().toList();
         for (int i = 0; i < vertices.size(); i++) {
             Vertice v = vertices.get(i);
@@ -125,7 +125,7 @@ public class SimpleTexture implements Experiment {
 
     @Override
     public void doRender(RenderContext ctx) {
-        vao.bind();
+        vao.bind(ctx);
         vao.doRender(ctx);
     }
 

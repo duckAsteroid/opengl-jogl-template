@@ -82,7 +82,7 @@ public class SimpleTriangle implements Experiment {
         VertexDataStructure structure = new VertexDataStructure(POSITION, COLOR);
         this.vbo = vao.createVbo(structure, 3);
         this.vbo.setUpdateHint(UpdateHint.STATIC);
-        this.vbo.init();
+        this.vbo.init(ctx);
 
         // 1. Compile the shader program first
         this.program = ShaderProgram.compile(
@@ -124,11 +124,11 @@ public class SimpleTriangle implements Experiment {
     @Override
     public void doRender(RenderContext ctx) {
         // Use the shader program first
-        program.use();
+        program.use(ctx);
         // Update the 'time' uniform with the elapsed time from the render context
         timeUniform.set((float) accumulator.value());
         // Bind the vertex data
-        vao.bind();
+        vao.bind(ctx);
         vao.doRender(ctx);
     }
 

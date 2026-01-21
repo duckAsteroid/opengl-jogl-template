@@ -2,6 +2,7 @@ package com.asteroid.duck.opengl.util.resources.manager;
 
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.resources.Resource;
+import com.asteroid.duck.opengl.util.resources.bound.BindingContext;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderLoader;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.texture.io.TextureData;
@@ -21,7 +22,7 @@ import java.util.stream.Stream;
  *
  * @see RenderContext
  */
-public interface ResourceManager extends Resource {
+public interface ResourceManager extends Resource, BindingContext {
 	// texture access
 	Texture getTexture(String name);
 	void putTexture(String name, Texture texture);

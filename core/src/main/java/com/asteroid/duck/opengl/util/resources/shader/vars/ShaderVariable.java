@@ -5,6 +5,7 @@ import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
 
+import java.util.Comparator;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -17,12 +18,21 @@ import java.util.function.Supplier;
 public abstract class ShaderVariable<T> implements BiConsumer<RenderContext, ShaderProgram> {
 	protected final String name;
 	protected final Function<RenderContext, T> provider;
+	protected final boolean cached = false;
+
 
 	protected ShaderVariable(String name, Function<RenderContext, T> provider) {
 		this.name = name;
 		this.provider = provider;
 	}
 
+	/**
+	 * Converts a supplier into a function that ignores the supplied RenderContext.
+	 * Allows "dumb" suppliers to be used where a function is required in {@link #provider}.
+	 * @param supplier the simple supplier to wrap.
+	 * @return a function that ignores the RenderContext and calls the supplier.
+	 * @param <T> the type of value supplied (for type safety)
+	 */
 	public static <T> Function<RenderContext, T> wrap(Supplier<T> supplier) {
 		return (ctx) -> supplier.get();
 	}
