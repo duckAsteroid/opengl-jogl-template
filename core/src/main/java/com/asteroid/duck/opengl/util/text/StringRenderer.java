@@ -22,7 +22,13 @@ import java.awt.*;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * This is a simple renderer for rendering strings using a FontTexture.
+ * Users must supply the text, position (up to a maximum number of characters) to render.
+ * And then supply a FontTexture to use for rendering.
+ */
 public class StringRenderer implements RenderedItem {
     private static final Logger LOG = LoggerFactory.getLogger(StringRenderer.class);
     private static final List<Vertice> fourCorners = Vertice.standardFourVertices().toList();
@@ -43,7 +49,7 @@ public class StringRenderer implements RenderedItem {
     /**
      * Where on screen the string is rendered
      */
-    private Vector2f position = new Vector2f(100, 100);
+    private Point position = new Point(0, 100);
     /**
      * The text to render
      */
@@ -59,7 +65,7 @@ public class StringRenderer implements RenderedItem {
     private final VertexArrayObject vao = new VertexArrayObject();
     private ElementBufferObject ebo;
     private VertexBufferObject vbo;
-
+    private final AtomicBoolean requiresUpdate = new AtomicBoolean(true);
 
     public StringRenderer(FontTexture fontTexture, int maxChars) {
         this.fontTexture = Objects.requireNonNull(fontTexture, "Font texture cannot be null");
@@ -113,6 +119,14 @@ public class StringRenderer implements RenderedItem {
         shaderProgram.use(ctx);
     }
 
+    public FontTexture getFontTexture() {
+        return fontTexture;
+    }
+
+    public String getText() {
+        return text;
+    }
+
     public void setText(String text) {
         if (text.length() > maxChars) {
             if (hardLimit) {
@@ -123,6 +137,16 @@ public class StringRenderer implements RenderedItem {
             }
         }
         this.text = text;
+        requiresUpdate.set(true);
+    }
+
+    public Point getPosition() {
+        return position;
+    }
+
+    public void setPosition(Point position) {
+        this.position = position;
+        requiresUpdate.set(true);
     }
 
     /**
@@ -131,6 +155,7 @@ public class StringRenderer implements RenderedItem {
      * @param cursor The starting position to render the text, the cursor will be advanced as each glyph is processed
      */
     private void calculateVertexData(RenderContext ctx, Point cursor) {
+        ebo.clear();
         for(int i = 0; i < text.length(); i++) {
             var c = text.charAt(i);
             // get the glyph for this character
@@ -142,10 +167,6 @@ public class StringRenderer implements RenderedItem {
             final var screen = glyph.rawBounds(cursor);
             // add the debug line for the glyph datum
             final Vector2f datum = glyph.datum(cursor);
-
-            if (LOG.isTraceEnabled()) {
-                LOG.trace("glyph[{}]: {} = glyph {} @ datum {}",i, c, glyph, datum);
-            }
 
             // populate the vertex data buffer with the screen and texture positions of each vertice
             for(int j = 0; j < fourCorners.size(); j++) {
@@ -174,7 +195,10 @@ public class StringRenderer implements RenderedItem {
         shaderProgram.use(ctx);
         vao.bind(ctx);
         // calculate the vertex data for the current text and position
-        calculateVertexData(ctx, new Point((int)position.x, (int)position.y));
+        if (requiresUpdate.get()) {
+            calculateVertexData(ctx, new Point(position));
+            requiresUpdate.set(false);
+        }
         // draw the text
         vao.setDrawMode(BufferDrawMode.TRIANGLES);
         vao.doRender(ctx);
