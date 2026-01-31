@@ -8,7 +8,10 @@
     </appender>
 
     <!-- 2. Logger: Fine-tune logging for specific packages -->
-    <logger name="com.asteroid.duck" level="trace" additivity="false">
+    <logger name="com.asteroid.duck" level="debug" additivity="false">
+        <appender-ref ref="STDOUT" />
+    </logger>
+    <logger name="com.asteroid.duck.opengl.experiments" level="info" additivity="false">
         <appender-ref ref="STDOUT" />
     </logger>
 

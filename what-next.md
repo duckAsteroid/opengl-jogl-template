@@ -3,6 +3,45 @@ I can pick it up more quickly when work/time/life permits!
 
 # Last Thing:
 
+2026-01-31:
+Managed to get the debug text rendering working again.
+Render on top of an image!
+
+Thoughts: could use affine transform (matrix math) to locate, scale and
+skew the text. This would avoid recalculating vertex positions each time?
+
+```cpp
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+// 1. Initialize as identity
+glm::mat4 trans = glm::mat4(1.0f);
+
+// 2. Apply transformations (Order matters: Trans * Rot * Scale)
+trans = glm::translate(trans, glm::vec3(x, y, z));
+trans = glm::rotate(trans, glm::radians(angle), glm::vec3(0.0f, 0.0f, 1.0f));
+trans = glm::scale(trans, glm::vec3(scaleX, scaleY, 1.0f));
+
+// For skew (shear), you must set the matrix elements directly:
+// trans[1][0] = skewX; // Skew x by y
+// trans[0][1] = skewY; // Skew y by x
+
+// 3. Send to Shader
+GLint transformLoc = glGetUniformLocation(shaderProgram, "transform");
+glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+
+```
+
+```glsl
+// Initialize as an identity matrix (1.0 on the diagonal)
+uniform mat4 transform = mat4(1.0);
+
+void main() {
+    gl_Position = transform * vec4(aPos, 1.0);
+}
+```
+
 Last update: 2026-01-07
 
 I was working on having ShaderVariable create some kind of "action"

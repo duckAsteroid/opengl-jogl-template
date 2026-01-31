@@ -64,6 +64,8 @@ public abstract class GLWindow implements RenderContext {
 		}
         if (!glfwInit()) throw new RuntimeException("Unable to init GLFW");
 
+
+
         glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
         glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);

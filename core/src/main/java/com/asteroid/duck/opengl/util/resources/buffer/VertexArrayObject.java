@@ -131,4 +131,9 @@ public class VertexArrayObject  implements RenderedItem {
             glDeleteVertexArrays(vao);
         }
     }
+
+    @Override
+    public String toString() {
+        return "VAO(id=" + vao + ")";
+    }
 }

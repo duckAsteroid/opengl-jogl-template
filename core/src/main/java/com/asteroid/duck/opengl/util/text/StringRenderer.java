@@ -58,6 +58,7 @@ public class StringRenderer implements RenderedItem {
      * A shader used to render the text
      */
     private ShaderProgram shaderProgram;
+    private TextureUnit textureUnit;
 
     private final VertexElement screenPosition = new VertexElement(VertexElementType.VEC_2F, "screenPosition");
     private final VertexElement texturePosition = new VertexElement(VertexElementType.VEC_2F, "texturePosition");
@@ -77,25 +78,26 @@ public class StringRenderer implements RenderedItem {
 
     @Override
     public void init(RenderContext ctx) throws IOException {
-        initShader(ctx);
         initTexture(ctx);
+        initShader(ctx);
+
+        textureUnit.useInShader(shaderProgram, "tex");
+
         initBuffers(ctx);
         initVariables(ctx);
     }
 
-    private void initTexture(RenderContext ctx) {
-        var tex = fontTexture.getTexture();
-        TextureUnit textureUnit = ctx.getResourceManager().nextTextureUnit();
-        textureUnit.bind(tex);
-        textureUnit.useInShader(shaderProgram, "tex");
+    private void initShader(RenderContext ctx) {
+        // create the shader
+        shaderProgram = ctx.getResourceManager().getSimpleShader("passthru2");
+        shaderProgram.use(ctx);
     }
 
-    private void initVariables(RenderContext ctx) {
-        // put the ortho matrix into the shader
-        Matrix4f ortho = ctx.ortho();
-        shaderProgram.uniforms().get("projection", Matrix4f.class).set(ortho);
-        // set the text color for the shader
-        shaderProgram.uniforms().get("textColor", Vector4f.class).set(StandardColors.LIGHTBLUE.color);
+    private void initTexture(RenderContext ctx) {
+        this.textureUnit = ctx.getResourceManager().nextTextureUnit();
+        textureUnit.activate();
+        var tex = fontTexture.getTexture();
+        textureUnit.bind(tex);
     }
 
     private void initBuffers(RenderContext ctx) {
@@ -112,12 +114,15 @@ public class StringRenderer implements RenderedItem {
         vbo.init(ctx);
         vbo.setup(shaderProgram);
     }
-
-    private void initShader(RenderContext ctx) {
-        // create the shader
-        shaderProgram = ctx.getResourceManager().getSimpleShader("passthru2");
-        shaderProgram.use(ctx);
+    
+    private void initVariables(RenderContext ctx) {
+        // put the ortho matrix into the shader
+        Matrix4f ortho = ctx.ortho();
+        shaderProgram.uniforms().get("projection", Matrix4f.class).set(ortho);
+        // set the text color for the shader
+        shaderProgram.uniforms().get("textColor", Vector4f.class).set(StandardColors.LIGHTBLUE.color);
     }
+
 
     public FontTexture getFontTexture() {
         return fontTexture;
@@ -147,6 +152,10 @@ public class StringRenderer implements RenderedItem {
     public void setPosition(Point position) {
         this.position = position;
         requiresUpdate.set(true);
+    }
+
+    public void setTextColor(Vector4f color) {
+        shaderProgram.uniforms().get("textColor", Vector4f.class).set(color);
     }
 
     /**
@@ -186,8 +195,11 @@ public class StringRenderer implements RenderedItem {
         }
 
         vao.bind(ctx);
+        vao.setDrawMode(BufferDrawMode.TRIANGLES);
+
         vbo.update(UpdateHint.DYNAMIC);
         ebo.update();
+
     }
 
     @Override
@@ -200,7 +212,6 @@ public class StringRenderer implements RenderedItem {
             requiresUpdate.set(false);
         }
         // draw the text
-        vao.setDrawMode(BufferDrawMode.TRIANGLES);
         vao.doRender(ctx);
     }
 

@@ -229,21 +229,47 @@ public class ShaderProgram implements Resource {
 		return debugBuilder().toString();
 	}
 
-	@Override
-	public String toString() {
-		var sb = debugBuilder().append(":\n");
+	public void renderShaderSource(StringBuilder sb) {
 		sb.append('\t').append("vertex=").append(vertex.location()).append("\n");
 		sb.append('\t').append("fragment=").append(fragment.location()).append("\n");
 		if (geometry != null && !geometry.isSourceBlank()) {
 			sb.append('\t').append("geometry=").append(geometry.location()).append("\n");
 		}
-		sb.append("----------------------------\n");
+	}
+
+	public void renderUniforms(StringBuilder sb) {
 		Map<String, Variable> vars = get(VariableType.UNIFORM);
 		String uniforms = vars.values().stream().sorted().map(Objects::toString).collect(Collectors.joining(", ", "uniforms={", "}; "));
 		sb.append('\t').append(uniforms).append("\n");
-		vars = get(VariableType.ATTRIBUTE);
+	}
+
+	public void renderAttributes(StringBuilder sb) {
+		Map<String, Variable> vars = get(VariableType.ATTRIBUTE);
 		String attributes = vars.values().stream().sorted().map(Objects::toString).collect(Collectors.joining(", ","attributes={", "}; "));
 		sb.append('\t').append(attributes).append("\n");
+	}
+
+	public static final int SHADER_SOURCE = 1;
+	public static final int UNIFORMS = 2;
+	public static final int ATTRIBUTES = 4;
+
+	public static int DEBUG = 0;
+
+	@Override
+	public String toString() {
+		var sb = debugBuilder();
+		if ((DEBUG & SHADER_SOURCE) != 0) {
+			sb.append("\n");
+			renderShaderSource(sb);
+		}
+		if ((DEBUG & UNIFORMS) != 0) {
+			sb.append("\n");
+			renderUniforms(sb);
+		}
+		if ((DEBUG & ATTRIBUTES) != 0) {
+			sb.append("\n");
+			renderAttributes(sb);
+		}
 		return sb.toString();
 	}
 }

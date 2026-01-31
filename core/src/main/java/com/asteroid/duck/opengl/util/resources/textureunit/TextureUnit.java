@@ -73,8 +73,15 @@ public class TextureUnit implements Resource, Comparable<TextureUnit> {
 		return new TextureUnit(index, GL_TEXTURE0 + index, disposalFunction);
 	}
 
-	public void bind(Texture texture) {
+	public void activate() {
 		glActiveTexture(glTextureUnitID);
+		if (LOG.isTraceEnabled()) {
+			LOG.trace("Activated texture unit: {}", this);
+		}
+	}
+
+	public void bind(Texture texture) {
+		activate();
 		texture.bind();
 		boundTexture = texture;
 		if (LOG.isTraceEnabled()) {

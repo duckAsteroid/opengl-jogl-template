@@ -86,14 +86,14 @@ public class Texture implements Resource {
 		this.height = height;
 		if (dimensions != Dimensions.TWO_DIMENSION) throw new IllegalArgumentException("Texture type must be 2D");
 		// create texture
-		glBindTexture(dimensions.openGlCode(), this.id);
+		bind();
 		glTexImage2D(dimensions.openGlCode(), 0, this.internalFormat, width, height, 0, this.imageFormat, this.dataType, pixels);
 		// set Texture wrap and filter modes
 		wrap.openGlParamsStream().forEach(param -> glTexParameteri(dimensions.openGlCode(), param, wrap.openGlCode()));
 		filter.openGlParamsStream().forEach(param -> glTexParameteri(dimensions.openGlCode(), param, filter.openGlCode()));
 
 		// unbind texture
-		glBindTexture(dimensions.openGlCode(), 0);
+		unbind();
 	}
 
 	public void generate(int width, int height, ByteBuffer data) {

@@ -1,6 +1,8 @@
 package com.asteroid.duck.opengl.experiments;
 
+import com.asteroid.duck.opengl.util.PassthruTextureRenderer;
 import com.asteroid.duck.opengl.util.RenderContext;
+import com.asteroid.duck.opengl.util.color.StandardColors;
 import com.asteroid.duck.opengl.util.keys.KeyRegistry;
 import com.asteroid.duck.opengl.util.resources.font.FontTextureFactory;
 import com.asteroid.duck.opengl.util.text.StringRenderer;
@@ -8,6 +10,7 @@ import org.lwjgl.glfw.GLFW;
 
 import java.awt.*;
 import java.io.IOException;
+import java.util.Random;
 
 public class StringExperiment implements Experiment {
     private static final String[] STRINGS = new String[]{
@@ -31,6 +34,8 @@ public class StringExperiment implements Experiment {
     }
 
     private StringRenderer stringRenderer;
+    private PassthruTextureRenderer textureRenderer;
+
     @Override
     public String getDescription() {
         return "An experiment using string helper";
@@ -38,12 +43,20 @@ public class StringExperiment implements Experiment {
 
     @Override
     public void init(RenderContext ctx) throws IOException {
-        ctx.setClearScreen(true);
+        ctx.getResourceManager().getTexture("molly.jpg", "molly.jpg");
         registerKeys(ctx.getKeyRegistry());
         var ftf = new FontTextureFactory(new Font("Times New Roman", Font.BOLD,24), true);
         stringRenderer = new StringRenderer(ftf.createFontTexture(), maxLengthString());
         stringRenderer.init(ctx);
         stringRenderer.setText(STRINGS[selectedStringIndex]);
+
+        // FIXME This next line is what nukes the texture from the font?
+        // Probably because the texture unit is default and this binds a texture during it's init?
+        // it then unbinds (binds 0) which nukes the texture in the texture unit
+        // before we get a chance to use it in the string renderer?
+
+        textureRenderer = new PassthruTextureRenderer("molly.jpg");
+        textureRenderer.init(ctx);
     }
 
     private void registerKeys(KeyRegistry ctx) {
@@ -53,6 +66,15 @@ public class StringExperiment implements Experiment {
         ctx.registerKeyAction(GLFW.GLFW_KEY_RIGHT, GLFW.GLFW_MOD_SHIFT, () -> move(Direction.RIGHT), "Move text right");
 
         ctx.registerKeyAction(GLFW.GLFW_KEY_S, this::nextString, "Change string");
+        ctx.registerKeyAction(GLFW.GLFW_KEY_C, this::nextColor, "Change color");
+    }
+    private final Random rnd = new Random();
+
+    private void nextColor() {
+        var index = rnd.nextInt(StandardColors.values().length);
+        var color = StandardColors.values()[index];
+        System.out.println("Changing color to " + color.name());
+        stringRenderer.setTextColor(color.color);
     }
 
     private void nextString() {
@@ -79,11 +101,13 @@ public class StringExperiment implements Experiment {
 
     @Override
     public void doRender(RenderContext ctx) {
+        textureRenderer.doRender(ctx);
         stringRenderer.doRender(ctx);
     }
 
     @Override
     public void dispose() {
+        textureRenderer.dispose();
         stringRenderer.dispose();
     }
 }
