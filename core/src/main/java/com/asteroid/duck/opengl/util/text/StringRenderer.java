@@ -4,6 +4,7 @@ import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.RenderedItem;
 import com.asteroid.duck.opengl.util.color.StandardColors;
 import com.asteroid.duck.opengl.util.geom.Vertice;
+import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
 import com.asteroid.duck.opengl.util.resources.buffer.BufferDrawMode;
 import com.asteroid.duck.opengl.util.resources.buffer.UpdateHint;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
@@ -33,6 +34,11 @@ public class StringRenderer implements RenderedItem {
     private static final Logger LOG = LoggerFactory.getLogger(StringRenderer.class);
     private static final List<Vertice> fourCorners = Vertice.standardFourVertices().toList();
     private static final int[] indices = Vertice.standardSixVertices().mapToInt(fourCorners::indexOf).toArray();
+
+    private static final String TEXT_UPDATE = "textUpdate";
+    private static final String TEXT_COLOR = "textColor";
+
+    private final RenderActionQueue renderActions = new RenderActionQueue(TEXT_UPDATE);
     /**
      * The font texture used to draw the string
      */
@@ -66,7 +72,7 @@ public class StringRenderer implements RenderedItem {
     private final VertexArrayObject vao = new VertexArrayObject();
     private ElementBufferObject ebo;
     private VertexBufferObject vbo;
-    private final AtomicBoolean requiresUpdate = new AtomicBoolean(true);
+
 
     public StringRenderer(FontTexture fontTexture, int maxChars) {
         this.fontTexture = Objects.requireNonNull(fontTexture, "Font texture cannot be null");
@@ -142,7 +148,7 @@ public class StringRenderer implements RenderedItem {
             }
         }
         this.text = text;
-        requiresUpdate.set(true);
+        renderActions.enqueue(TEXT_UPDATE, (ctx) -> calculateVertexData(ctx, new Point(position)));
     }
 
     public Point getPosition() {
@@ -151,11 +157,13 @@ public class StringRenderer implements RenderedItem {
 
     public void setPosition(Point position) {
         this.position = position;
-        requiresUpdate.set(true);
+        renderActions.enqueue(TEXT_UPDATE, (ctx) -> calculateVertexData(ctx, new Point(position)));
     }
 
     public void setTextColor(Vector4f color) {
-        shaderProgram.uniforms().get("textColor", Vector4f.class).set(color);
+        renderActions.enqueue(TEXT_COLOR, (ctx) -> {
+            shaderProgram.uniforms().get(TEXT_COLOR, Vector4f.class).set(color);
+        });
     }
 
     /**
@@ -206,11 +214,8 @@ public class StringRenderer implements RenderedItem {
     public void doRender(RenderContext ctx) {
         shaderProgram.use(ctx);
         vao.bind(ctx);
-        // calculate the vertex data for the current text and position
-        if (requiresUpdate.get()) {
-            calculateVertexData(ctx, new Point(position));
-            requiresUpdate.set(false);
-        }
+        // process any pending render actions
+        renderActions.processAll(ctx);
         // draw the text
         vao.doRender(ctx);
     }
