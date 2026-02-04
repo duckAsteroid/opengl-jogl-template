@@ -15,6 +15,7 @@ import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.textureunit.TextureUnit;
 import org.joml.Matrix4f;
 import org.joml.Vector2f;
+import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -124,6 +125,12 @@ public class StringRenderer implements RenderedItem {
     private void initVariables(RenderContext ctx) {
         // put the ortho matrix into the shader
         Matrix4f ortho = ctx.ortho();
+        float scaleX = 4.0f;
+        float scaleY = 4.0f;
+        ortho = ortho.scale(scaleX, scaleY, 1.0f);
+        Vector3f axis = new Vector3f(0.0f, 0.0f, 1.0f);
+        float angle = 45.0f;
+        ortho = ortho.rotate((float)Math.toRadians(angle), axis);
         shaderProgram.uniforms().get("projection", Matrix4f.class).set(ortho);
         // set the text color for the shader
         shaderProgram.uniforms().get("textColor", Vector4f.class).set(StandardColors.LIGHTBLUE.color);
