@@ -54,7 +54,7 @@ public class OffscreenBlurTextureRenderer extends CompositeRenderItem {
 		this.stage2 = new BlurTextureRenderer(TEXTURE_FBO, false);
 		stage2.setXAxis(false);
 		stage2.addVariable(ShaderVariable.floatVariable("multiplier", this::multiplier));
-    add(stage2);
+    	add(stage2);
 
 		super.init(ctx);
 	}

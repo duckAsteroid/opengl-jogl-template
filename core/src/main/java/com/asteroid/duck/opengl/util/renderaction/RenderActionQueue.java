@@ -1,21 +1,24 @@
 package com.asteroid.duck.opengl.util.renderaction;
 
 import com.asteroid.duck.opengl.util.RenderContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * Queue for render actions.
- * Actions have a "type" (String).
+ * A thread-safe Queue for render actions, lets clients queue up actions to be performed during rendering loop.
+ * Actions have an "action type" (a string identifying a particular kind of action).
  * Certain types can be marked as "singleton"; this means that only the latest action of that type is kept in the 
  * queue. (e.g. variable updates where only the latest value matters)
  */
 public class RenderActionQueue {
-    private final Queue<Action> queue = new ConcurrentLinkedQueue<>();
-    private final Map<String, Action> latestByType = new ConcurrentHashMap<>();
+    private static final Logger LOG = LoggerFactory.getLogger(RenderActionQueue.class);
+    private final Queue<Action> queue = new LinkedList<>();
+    private final Map<String, Action> latestByType = new HashMap<>();
     private final Set<String> singletonTypes;
+    private final ReentrantLock lock = new ReentrantLock(false);
 
     public RenderActionQueue(String ... singletonTypes) {
         this(new HashSet<>(Arrays.asList(singletonTypes)));
@@ -27,14 +30,6 @@ public class RenderActionQueue {
     public RenderActionQueue(Set<String> singletonTypes) {
         this.singletonTypes = new HashSet<>(singletonTypes);
     }
-    
-    public void addSingletonType(String actionType) {
-        singletonTypes.add(actionType);
-    }
-    
-    public void removeSingletonType(String actionType) {
-        singletonTypes.remove(actionType);
-    }
 
     /**
      * Enqueues an action with the given type.
@@ -45,10 +40,15 @@ public class RenderActionQueue {
      */
     public void enqueue(String actionType, Action action) {
         if (action != null) {
-            if (singletonTypes.contains(actionType)) {
-                latestByType.put(actionType, action);
-            } else {
-                queue.offer(action);
+            try {
+                lock.lock();
+                if (singletonTypes.contains(actionType)) {
+                    latestByType.put(actionType, action);
+                } else {
+                    queue.offer(action);
+                }
+            } finally {
+                lock.unlock();
             }
         }
     }
@@ -59,16 +59,33 @@ public class RenderActionQueue {
      * @return a list of all actions in the queue
      */
     public List<Action> drain() {
-        List<Action> actions = new ArrayList<>(queue);
-        queue.clear();
-        actions.addAll(latestByType.values());
-        latestByType.clear();
-        return actions;
+        try {
+            lock.lock();
+            // create a copy to avoid concurrent modification issues, then clear the original queue and latestByType map
+            List<Action> actions = new ArrayList<>(queue);
+            // clear the queue
+            queue.clear();
+            // add the latest actions for singleton types
+            actions.addAll(latestByType.values());
+            // clear the latestByType map
+            latestByType.clear();
+            return actions;
+        } finally {
+            lock.unlock();
+        }
     }
 
+    /**
+     * Drains the queue and processes all actions by calling their onRender method with the given RenderContext.
+     * @param ctx the RenderContext to pass to each action's onRender method
+     */
     public void processAll(RenderContext ctx) {
         for (Action action : drain()) {
-            action.onRender(ctx);
+            try {
+                action.onRender(ctx);
+            } catch (Exception e) {
+                LOG.error("Error processing render action of type {}: {}", action.getClass().getSimpleName(), e.getMessage(), e);
+            }
         }
     }
 }

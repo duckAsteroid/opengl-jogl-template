@@ -6,6 +6,7 @@ import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.shader.vars.ShaderVariable;
 import com.asteroid.duck.opengl.util.resources.shader.vars.ShaderVariables;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
+import org.joml.Vector2f;
 
 import java.io.IOException;
 
@@ -50,6 +51,10 @@ public class BlurTextureRenderer extends AbstractPassthruRenderer {
 	protected ShaderProgram initShaderProgram(RenderContext ctx) throws IOException {
 		addVariable(ShaderVariable.booleanVariable("blur", this::isBlur));
 		addVariable(ShaderVariable.booleanVariable("x", this::isXAxis));
+		addVariable(ShaderVariable.vec2fVariable("dimensions", () -> {
+			Texture t = ctx.getResourceManager().getTexture(textureName);
+			return new Vector2f(t.getWidth(), t.getHeight());
+		}));
 		return ctx.getResourceManager().getShaderLoader().LoadSimpleShaderProgram("blur");
 	}
 
