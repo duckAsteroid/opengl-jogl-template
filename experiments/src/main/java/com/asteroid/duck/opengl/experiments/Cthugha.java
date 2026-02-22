@@ -4,7 +4,7 @@ import com.asteroid.duck.opengl.util.CompositeRenderItem;
 import com.asteroid.duck.opengl.util.OffscreenTextureRenderer;
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.TranslateTextureRenderer;
-import com.asteroid.duck.opengl.util.audio.Polyline;
+import com.asteroid.duck.opengl.util.wave.Polyline;
 import com.asteroid.duck.opengl.util.blur.OffscreenBlurTextureRenderer;
 import com.asteroid.duck.opengl.util.keys.KeyCombination;
 import com.asteroid.duck.opengl.util.palette.PaletteRenderer;

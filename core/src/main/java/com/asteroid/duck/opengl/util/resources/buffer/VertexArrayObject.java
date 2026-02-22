@@ -4,6 +4,7 @@ import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.RenderedItem;
 
 import com.asteroid.duck.opengl.util.resources.bound.BindingException;
+import com.asteroid.duck.opengl.util.resources.bound.ExclusivityGroup;
 import com.asteroid.duck.opengl.util.resources.buffer.ebo.ElementBufferObject;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexBufferObject;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexDataStructure;
@@ -34,6 +35,8 @@ public class VertexArrayObject  implements RenderedItem {
      * Default is {@link BufferDrawMode#TRIANGLES}
      */
     private BufferDrawMode drawMode = BufferDrawMode.TRIANGLES;
+
+    private ExclusivityGroup<VertexArrayObject> binding;
 
     public boolean hasVbo() {
         return vbo != null;
@@ -81,6 +84,7 @@ public class VertexArrayObject  implements RenderedItem {
     }
 
     public void init(RenderContext ctx) {
+        this.binding = ctx.getResourceManager().exclusivityGroup(VertexArrayObject.class);
         vao = glGenVertexArrays();
         bind(ctx);
         if (vbo != null) {
@@ -92,12 +96,10 @@ public class VertexArrayObject  implements RenderedItem {
     }
 
     public void bind(RenderContext ctx) {
-        var binding = ctx.getResourceManager().exclusivityGroup(VertexArrayObject.class);
         binding.bind(this);
     }
 
     protected void unbind(RenderContext ctx) throws BindingException {
-        var binding = ctx.getResourceManager().exclusivityGroup(VertexArrayObject.class);
         binding.unbind(this);
     }
 

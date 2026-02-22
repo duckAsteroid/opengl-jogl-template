@@ -30,6 +30,11 @@ public class SimulatedDataSource implements AudioDataSource {
 	}
 
 	@Override
+	public TargetDataLine raw() {
+		throw  new UnsupportedOperationException();
+	}
+
+	@Override
 	public int available() {
 		return samples(timer.elapsed()) * (bytesPerSample());
 	}
@@ -109,7 +114,7 @@ public class SimulatedDataSource implements AudioDataSource {
 		t.reset();
 		t.setPaused(false);
 		LineAcquirer laq = new LineAcquirer();
-		LineAcquirer.MixerLine mixerLine = laq.allLinesMatching(info).get(0);
+		LineAcquirer.MixerLine mixerLine = laq.allLinesMatching(info).toList().get(0);
 		SimulatedDataSource simulated = new SimulatedDataSource(t, LineAcquirer.getSampledWaveformData());
 		try(Mixer mixer = mixerLine.mixer()) {
 			byte[] audioBuffer = new byte[44100];

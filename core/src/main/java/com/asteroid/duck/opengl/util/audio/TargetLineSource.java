@@ -11,6 +11,11 @@ public class TargetLineSource implements AudioDataSource {
 	}
 
 	@Override
+	public TargetDataLine raw() {
+		return line;
+	}
+
+	@Override
 	public int available() {
 		return line.available();
 	}

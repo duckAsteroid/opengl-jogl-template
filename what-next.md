@@ -3,6 +3,11 @@ I can pick it up more quickly when work/time/life permits!
 
 # Last Thing:
 
+2026-02-20:
+Trying to write audio data directly into a RG 1D texture.
+THen render that on screen by multiplying it by a colormap texture (like a heatmap) to get a visual representation of the audio data.
+
+
 2026-01-31:
 Managed to get the debug text rendering working again.
 Render on top of an image!

@@ -1,7 +1,10 @@
-package com.asteroid.duck.opengl.util.audio;
+package com.asteroid.duck.opengl.util.wave;
 
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.RenderedItem;
+import com.asteroid.duck.opengl.util.audio.AudioDataSource;
+import com.asteroid.duck.opengl.util.audio.LineAcquirer;
+import com.asteroid.duck.opengl.util.audio.RollingFloatBuffer;
 import com.asteroid.duck.opengl.util.color.StandardColors;
 import com.asteroid.duck.opengl.util.resources.buffer.BufferDrawMode;
 import com.asteroid.duck.opengl.util.resources.buffer.UpdateHint;
@@ -28,7 +31,7 @@ import static org.lwjgl.opengl.GL20.glVertexAttribPointer;
 import static org.lwjgl.opengl.GL30.glGenVertexArrays;
 
 /**
- * https://github.com/jackaudio/jackaudio.github.com/wiki
+ *
  */
 public class Polyline implements RenderedItem {
 	private ShaderProgram shaderProgram = null;

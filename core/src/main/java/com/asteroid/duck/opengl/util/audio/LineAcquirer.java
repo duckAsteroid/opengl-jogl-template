@@ -13,7 +13,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Stream;
-
+//https://github.com/jackaudio/jackaudio.github.com/wiki
+//https://www.portaudio.com/
 public class LineAcquirer {
   private static final Logger LOG = LoggerFactory.getLogger(LineAcquirer.class);
 
@@ -22,7 +23,7 @@ public class LineAcquirer {
       CompositeWaveform audio = getSampledWaveformData();
       return new SimulatedDataSource(ctx.getTimer(), audio);
     }
-    List<MixerLine> mixerLines = allLinesMatching(ideal);
+    List<MixerLine> mixerLines = allLinesMatching(ideal).toList();
     for (MixerLine mixerLine : mixerLines) {
       System.out.println(mixerLine.toString());
     }
@@ -75,21 +76,25 @@ public class LineAcquirer {
     return result;
   }
 
-  public List<MixerLine> allLinesMatching(AudioFormat format) {
+  public Stream<MixerLine> allLinesMatching(AudioFormat format) {
     DataLine.Info info = new DataLine.Info(TargetDataLine.class, format);
     return allLinesMatching(info);
   }
-  public List<MixerLine> allLinesMatching(DataLine.Info info) {
+  public Stream<MixerLine> allLinesMatching(DataLine.Info info) {
     return allLines().stream()
-      .filter(line -> line.mixer.isLineSupported(info))
-      .toList();
+            .filter(line -> info.getLineClass().isAssignableFrom(line.line.getLineClass()))
+      .filter(line -> line.mixer.isLineSupported(info));
   }
 
-  public final static AudioFormat IDEAL = new AudioFormat( 44100f, 16, 2, true, false);
+  public final static AudioFormat IDEAL = new AudioFormat( 48000f, 16, 2, true, false);
 
   public static void main(String[] args) {
     LineAcquirer laq = new LineAcquirer();
-    List<MixerLine> mixerLines = laq.allLinesMatching(IDEAL);
+    laq.dump();
+  }
+
+  public void dump() {
+    List<MixerLine> mixerLines = allLinesMatching(IDEAL).toList();
     mixerLines.forEach(System.out::println);
   }
 }

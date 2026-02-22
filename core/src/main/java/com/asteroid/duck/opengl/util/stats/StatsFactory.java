@@ -9,7 +9,7 @@ import java.util.HashMap;
 public class StatsFactory {
   public static boolean enabled = System.getProperty("cthugha.stats.enabled","true").equals("true");
   public static boolean nanos = System.getProperty("cthugha.stats.time.nanos", "true").equals("true");
-  private static HashMap<String, Stats> statistics = new HashMap<>();
+  private static final HashMap<String, Stats> statistics = new HashMap<>();
 
   public static Stats stats(String name) {
     if (!enabled) return new Stats() {};

@@ -2,11 +2,13 @@ package com.asteroid.duck.opengl.util.audio;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.TargetDataLine;
 
 /**
  * Our interface into an underlying (possibly simulated) audio data source
  */
 public interface AudioDataSource {
+	TargetDataLine raw();
 	/**
 	 * Open using a given format
 	 * @param format the format
