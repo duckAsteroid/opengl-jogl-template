@@ -5,7 +5,7 @@ import com.asteroid.duck.opengl.util.GLCoded;
 import static org.lwjgl.opengl.GL15.*;
 
 /**
- * A hint to the GL driver about how the data in the buffer will be used and updated.
+ * Usage hint passed to {@code glBufferData} describing expected update/read frequency.
  */
 public enum UpdateHint implements GLCoded {
     /**
@@ -27,6 +27,11 @@ public enum UpdateHint implements GLCoded {
         this.glCode = glCode;
     }
 
+    /**
+     * Returns the underlying OpenGL usage constant.
+     *
+     * @return GL usage enum (for example {@code GL_DYNAMIC_DRAW})
+     */
     public int openGlCode() {
         return glCode;
     }

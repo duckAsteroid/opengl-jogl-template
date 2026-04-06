@@ -11,28 +11,61 @@ import java.util.Objects;
 import static org.lwjgl.opengl.GL11.GL_FLOAT;
 
 /**
- * Represents the type of {@link VertexElement} in a {@link VertexDataStructure}.
- * Can go between the bytes in the underlying memory buffer and the Java type this element holds.
- * There are implementations for common vertex data types as static members:
+ * Strategy object that bridges a Java type {@code T} and a packed OpenGL vertex attribute.
+ *
+ * <p>Each instance encodes three closely related pieces of metadata:</p>
  * <ul>
- * <li>{@link #FLOAT}</li>
- * <li>{@link #VEC_2F}</li>
- * <li>{@link #VEC_3F}</li>
- * <li>{@link #VEC_4F}</li>
+ *   <li><b>Java type</b> – the high-level Java class accepted by {@link #serializeRaw} and
+ *       returned by {@link #deserializeRaw}.</li>
+ *   <li><b>Dimensions</b> – the number of scalar components (e.g. 1 for {@code float}, 3 for
+ *       {@link Vector3f}).</li>
+ *   <li><b>GL type</b> – the OpenGL scalar type constant used in
+ *       {@code glVertexAttribPointer} (currently always {@code GL_FLOAT}).</li>
  * </ul>
- * @param <T> The Java type of data stored in the element
+ *
+ * <p>Pre-built singletons cover the most common cases:</p>
+ * <ul>
+ *   <li>{@link #FLOAT}   – single {@code float}</li>
+ *   <li>{@link #VEC_2F}  – {@link Vector2f}</li>
+ *   <li>{@link #VEC_3F}  – {@link Vector3f}</li>
+ *   <li>{@link #VEC_4F}  – {@link Vector4f}</li>
+ * </ul>
+ *
+ * <p>Custom types can be added by subclassing and implementing {@link #serialize} and
+ * {@link #deserialize}.</p>
+ *
+ * @param <T> the Java type of the value stored in this element
+ * @see VertexElement
+ * @see VertexDataStructure
  */
 public abstract class VertexElementType<T> {
 	private final Class<T> javaType;
 	private final int dimensions;
 	private final int glType;
 
+	/**
+	 * Constructs a new type descriptor.
+	 *
+	 * @param t      Java class for this type
+	 * @param s      number of scalar components
+	 * @param glType OpenGL scalar type constant (e.g. {@code GL_FLOAT})
+	 */
 	public VertexElementType(Class<T> t, int s, int glType) {
 		this.javaType = t;
 		this.dimensions = s;
 		this.glType = glType;
 	}
 
+	/**
+	 * Serializes an untyped value into the buffer, applying a null-replacement when necessary.
+	 *
+	 * <p>If {@code obj} is null, {@link #nullReplacementValue()} is used. The value is then
+	 * cast to {@code T} and delegated to {@link #serialize(Object, ByteBuffer)}.</p>
+	 *
+	 * @param obj    value to serialize; may be null if the type supports a null replacement
+	 * @param buffer destination buffer; must have sufficient remaining capacity
+	 * @throws IllegalArgumentException if {@code obj} is not an instance of {@link #getJavaType()}
+	 */
 	public void serializeRaw(Object obj, ByteBuffer buffer) {
 		try {
 			if (obj == null) {
@@ -45,40 +78,87 @@ public abstract class VertexElementType<T> {
 	}
 
 	/**
-	 * The open GL type of the data in the element
+	 * Returns the OpenGL scalar type constant for this element's components.
+	 *
+	 * @return GL scalar type (e.g. {@code GL_FLOAT})
 	 */
 	public int glType() {
 		return glType;
 	}
 
 	/**
-	 * How many dimensions to this element (e.g. 1 for FLOAT, 2 for Vec2 etc.)
+	 * Returns the number of scalar components in this element.
+	 *
+	 * <p>For example, {@link #FLOAT} returns 1 and {@link #VEC_3F} returns 3.</p>
+	 *
+	 * @return component count
 	 */
 	public int dimensions() {
 		return dimensions;
 	}
 
+	/**
+	 * Returns the byte size of this element within a vertex record.
+	 *
+	 * <p><b>Note:</b> currently assumes 4 bytes per component, i.e. all elements use
+	 * {@code GL_FLOAT}. This will need revisiting if integer or half-float types are added.</p>
+	 *
+	 * @return byte size of one element
+	 */
 	public int byteSize() {
 		// FIXME what to do for non FLOAT elements
 		return dimensions * 4;
 	}
 
 	/**
-	 * The expected Java type of data stored in the element
-	 * @return the class of the Java type
+	 * Returns the Java class corresponding to this element's type.
+	 *
+	 * @return Java type class
 	 */
 	public Class<T> getJavaType() {
 		return javaType;
 	}
 
+	/**
+	 * Serializes a typed value into a {@link ByteBuffer}.
+	 *
+	 * <p>Implementations must write exactly {@link #byteSize()} bytes into {@code buffer}.</p>
+	 *
+	 * @param obj    strongly-typed value to serialize
+	 * @param buffer destination buffer
+	 */
 	protected abstract void serialize(T obj, ByteBuffer buffer);
 
+	/**
+	 * Deserializes a value from a {@link ByteBuffer} without type safety.
+	 *
+	 * @param buffer source buffer positioned at the start of this element's bytes
+	 * @return deserialized value as {@code Object}
+	 */
 	public Object deserializeRaw(ByteBuffer buffer) {
-			return deserialize(buffer);
+		return deserialize(buffer);
 	}
 
+	/**
+	 * Deserializes a strongly-typed value from a {@link ByteBuffer}.
+	 *
+	 * <p>Implementations must consume exactly {@link #byteSize()} bytes from {@code buffer}.</p>
+	 *
+	 * @param buffer source buffer positioned at the start of this element's bytes
+	 * @return deserialized value
+	 */
 	protected abstract T deserialize(ByteBuffer buffer);
 
+	/**
+	 * Returns a non-null default value used when {@code null} is supplied during serialization.
+	 *
+	 * <p>The default implementation throws, indicating the type does not support null values.
+	 * Subclasses should override to return a sensible zero-equivalent (e.g. {@code 0f},
+	 * {@code new Vector3f(0)}).</p>
+	 *
+	 * @return null-replacement value
+	 * @throws IllegalArgumentException always, unless overridden
+	 */
 	public Object nullReplacementValue() {
 		throw new IllegalArgumentException("Serialized value of "+javaType.getName()+" cannot be null");
 	}
@@ -102,6 +182,13 @@ public abstract class VertexElementType<T> {
 		return "[%s, %dx%d]".formatted(javaType.getName(), dimensions, glType);
 	}
 
+	/**
+	 * Creates a {@link VertexElementType} from a {@link ShaderVariableType}.
+	 *
+	 * @param svt shader variable type to map
+	 * @return corresponding pre-built {@code VertexElementType} singleton
+	 * @throws IllegalArgumentException if no mapping exists for {@code svt}
+	 */
 	public static VertexElementType<?> from(ShaderVariableType svt) {
 		return switch (svt) {
 			case FLOAT -> FLOAT;
@@ -112,8 +199,9 @@ public abstract class VertexElementType<T> {
 		};
 	}
 
-	/// TYPED SINGLETON INSTANCES --------------------------------------------------------------------
+	// --- Pre-built singleton instances -----------------------------------------------------------
 
+	/** Single {@code float} component. Null serializes as {@code 0f}. */
 	public static VertexElementType<Float> FLOAT = new VertexElementType<>(Float.class, 1, GL_FLOAT) {
 
 		public Float deserialize(ByteBuffer byteBuffer) {
@@ -130,6 +218,7 @@ public abstract class VertexElementType<T> {
 		}
 	};
 
+	/** Two-component float vector ({@link Vector2f}). Null serializes as {@code (0, 0)}. */
 	public static VertexElementType<Vector2f> VEC_2F = new VertexElementType<>(Vector2f.class,  2, GL_FLOAT) {
 
 		public Vector2f deserialize(ByteBuffer byteBuffer) {
@@ -148,6 +237,7 @@ public abstract class VertexElementType<T> {
 		}
 	};
 
+	/** Three-component float vector ({@link Vector3f}). Null serializes as {@code (0, 0, 0)}. */
 	public static VertexElementType<Vector3f> VEC_3F = new VertexElementType<>(Vector3f.class, 3, GL_FLOAT) {
 
 		public Vector3f deserialize(ByteBuffer byteBuffer) {
@@ -167,6 +257,7 @@ public abstract class VertexElementType<T> {
 		}
 	};
 
+	/** Four-component float vector ({@link Vector4f}). Null serializes as {@code (0, 0, 0, 0)}. */
 	public static final VertexElementType<Vector4f> VEC_4F = new VertexElementType<>(Vector4f.class,4,GL_FLOAT) {
 		public Vector4f deserialize(ByteBuffer byteBuffer) {
 			float x = byteBuffer.getFloat();

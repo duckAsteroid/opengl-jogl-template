@@ -7,6 +7,11 @@ import com.google.auto.service.AutoService;
 import static org.lwjgl.opengl.GL15.GL_ELEMENT_ARRAY_BUFFER;
 import static org.lwjgl.opengl.GL15.glBindBuffer;
 
+/**
+ * Binder implementation that maps {@link ElementBufferObject} to {@code GL_ELEMENT_ARRAY_BUFFER}.
+ *
+ * <p>Used by the resource binding/exclusivity system to ensure correct OpenGL bind/unbind calls.</p>
+ */
 @AutoService(Binder.class)
 public class ElementBufferObjectBinder implements Binder<ElementBufferObject> {
     @Override

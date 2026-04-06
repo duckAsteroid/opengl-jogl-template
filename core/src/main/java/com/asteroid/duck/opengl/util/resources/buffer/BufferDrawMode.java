@@ -5,7 +5,7 @@ import com.asteroid.duck.opengl.util.GLCoded;
 import static org.lwjgl.opengl.GL11.*;
 
 /**
- * Defines the drawing mode to use when rendering the vertex data.
+ * OpenGL primitive topology used by draw calls such as {@code glDrawArrays} and {@code glDrawElements}.
  */
 public enum BufferDrawMode implements GLCoded {
     /**
@@ -28,6 +28,11 @@ public enum BufferDrawMode implements GLCoded {
         this.glCode = glCode;
     }
 
+    /**
+     * Returns the underlying OpenGL enum value.
+     *
+     * @return GL primitive constant (for example {@code GL_TRIANGLES})
+     */
     public int openGlCode() {
         return glCode;
     }
