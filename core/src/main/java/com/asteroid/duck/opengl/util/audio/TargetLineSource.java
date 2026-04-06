@@ -5,14 +5,16 @@ import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.TargetDataLine;
 
 public class TargetLineSource implements AudioDataSource {
+	private final String name;
 	private final TargetDataLine line;
-	public TargetLineSource(TargetDataLine line) {
+	public TargetLineSource(String name, TargetDataLine line) {
+		this.name = name;
 		this.line = line;
 	}
 
 	@Override
-	public TargetDataLine raw() {
-		return line;
+	public String getName() {
+		return name;
 	}
 
 	@Override
@@ -31,8 +33,18 @@ public class TargetLineSource implements AudioDataSource {
 	}
 
 	@Override
+	public boolean isOpen() {
+		return line.isOpen();
+	}
+
+	@Override
 	public void start() {
 		line.start();
+	}
+
+	@Override
+	public boolean isRunning() {
+		return line.isRunning();
 	}
 
 	@Override

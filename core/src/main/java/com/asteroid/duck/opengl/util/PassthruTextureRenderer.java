@@ -35,8 +35,4 @@ public class PassthruTextureRenderer extends AbstractPassthruRenderer implements
 		return ctx.getResourceManager().getTexture(textureName);
 	}
 
-	@Override
-	public void doRenderWithShader(RenderContext ctx) {
-		super.doRenderWithShader(ctx);
-	}
 }

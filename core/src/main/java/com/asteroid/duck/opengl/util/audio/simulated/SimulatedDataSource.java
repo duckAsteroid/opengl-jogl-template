@@ -11,6 +11,7 @@ import com.asteroid.duck.opengl.util.timer.TimerImpl;
 import javax.sound.sampled.*;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
 
 import static com.asteroid.duck.opengl.util.audio.LineAcquirer.IDEAL;
@@ -18,20 +19,20 @@ import static com.asteroid.duck.opengl.util.audio.LineAcquirer.IDEAL;
 public class SimulatedDataSource implements AudioDataSource {
 
 	private final Timer timer;
-	private final SampledWaveformData source;
-	private AudioFormat format;
+	private final StereoDataSource source;
+	private AudioFormat format = null;
 	private int limit;
 	private boolean running;
 	private double lastRead;
 
-	public SimulatedDataSource(Timer timer, SampledWaveformData source) {
+	public SimulatedDataSource(Timer timer, StereoDataSource source) {
 		this.timer = timer;
 		this.source = source;
 	}
 
 	@Override
-	public TargetDataLine raw() {
-		throw  new UnsupportedOperationException();
+	public String getName() {
+		return "SimulatedDataSource: "+source.toString();
 	}
 
 	@Override
@@ -66,9 +67,11 @@ public class SimulatedDataSource implements AudioDataSource {
 		double samplePeriod = 1.0 / format.getSampleRate();
 		// this is the maximum number of samples we can read (respecting our buffer limit)
 		int samples = samples(now);
+		if (samples <= 0)
+			return 0;
 
 		// this buffer is a short view onto the array calibrated to the start and limit given
-		ShortBuffer buffer = ByteBuffer.wrap(array, start, limit).asShortBuffer();
+		ShortBuffer buffer = ByteBuffer.wrap(array, start, limit).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer();
 
 		// Can the buffer take more than we can theoretically read
 		if (buffer.remaining() > samples) {
@@ -98,8 +101,18 @@ public class SimulatedDataSource implements AudioDataSource {
 	}
 
 	@Override
+	public boolean isRunning() {
+		return running;
+	}
+
+	@Override
 	public void stop() {
 		this.running = false;
+	}
+
+	@Override
+	public boolean isOpen() {
+		return format != null;
 	}
 
 	@Override
@@ -117,7 +130,7 @@ public class SimulatedDataSource implements AudioDataSource {
 		LineAcquirer.MixerLine mixerLine = laq.allLinesMatching(info).toList().get(0);
 		SimulatedDataSource simulated = new SimulatedDataSource(t, LineAcquirer.getSampledWaveformData());
 		try(Mixer mixer = mixerLine.mixer()) {
-			byte[] audioBuffer = new byte[44100];
+			byte[] audioBuffer = new byte[32];
 			SourceDataLine output = (SourceDataLine) mixer.getLine(info);
 			System.out.println("Running on "+mixerLine);
 			output.open(IDEAL);
@@ -131,7 +144,6 @@ public class SimulatedDataSource implements AudioDataSource {
 				int read = simulated.read(audioBuffer, 0, audioBuffer.length);
 				readStats.add(read);
 				output.write(audioBuffer, 0, read);
-				System.out.print('.');
 			}
 			simulated.close();
 			output.close();

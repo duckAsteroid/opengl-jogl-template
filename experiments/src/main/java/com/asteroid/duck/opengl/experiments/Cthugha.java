@@ -4,12 +4,12 @@ import com.asteroid.duck.opengl.util.CompositeRenderItem;
 import com.asteroid.duck.opengl.util.OffscreenTextureRenderer;
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.TranslateTextureRenderer;
-import com.asteroid.duck.opengl.util.wave.Polyline;
 import com.asteroid.duck.opengl.util.blur.OffscreenBlurTextureRenderer;
 import com.asteroid.duck.opengl.util.keys.KeyCombination;
 import com.asteroid.duck.opengl.util.palette.PaletteRenderer;
 import com.asteroid.duck.opengl.util.resources.texture.*;
 import com.asteroid.duck.opengl.util.resources.texture.io.ImageLoadingOptions;
+import com.asteroid.duck.opengl.util.wave.AudioWave;
 import org.joml.Vector4f;
 
 import java.io.IOException;
@@ -58,11 +58,11 @@ public class Cthugha extends CompositeRenderItem implements Experiment {
 		add(blurStage);
 
 		// wave
-		Polyline polyline = new Polyline();
+		AudioWave polyline = new AudioWave();
 		polyline.setLineWidth(1.0f);
 		polyline.setLineColour(new Vector4f(1.0f));
 		OffscreenTextureRenderer waveRenderStage = new OffscreenTextureRenderer(polyline, offscreen);
-	  add(waveRenderStage);
+	  	add(waveRenderStage);
 
 		// palette
 		Texture palette = ctx.getResourceManager().getTexture("palette", "palettes/FIRE2.MAP.png", ImageLoadingOptions.DEFAULT.withSingleLine());
@@ -76,10 +76,10 @@ public class Cthugha extends CompositeRenderItem implements Experiment {
 
 	private void updateFrequency() {
 		frequency += 1;
-    if (frequency > 100.0) {
-      frequency = 2.0;
-    }
-    System.out.println("Update frequency: " + frequency);
+		if (frequency > 100.0) {
+		  frequency = 2.0;
+		}
+		System.out.println("Update frequency: " + frequency);
 	}
 
 	@Override

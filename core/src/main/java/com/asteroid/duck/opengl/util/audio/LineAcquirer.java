@@ -1,10 +1,8 @@
 package com.asteroid.duck.opengl.util.audio;
 
 import com.asteroid.duck.opengl.util.RenderContext;
-import com.asteroid.duck.opengl.util.audio.simulated.CompositeWaveform;
-import com.asteroid.duck.opengl.util.audio.simulated.Note;
-import com.asteroid.duck.opengl.util.audio.simulated.SimulatedDataSource;
-import com.asteroid.duck.opengl.util.audio.simulated.Waveform;
+import com.asteroid.duck.opengl.util.audio.simulated.*;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,55 +10,71 @@ import javax.sound.sampled.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 //https://github.com/jackaudio/jackaudio.github.com/wiki
 //https://www.portaudio.com/
 public class LineAcquirer {
   private static final Logger LOG = LoggerFactory.getLogger(LineAcquirer.class);
 
-  public AudioDataSource acquire(RenderContext ctx, AudioFormat ideal) throws LineUnavailableException {
-    if (System.getProperty("simulate.audio", "false").equalsIgnoreCase("true")) {
-      CompositeWaveform audio = getSampledWaveformData();
-      return new SimulatedDataSource(ctx.getTimer(), audio);
+  private List<AudioDataSource> sources = new ArrayList<>();
+  private int selectedSource = 0;
+
+  public void init(RenderContext ctx, AudioFormat ideal)  {
+    if (System.getProperty("simulate.audio", "true").equalsIgnoreCase("true")) {
+      StereoDataSource audio = getSampledWaveformData();
+      sources.add(new SimulatedDataSource(ctx.getTimer(), audio));
     }
     List<MixerLine> mixerLines = allLinesMatching(ideal).toList();
-    for (MixerLine mixerLine : mixerLines) {
-      System.out.println(mixerLine.toString());
+    mixerLines.stream().map(MixerLine::getTargetDataLine)
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .forEach(sources::add);
+    if (sources.isEmpty()) {
+      throw new RuntimeException("No sources found");
     }
-    MixerLine mixerLine = mixerLines.get(0);
-    System.out.println(mixerLine.toString());
-    return mixerLine.getTargetDataLine();
   }
 
-  public static CompositeWaveform getSampledWaveformData() {
+  public AudioDataSource getSelectedSource() {
+    return sources.get(selectedSource);
+  }
+
+  public AudioDataSource next() {
+    AudioDataSource current = getSelectedSource();
+    selectedSource = (selectedSource + 1) % sources.size();
+    return current;
+  }
+
+  public AudioDataSource previous() {
+    AudioDataSource current = getSelectedSource();
+    selectedSource = (selectedSource - 1 + sources.size()) % sources.size();
+    return current;
+  }
+
+  public static StereoDataSource getSampledWaveformData() {
     Waveform midC = Waveform.MIDDLE_C.amplify(100);
-    CompositeWaveform audio = new CompositeWaveform(5);
-    final double LENGTH = 1;
-    audio.add(midC);
-    // E
-    //audio.add(midC.transpose(4).atStereo(-1));
-    audio.add(new Note(midC.transpose(3).atStereo(-1), LENGTH, "1010"));
-    // G
-    //audio.add(midC.transpose(7).atStereo(+1));
-    audio.add(new Note(midC.transpose(7).atStereo(+1), LENGTH, "1100"));
-    // -2 octaves
-    //audio.add(new Note(midC.transpose(-24).atStereo(-1.0), LENGTH, "01"));
-    // +2 octaves
-    //audio.add(new Note(midC.transpose(+24).atStereo(+1.0), LENGTH, "10"));
-    return audio;
+
+    return OscillatingStereoPositioner.fullScale(1.0).wrap(midC);
   }
 
   public record MixerLine(Mixer mixer, Line.Info line) {
-    public AudioDataSource getTargetDataLine() throws LineUnavailableException {
-      return new TargetLineSource((TargetDataLine) mixer.getLine(line));
+    public Optional<AudioDataSource> getTargetDataLine() {
+      final String lineDesc = toString();
+      try {
+        return Optional.of(new TargetLineSource(lineDesc, (TargetDataLine) mixer.getLine(line)));
+      } catch (LineUnavailableException e) {
+          LOG.error("Line unavailable: {}", lineDesc, e);
+        return Optional.empty();
+      }
     }
+    @NotNull
     @Override
     public String toString() {
       return mixer.getMixerInfo().getName() + ":"+ line.toString();
     }
   }
 
-  public List<MixerLine> allLines() {
+  public static List<MixerLine> allLines() {
     ArrayList<MixerLine> result = new ArrayList<>();
     Mixer.Info[] mixerInfos = AudioSystem.getMixerInfo();
     for (Mixer.Info info: mixerInfos){
@@ -76,11 +90,11 @@ public class LineAcquirer {
     return result;
   }
 
-  public Stream<MixerLine> allLinesMatching(AudioFormat format) {
+  public static Stream<MixerLine> allLinesMatching(AudioFormat format) {
     DataLine.Info info = new DataLine.Info(TargetDataLine.class, format);
     return allLinesMatching(info);
   }
-  public Stream<MixerLine> allLinesMatching(DataLine.Info info) {
+  public static Stream<MixerLine> allLinesMatching(DataLine.Info info) {
     return allLines().stream()
             .filter(line -> info.getLineClass().isAssignableFrom(line.line.getLineClass()))
       .filter(line -> line.mixer.isLineSupported(info));

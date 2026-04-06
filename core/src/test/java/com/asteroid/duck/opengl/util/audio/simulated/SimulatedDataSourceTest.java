@@ -24,7 +24,7 @@ class SimulatedDataSourceTest {
 		}
 	};
 
-	private SimulatedDataSource subject = new SimulatedDataSource(simulatedTimer, Waveform.MIDDLE_C.amplify(1000));
+	private SimulatedDataSource subject = new SimulatedDataSource(simulatedTimer, StaticStereoPositioner.CENTER.wrap(Waveform.MIDDLE_C.amplify(1000)));
 
 	@Test
 	public void testNormalFlow() throws LineUnavailableException {

@@ -6,16 +6,15 @@ import java.nio.ShortBuffer;
 /**
  * A rolling or ring buffer can be continuously written to and stores the last N samples.
  * Samples are float data points.
+ * This class is thread-safe for concurrent write and read operations.
  */
 public class RollingFloatBuffer {
 	/** Normalised (relative to {@link #max}, mono audio data */
 	private final float[] buffer;
 	// the current location at which write will occur
-	private int writePos;
-	// the current location at which read will occur
-	private int readPos;
+	private volatile int writePos;
 	/** The maximum value. Values will be normalised with respect to this when read */
-	private short max = Short.MAX_VALUE;
+	private volatile short max = Short.MAX_VALUE;
 
 	public RollingFloatBuffer(int size) {
 		this.buffer = new float[size];
@@ -30,11 +29,11 @@ public class RollingFloatBuffer {
 	 * Each pair of short values is L/R channel from one sample
 	 * The audio values are averaged into a single value for storage.
 	 * They are also normalised based on an arbitrary MAX.
-	 * @param audio
+	 * @param audio the audio buffer containing L/R channel pairs
 	 */
 	public void write(ShortBuffer audio) {
 		// take 2 samples at a time from the buffer (L + R)
-		while(audio.remaining() > 2) {
+		while(audio.remaining() >= 2) {
 			// each get is actually a short, cast to float
 			// get L and R channels
 			float l = audio.get();
@@ -55,27 +54,27 @@ public class RollingFloatBuffer {
 	 * The values are read out in pairs:
 	 * an X value - normalised 0-1, based on how far through the read
 	 * a Y value - normalised audio amplitude
-	 * @param floatBuffer
+	 * @param floatBuffer the target buffer to fill with X,Y coordinate pairs
 	 */
 	public void read(FloatBuffer floatBuffer) {
+		// Capture writePos atomically to ensure consistent read
+		final int currentWritePos = writePos;
+
 		// what is the most we can read?
-		int readExtent = Math.min(floatBuffer.limit(), buffer.length);
+		int readExtent = Math.min(floatBuffer.limit() / 2, buffer.length);
 		// start position (can be negative)
-		int startAt = writePos - readExtent;
-		// if the start is negative
-		while(startAt < 0) {
-			// remove the length of the buffer
-			startAt = buffer.length - startAt;
+		int startAt = currentWritePos - readExtent;
+		// if the start is negative, wrap around
+		if(startAt < 0) {
+			startAt = buffer.length + startAt;
 		}
+
 		// transfer data into target buffer
-		int x = 0;
-		while (floatBuffer.remaining() >= 2) {
-			// X - normalised to the extent 0 - 1
+		for (int x = 0; x < readExtent && floatBuffer.remaining() >= 2; x++) {
+			// X - normalised to the extent -1 to +1
 			floatBuffer.put(normalise(x, readExtent));
-			x++;
-			// this will also roll around - so we can put N copies of the data into the buffer
-			int index = (startAt + x) % buffer.length;
 			// Y - straight from the rolling buffer data
+			int index = (startAt + x) % buffer.length;
 			floatBuffer.put(buffer[index]);
 		}
 	}
@@ -91,21 +90,19 @@ public class RollingFloatBuffer {
 		return (x / (size / 2.0f)) - 1;
 	}
 
-	private int decAudioIndex(int audioIndex) {
-		audioIndex = audioIndex - 1;
-		if (audioIndex < 0) {
-			audioIndex = buffer.length - 1;
-		}
-		return audioIndex;
-	}
-
+	/**
+	 * Increase the maximum audio value used for normalization.
+	 * @param i the amount to increase by
+	 */
 	public void incMax(int i) {
 		this.max = (short) Math.min(max + i, Short.MAX_VALUE);
-		System.out.println(max);
 	}
 
+	/**
+	 * Decrease the maximum audio value used for normalization.
+	 * @param i the amount to decrease by
+	 */
 	public void decMax(int i) {
 		this.max = (short) Math.max(max - i, 0);
-		System.out.println(max);
 	}
 }

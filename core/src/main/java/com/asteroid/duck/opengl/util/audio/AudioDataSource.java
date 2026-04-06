@@ -8,7 +8,7 @@ import javax.sound.sampled.TargetDataLine;
  * Our interface into an underlying (possibly simulated) audio data source
  */
 public interface AudioDataSource {
-	TargetDataLine raw();
+	String getName();
 	/**
 	 * Open using a given format
 	 * @param format the format
@@ -16,6 +16,8 @@ public interface AudioDataSource {
 	 * @throws LineUnavailableException if can't do it
 	 */
 	void open(AudioFormat format, int bufferSize) throws LineUnavailableException;
+
+	boolean isOpen();
 
 	/**
 	 * Start the data source
@@ -43,4 +45,6 @@ public interface AudioDataSource {
 	 * Close the data source (cannot be restarted)
 	 */
 	void close();
+
+	boolean isRunning();
 }
