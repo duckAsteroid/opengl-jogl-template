@@ -55,24 +55,35 @@ public class BlurKernel {
 	}
 
 	public DiscreteSampleKernel getDiscreteSampleKernel() {
-		double[] discreteWeights = new double[(weights.length / 2) + 1] ;
-		discreteWeights[0] = weights[0];
+		// Pair up the non-center weights into linear-interpolation samples.
+		// If there's an odd number of non-center weights, the last one becomes its own sample.
+		int nonCenter = weights.length - 1;
+		int pairs = nonCenter / 2;
+		int remainder = nonCenter % 2;
+		int discreteSize = 1 + pairs + remainder;
 
-		for (int i = 0; i < discreteWeights.length - 1; i++) {
+		double[] discreteWeights = new double[discreteSize];
+		double[] discreteOffsets = new double[discreteSize];
+
+		discreteWeights[0] = weights[0];
+		discreteOffsets[0] = 0.0;
+
+		for (int i = 0; i < pairs; i++) {
 			// 1, 3, 5 ...
 			int t1 = 1 + (i * 2);
 			// 2, 4, 6 ...
 			int t2 = t1 + 1;
 			discreteWeights[i + 1] = weights[t1] + weights[t2];
-		}
-		double[] discreteOffsets = new double[discreteWeights.length];
-		discreteOffsets[0] = 0.0;
-		for (int i = 0; i < discreteOffsets.length - 1; i++) {
-			int t1 = 1 + (i * 2);
-			int t2 = t1 + 1;
 			discreteOffsets[i + 1] = ((offsets[t1] * weights[t1]) + (offsets[t2] * weights[t2])) /
 							discreteWeights[i + 1];
 		}
+
+		if (remainder == 1) {
+			int last = weights.length - 1;
+			discreteWeights[discreteSize - 1] = weights[last];
+			discreteOffsets[discreteSize - 1] = offsets[last];
+		}
+
 		return new DiscreteSampleKernel(discreteOffsets, discreteWeights);
 	}
 

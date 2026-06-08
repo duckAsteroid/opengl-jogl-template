@@ -88,4 +88,12 @@ public abstract class ShaderVariable<T> implements BiConsumer<RenderContext, Sha
 			}
 		};
 	}
+
+	public static ShaderVariable<float[]> floatArrayVariable(String name, Supplier<float[]> supplier) {
+		return new ShaderVariable<>(name, wrap(supplier)) {
+			public void accept(RenderContext ctx, ShaderProgram program) {
+				program.uniforms().get(name, float[].class).set(provider.apply(ctx));
+			}
+		};
+	}
 }

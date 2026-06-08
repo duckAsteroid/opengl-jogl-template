@@ -7,22 +7,33 @@ import com.asteroid.duck.opengl.util.resources.shader.vars.ShaderVariable;
 import com.asteroid.duck.opengl.util.resources.shader.vars.ShaderVariables;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import org.joml.Vector2f;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_B;
-import static org.lwjgl.glfw.GLFW.GLFW_KEY_X;
+import static org.lwjgl.glfw.GLFW.*;
 
 /**
  * Renders a texture to current output with (or without) a gaussian blur in a single dimension (X/Y)
  */
 public class BlurTextureRenderer extends AbstractPassthruRenderer {
+	private static final Logger LOG = LoggerFactory.getLogger(BlurTextureRenderer.class);
+
+	/** Minimum odd kernel size supported by {@link BlurKernel}. */
+	public static final int MIN_KERNEL_SIZE = 3;
+	/** Maximum odd kernel size; keeps the discrete tap count within MAX_KERNEL_SIZE in the shader. */
+	public static final int MAX_KERNEL_SIZE = 65;
+
 	private boolean blur = true;
 	// If true = X, else Y
 	private boolean axis = true;
 	private final String textureName;
 	private final boolean registerKeys;
 	private final ShaderVariables variables = new ShaderVariables();
+
+	private int kernelSize = 29;
+	private DiscreteSampleKernel cachedKernel = new BlurKernel(kernelSize).getDiscreteSampleKernel();
 
 	public BlurTextureRenderer(String sourceTexture) {
 		this(sourceTexture, true);
@@ -38,6 +49,8 @@ public class BlurTextureRenderer extends AbstractPassthruRenderer {
 		if (registerKeys) {
 			ctx.getKeyRegistry().registerKeyAction(GLFW_KEY_B, this::toggleBlur, "Toggle blurring on/off");
 			ctx.getKeyRegistry().registerKeyAction(GLFW_KEY_X, this::toggleAxis, "Toggle X/Y axis blurring");
+			ctx.getKeyRegistry().registerKeyAction(GLFW_KEY_RIGHT_BRACKET, this::increaseKernelSize, "Increase blur kernel size");
+			ctx.getKeyRegistry().registerKeyAction(GLFW_KEY_LEFT_BRACKET, this::decreaseKernelSize, "Decrease blur kernel size");
 		}
 		super.init(ctx);
 	}
@@ -55,6 +68,9 @@ public class BlurTextureRenderer extends AbstractPassthruRenderer {
 			Texture t = ctx.getResourceManager().getTexture(textureName);
 			return new Vector2f(t.getWidth(), t.getHeight());
 		}));
+		addVariable(ShaderVariable.intVariable("kernelSize", ctx2 -> cachedKernel.size()));
+		addVariable(ShaderVariable.floatArrayVariable("offsets", () -> cachedKernel.floatOffsets()));
+		addVariable(ShaderVariable.floatArrayVariable("weights", () -> cachedKernel.floatWeights()));
 		return ctx.getResourceManager().getShaderLoader().LoadSimpleShaderProgram("blur");
 	}
 
@@ -92,5 +108,28 @@ public class BlurTextureRenderer extends AbstractPassthruRenderer {
 	public void toggleAxis() {
 		axis = !axis;
 		System.out.println("Axis="+( axis ? "x" : "y"));
+	}
+
+	public int getKernelSize() {
+		return kernelSize;
+	}
+
+	public void setKernelSize(int size) {
+		if (size < MIN_KERNEL_SIZE) size = MIN_KERNEL_SIZE;
+		if (size > MAX_KERNEL_SIZE) size = MAX_KERNEL_SIZE;
+		if (size % 2 == 0) size++;
+		if (size != kernelSize) {
+			kernelSize = size;
+			cachedKernel = new BlurKernel(kernelSize).getDiscreteSampleKernel();
+			LOG.info("Blur kernel size={} ({} discrete samples)", kernelSize, cachedKernel.size());
+		}
+	}
+
+	public void increaseKernelSize() {
+		setKernelSize(kernelSize + 2);
+	}
+
+	public void decreaseKernelSize() {
+		setKernelSize(kernelSize - 2);
 	}
 }

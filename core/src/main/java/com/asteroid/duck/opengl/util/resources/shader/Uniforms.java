@@ -77,6 +77,9 @@ public class Uniforms {
 		if (Matrix4f.class.isAssignableFrom(type)) {
 			return (Uniform<T>) new Uniform<>(this, name, loc, this::setMatrix4f);
 		}
+		if (float[].class.equals(type)) {
+			return (Uniform<T>) new Uniform<>(this, name, loc, this::setFloatArray);
+		}
 
 		throw new IllegalArgumentException("Unsupported uniform type: " + type.getName());
 	}
