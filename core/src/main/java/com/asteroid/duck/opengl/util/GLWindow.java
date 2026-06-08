@@ -51,6 +51,9 @@ public abstract class GLWindow implements RenderContext {
 	private GLFWErrorCallback errorCallback;
 	private Rectangle windowed = null;
 	private Rectangle window;
+	private int initialWidth;
+	private int initialHeight;
+	private int windowScale = 0;
 	private final List<ResizeListener> resizeListeners = new CopyOnWriteArrayList<>();
 	private Vector4f backgroundColor = new Vector4f(0.0f);
 	private boolean clearScreen = true;
@@ -60,6 +63,8 @@ public abstract class GLWindow implements RenderContext {
 	public GLWindow(ResourceManager resourceManager, String title, int width, int height, String icon) {
         this.resourceManager = resourceManager;
 		this.windowTitle = title;
+		this.initialWidth = width;
+		this.initialHeight = height;
         //System.out.println("INFO: OpenGL Version: "+glGetString(GL_VERSION));
         //this.errorCallback = GLFWErrorCallback.createPrint(System.err).set();
 		if (Platform.get() == Platform.LINUX) {
@@ -245,6 +250,27 @@ public abstract class GLWindow implements RenderContext {
 		if (errorCallback != null) errorCallback.free();
 	}
 
+
+	public void resetWindowSize() {
+		windowScale = 0;
+		glfwSetWindowSize(windowHandle, initialWidth, initialHeight);
+	}
+
+	public void scaleWindowUp() {
+		windowScale++;
+		applyWindowScale();
+	}
+
+	public void scaleWindowDown() {
+		windowScale--;
+		applyWindowScale();
+	}
+
+	private void applyWindowScale() {
+		int w = windowScale >= 0 ? initialWidth  << windowScale : initialWidth  >> (-windowScale);
+		int h = windowScale >= 0 ? initialHeight << windowScale : initialHeight >> (-windowScale);
+		glfwSetWindowSize(windowHandle, Math.max(w, 1), Math.max(h, 1));
+	}
 
 	public void toggleFullscreen() {
 		if (windowed == null) {

@@ -3,7 +3,10 @@ package com.asteroid.duck.opengl.util;
 import com.asteroid.duck.opengl.util.resources.framebuffer.FrameBuffer;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 
+import java.awt.Rectangle;
 import java.io.IOException;
+
+import static org.lwjgl.opengl.GL11.glViewport;
 
 /**
  * Wraps another {@link RenderedItem} and renders it to an offscreen {@link Texture} using a {@link FrameBuffer}.
@@ -28,6 +31,8 @@ public class OffscreenTextureRenderer implements RenderedItem {
 		fbo.bind();
 		renderedItem.doRender(ctx);
 		fbo.unbind();
+		Rectangle w = ctx.getWindow();
+		glViewport(0, 0, w.width, w.height);
 	}
 
 	@Override

@@ -49,6 +49,7 @@ public class FrameBuffer implements Resource {
 	/** Bind this framebuffer for rendering. */
 	public void bind() {
 		glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+		glViewport(0, 0, target.getWidth(), target.getHeight());
 	}
 
 	/** Unbind the framebuffer (bind the default framebuffer). */

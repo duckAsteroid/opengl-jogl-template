@@ -103,6 +103,9 @@ public class Main extends GLWindow implements RenderContext {
         kr.registerKeyAction(GLFW_KEY_RIGHT, () -> stepForward(false), "When paused, move the time forwards (<SHIFT> for larger steps)");
         kr.registerKeyAction(GLFW_KEY_I, this::printInstructions, "Print instructions");
         kr.registerKeyAction(GLFW_KEY_F11, this::toggleFullscreen, "Toggle fullscreen mode");
+        kr.registerKeyAction(GLFW_KEY_HOME, this::resetWindowSize, "Reset window to original size");
+        kr.registerKeyAction(GLFW_KEY_EQUAL, this::scaleWindowUp, "Scale window up by 2x");
+        kr.registerKeyAction(GLFW_KEY_MINUS, this::scaleWindowDown, "Scale window down by 2x");
         kr.registerKeyAction(GLFW_KEY_F1,this::printDebug, "Print debug data");
     }
 
