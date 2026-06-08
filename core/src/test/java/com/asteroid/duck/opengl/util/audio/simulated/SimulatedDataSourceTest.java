@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import javax.sound.sampled.LineUnavailableException;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
 import java.util.IntSummaryStatistics;
 import java.util.stream.IntStream;
@@ -52,7 +53,7 @@ class SimulatedDataSourceTest {
 		elapsedTime += 256 * (1 / IDEAL.getSampleRate());
 		bytesRead = subject.read(readBuffer, 0, readBuffer.length);
 		assertEquals(980, bytesRead);
-		final ShortBuffer secondBuffer = ByteBuffer.wrap(readBuffer, 0, bytesRead).asShortBuffer();
+		final ShortBuffer secondBuffer = ByteBuffer.wrap(readBuffer, 0, bytesRead).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer();
 		assertEquals(490, secondBuffer.limit());
 		IntStream intStream = IntStream.range(0, secondBuffer.capacity())
 						.map(secondBuffer::get);
