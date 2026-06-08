@@ -89,6 +89,7 @@ public class Triangles implements RenderedItem {
     }
 
     private void initBuffers(RenderContext ctx) {
+        vao.init(ctx);
         // Create a VBO and bind it
         var structure = new VertexDataStructure(new VertexElement(VertexElementType.VEC_2F, "position"));
         vbo = vao.createVbo(structure, vertices.length);

@@ -23,7 +23,6 @@ import static org.lwjgl.glfw.GLFW.*;
 /**
  * An OpenGL window that runs a experiment
  */
-
 public class Main extends GLWindow implements RenderContext {
     private static final Logger LOG = LoggerFactory.getLogger(Main.class);
 
@@ -92,8 +91,8 @@ public class Main extends GLWindow implements RenderContext {
         }
         finally {
             LOG.info("Exiting...");
-            System.exit(0);
         }
+        System.exit(0);
     }
 
     public void registerKeys() {

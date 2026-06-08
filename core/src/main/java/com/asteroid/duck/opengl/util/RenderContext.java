@@ -1,5 +1,6 @@
 package com.asteroid.duck.opengl.util;
 
+import com.asteroid.duck.opengl.util.events.ResizeListener;
 import com.asteroid.duck.opengl.util.keys.KeyRegistry;
 import com.asteroid.duck.opengl.util.resources.manager.ResourceManager;
 import com.asteroid.duck.opengl.util.timer.Timer;
@@ -22,10 +23,15 @@ public interface RenderContext {
 	KeyRegistry getKeyRegistry();
 
 	/**
-	 * The current location and size of the window
+	 * The current location and size of the window viewport in pixels.
+	 * This is used for rendering and also resize events.
 	 * @return window
 	 */
 	Rectangle getWindow();
+
+	// listener for resize events (see above window dimensions)
+	void addResizeListener(ResizeListener listener);
+	void removeResizeListener(ResizeListener listener);
 
 	/**
 	 * The timer in operation - used for elapsed time etc.

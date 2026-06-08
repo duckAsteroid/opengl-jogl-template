@@ -1,13 +1,13 @@
 plugins {
-  id "com.github.ben-manes.versions" version "0.53.0"
-  id 'com.gradleup.shadow' version '9.2.2'
+  id "com.github.ben-manes.versions" version "0.54.0"
+  id 'com.gradleup.shadow' version '9.4.1'
 }
 
 description = 'A template application for OpenGL (via JOGL) projects and experiments'
 
 ext {
-    javaLanguageVersion = 17
-    lwjglVersion = '3.3.6'
+    javaLanguageVersion = 25
+    lwjglVersion = '3.4.1'
     lwjglNatives = 'natives-linux'
     jomlVersion = '1.10.8'
 }

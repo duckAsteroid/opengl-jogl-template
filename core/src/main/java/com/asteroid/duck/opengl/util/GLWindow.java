@@ -1,5 +1,6 @@
 package com.asteroid.duck.opengl.util;
 
+import com.asteroid.duck.opengl.util.events.ResizeListener;
 import com.asteroid.duck.opengl.util.keys.*;
 import com.asteroid.duck.opengl.util.resources.manager.ResourceManager;
 import com.asteroid.duck.opengl.util.resources.texture.io.TextureData;
@@ -18,9 +19,11 @@ import org.slf4j.LoggerFactory;
 import java.awt.*;
 import java.io.IOException;
 import java.nio.IntBuffer;
+import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
 import static org.lwjgl.glfw.GLFW.*;
@@ -48,6 +51,7 @@ public abstract class GLWindow implements RenderContext {
 	private GLFWErrorCallback errorCallback;
 	private Rectangle windowed = null;
 	private Rectangle window;
+	private final List<ResizeListener> resizeListeners = new CopyOnWriteArrayList<>();
 	private Vector4f backgroundColor = new Vector4f(0.0f);
 	private boolean clearScreen = true;
     private boolean windowClosing = false;
@@ -170,6 +174,9 @@ public abstract class GLWindow implements RenderContext {
 		glViewport(0, 0, width, height);
 		this.window = readWindow();
 		updateTitle();
+		for (ResizeListener listener : resizeListeners) {
+			listener.onResize(width, height);
+		}
 	}
 
     public void windowCloseCallback(long l) {
@@ -300,6 +307,16 @@ public abstract class GLWindow implements RenderContext {
 
 	public Rectangle getWindow() {
 		return window;
+	}
+
+	@Override
+	public void addResizeListener(ResizeListener listener) {
+		resizeListeners.add(listener);
+	}
+
+	@Override
+	public void removeResizeListener(ResizeListener listener) {
+		resizeListeners.remove(listener);
 	}
 
 	public Vector2f getWindowDimensions() {
