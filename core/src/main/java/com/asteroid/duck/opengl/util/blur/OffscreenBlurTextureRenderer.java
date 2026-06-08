@@ -65,6 +65,18 @@ public class OffscreenBlurTextureRenderer extends CompositeRenderItem {
 		ctx.registerKeyAction(GLFW.GLFW_KEY_S, () -> multiply(0.999f), "Decrease blur brightness by 1%");
 		ctx.registerKeyAction(GLFW.GLFW_KEY_S, GLFW.GLFW_MOD_SHIFT, () -> multiply(0.9f), "Decrease blur brightness by 10%");
 		ctx.registerKeyAction(GLFW.GLFW_KEY_B, this::toggleBlur, "Toggle blur on/off");
+		ctx.registerKeyAction(GLFW.GLFW_KEY_RIGHT_BRACKET, this::increaseKernelSize, "Increase blur kernel size");
+		ctx.registerKeyAction(GLFW.GLFW_KEY_LEFT_BRACKET, this::decreaseKernelSize, "Decrease blur kernel size");
+	}
+
+	private void increaseKernelSize() {
+		stage1.increaseKernelSize();
+		stage2.setKernelSize(stage1.getKernelSize());
+	}
+
+	private void decreaseKernelSize() {
+		stage1.decreaseKernelSize();
+		stage2.setKernelSize(stage1.getKernelSize());
 	}
 
 	private float multiplier() {
