@@ -1,6 +1,10 @@
 package com.asteroid.duck.opengl.util.blur;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -31,6 +35,16 @@ class BlurKernelTest {
 			double[] actual = BlurKernel.pascal(i + 1);
 			assertArrayEquals(expected[i], actual);
 		}
+	}
+
+	// Kernel weights must sum to 1.0 (center + 2× each side weight), for all valid sizes.
+	// A bug where pascal() used int instead of double caused overflow at size 31+, breaking this.
+	@ParameterizedTest
+	@ValueSource(ints = {3, 13, 21, 29, 31, 33, 51, 65})
+	void weightsSumToOne(int size) {
+		BlurKernel kernel = new BlurKernel(size);
+		double sum = kernel.weights[0] + 2.0 * Arrays.stream(kernel.weights).skip(1).sum();
+		assertEquals(1.0, sum, 1e-6, "Weights must sum to 1.0 for kernel size " + size);
 	}
 
 	@Test

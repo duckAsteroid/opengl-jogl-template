@@ -6,6 +6,7 @@ import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.TranslateTextureRenderer;
 import com.asteroid.duck.opengl.util.blur.OffscreenBlurTextureRenderer;
 import com.asteroid.duck.opengl.util.keys.KeyCombination;
+import com.asteroid.duck.opengl.util.keys.KeyRegistry;
 import com.asteroid.duck.opengl.util.palette.PaletteRenderer;
 import com.asteroid.duck.opengl.util.resources.texture.*;
 import com.asteroid.duck.opengl.util.resources.texture.io.ImageLoadingOptions;
@@ -13,6 +14,8 @@ import com.asteroid.duck.opengl.util.wave.AudioWave;
 import org.joml.Vector4f;
 
 import java.io.IOException;
+
+import static org.lwjgl.glfw.GLFW.*;
 
 /**
  * An attempt to do 90% of Cthugha:
@@ -26,6 +29,7 @@ import java.io.IOException;
 public class Cthugha extends CompositeRenderItem implements Experiment {
 
 	private double frequency = 25.0;
+	private OffscreenBlurTextureRenderer blurStage;
 
 	public static final String OFFSCREEN_TEXTURE_NAME = "yabadabado";
 
@@ -54,7 +58,7 @@ public class Cthugha extends CompositeRenderItem implements Experiment {
 		add(offscreenTrans);
 
 		// blur
-		OffscreenBlurTextureRenderer blurStage = new OffscreenBlurTextureRenderer(OFFSCREEN_TEXTURE_NAME, opts);
+		blurStage = new OffscreenBlurTextureRenderer(OFFSCREEN_TEXTURE_NAME, opts);
 		add(blurStage);
 
 		// wave
@@ -72,6 +76,17 @@ public class Cthugha extends CompositeRenderItem implements Experiment {
 		// straight render
 
 		super.init(ctx);
+		registerKeys(ctx.getKeyRegistry());
+	}
+
+	private void registerKeys(KeyRegistry kr) {
+		kr.registerKeyAction(GLFW_KEY_W, () -> blurStage.multiply(1.001f), "Increase blur brightness by 1%");
+		kr.registerKeyAction(GLFW_KEY_W, GLFW_MOD_SHIFT, () -> blurStage.multiply(1.1f), "Increase blur brightness by 10%");
+		kr.registerKeyAction(GLFW_KEY_S, () -> blurStage.multiply(0.999f), "Decrease blur brightness by 1%");
+		kr.registerKeyAction(GLFW_KEY_S, GLFW_MOD_SHIFT, () -> blurStage.multiply(0.9f), "Decrease blur brightness by 10%");
+		kr.registerKeyAction(GLFW_KEY_B, blurStage::toggleBlur, "Toggle blur on/off");
+		kr.registerKeyAction(GLFW_KEY_RIGHT_BRACKET, blurStage::increaseKernelSize, "Increase blur kernel size");
+		kr.registerKeyAction(GLFW_KEY_LEFT_BRACKET, blurStage::decreaseKernelSize, "Decrease blur kernel size");
 	}
 
 	private void updateFrequency() {

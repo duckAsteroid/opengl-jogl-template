@@ -3,93 +3,109 @@ package com.asteroid.duck.opengl.util.blur;
 import com.asteroid.duck.opengl.util.CompositeRenderItem;
 import com.asteroid.duck.opengl.util.OffscreenTextureRenderer;
 import com.asteroid.duck.opengl.util.RenderContext;
-import com.asteroid.duck.opengl.util.keys.KeyRegistry;
 import com.asteroid.duck.opengl.util.resources.shader.vars.ShaderVariable;
 import com.asteroid.duck.opengl.util.resources.texture.*;
-import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A renderer that takes a texture and blurs it using a blur shader.
- * The exact process involves a single offscreen buffer to render the first shader pass (X axis).
- * This is then blurred in Y axis when rendered to the current target using a second pass.
+ * Each pass performs a two-stage separable Gaussian blur: X axis to an offscreen buffer (fbo_a),
+ * then Y axis back to screen (final pass) or to a second offscreen buffer (fbo_b).
+ * Passes tick-tock: fbo_b feeds the next pass's X input, avoiding read/write to the same texture.
+ * Multiple passes multiply the effective blur radius (each pass adds sigma in quadrature).
  */
 public class OffscreenBlurTextureRenderer extends CompositeRenderItem {
 	private static final Logger LOG = LoggerFactory.getLogger(OffscreenBlurTextureRenderer.class);
-	public static final String TEXTURE_FBO = "texture_fbo";
+	public static final TextureOptions STANDARD_TEXTURE_OPTS = new TextureOptions(DataFormat.RGBA, Filter.LINEAR, Wrap.REPEAT);
+
 	private float multiplier = 0.99f;
 
+	private final int passes;
 	private final TextureOptions opts;
 	private final String sourceTextureName;
-	private BlurTextureRenderer stage1;
-	private BlurTextureRenderer stage2;
+	private final List<BlurTextureRenderer> stages = new ArrayList<>();
 
 	public OffscreenBlurTextureRenderer(String source) {
-		this(source, new TextureOptions(DataFormat.RGBA, Filter.LINEAR, Wrap.REPEAT));
+		this(source, 1, STANDARD_TEXTURE_OPTS);
 	}
 
 	public OffscreenBlurTextureRenderer(String source, TextureOptions options) {
+		this(source, 1, options);
+	}
+
+	public OffscreenBlurTextureRenderer(String source, int passes, TextureOptions options) {
+		if (passes < 1) throw new IllegalArgumentException("passes must be >= 1");
 		this.sourceTextureName = source;
+		this.passes = passes;
 		this.opts = options;
 	}
 
 	@Override
 	public void init(RenderContext ctx) throws IOException {
-		registerKeys(ctx.getKeyRegistry());
+		String fboA = sourceTextureName + "_fbo_a";
+		String fboB = sourceTextureName + "_fbo_b";
 
-		// first stage blur to offscreen texture
-		this.stage1 = new BlurTextureRenderer(sourceTextureName, false);
-		stage1.setXAxis(true);
-		stage1.addVariable(ShaderVariable.floatVariable("multiplier", this::multiplier));
+		Texture texA = TextureFactory.createTexture(ctx.getWindow(), null, opts);
+		ctx.getResourceManager().putTexture(fboA, texA);
+		Texture texB = TextureFactory.createTexture(ctx.getWindow(), null, opts);
+		ctx.getResourceManager().putTexture(fboB, texB);
 
-		Texture offscreen = TextureFactory.createTexture(ctx.getWindow(), null, opts);
-		ctx.getResourceManager().putTexture(TEXTURE_FBO, offscreen);
-		OffscreenTextureRenderer offscreenRender = new OffscreenTextureRenderer(stage1, offscreen);
-		add(offscreenRender);
+		for (int i = 0; i < passes; i++) {
+			boolean isLast = (i == passes - 1);
+			String input = (i == 0) ? sourceTextureName : fboB;
 
-		// seconds stage
-		this.stage2 = new BlurTextureRenderer(TEXTURE_FBO, false);
-		stage2.setXAxis(false);
-		stage2.addVariable(ShaderVariable.floatVariable("multiplier", this::multiplier));
-    	add(stage2);
+			// X pass always renders to fbo_a
+			BlurTextureRenderer xBlur = new BlurTextureRenderer(input);
+			xBlur.setXAxis(true);
+			xBlur.addVariable(ShaderVariable.floatVariable("multiplier", this::multiplier));
+			stages.add(xBlur);
+			add(new OffscreenTextureRenderer(xBlur, texA));
+
+			// Y pass: intermediate passes render to fbo_b; final pass renders to screen
+			BlurTextureRenderer yBlur = new BlurTextureRenderer(fboA);
+			yBlur.setXAxis(false);
+			yBlur.addVariable(ShaderVariable.floatVariable("multiplier", this::multiplier));
+			stages.add(yBlur);
+			if (isLast) {
+				add(yBlur);
+			} else {
+				add(new OffscreenTextureRenderer(yBlur, texB));
+			}
+		}
 
 		super.init(ctx);
 	}
 
-	private void registerKeys(KeyRegistry ctx) {
-		ctx.registerKeyAction(GLFW.GLFW_KEY_W, () -> multiply(1.001f), "Increase blur brightness by 1%");
-		ctx.registerKeyAction(GLFW.GLFW_KEY_W, GLFW.GLFW_MOD_SHIFT, () -> multiply(1.1f), "Increase blur brightness by 10%");
-		ctx.registerKeyAction(GLFW.GLFW_KEY_S, () -> multiply(0.999f), "Decrease blur brightness by 1%");
-		ctx.registerKeyAction(GLFW.GLFW_KEY_S, GLFW.GLFW_MOD_SHIFT, () -> multiply(0.9f), "Decrease blur brightness by 10%");
-		ctx.registerKeyAction(GLFW.GLFW_KEY_B, this::toggleBlur, "Toggle blur on/off");
-		ctx.registerKeyAction(GLFW.GLFW_KEY_RIGHT_BRACKET, this::increaseKernelSize, "Increase blur kernel size");
-		ctx.registerKeyAction(GLFW.GLFW_KEY_LEFT_BRACKET, this::decreaseKernelSize, "Decrease blur kernel size");
+	public void increaseKernelSize() {
+		setKernelSize(getKernelSize() + 2);
 	}
 
-	private void increaseKernelSize() {
-		stage1.increaseKernelSize();
-		stage2.setKernelSize(stage1.getKernelSize());
+	public void decreaseKernelSize() {
+		setKernelSize(getKernelSize() - 2);
+	}
+	private int getKernelSize() {
+		return stages.getFirst().getKernelSize();
 	}
 
-	private void decreaseKernelSize() {
-		stage1.decreaseKernelSize();
-		stage2.setKernelSize(stage1.getKernelSize());
+	private void setKernelSize(int size) {
+		stages.forEach(s -> s.setKernelSize(size));
 	}
 
-	private float multiplier() {
+	public float multiplier() {
 		return multiplier;
 	}
 
-	private void multiply(float v) {
+	public void multiply(float v) {
 		multiplier *= v;
 		LOG.info("multiplier={}", multiplier);
 	}
 
-	private void toggleBlur() {
-    stage1.toggleBlur();
-		stage2.toggleBlur();
-  }
+	public void toggleBlur() {
+		stages.forEach(BlurTextureRenderer::toggleBlur);
+	}
 }

@@ -83,7 +83,10 @@ tasks.register("debugRun", JavaExec) {
   workingDir = project.projectDir
 
     logger.log(LogLevel.LIFECYCLE, workingDir.toString())
-  jvmArgs = ["--enable-preview","-javaagent:src/test/libs/lwjglx-debug-1.0.0.jar=tn;o=debugRun.gl.log"]
+  jvmArgs = ["--enable-preview",
+             "-javaagent:src/test/libs/lwjglx-debug-1.0.5.jar=tn;o=debugRun.gl.log",
+             "--enable-native-access=ALL-UNNAMED"
+            ]
   def myProps = [
           "simulate.audio": "TRUE",
           "slf4j.internal.verbosity": "WARN"

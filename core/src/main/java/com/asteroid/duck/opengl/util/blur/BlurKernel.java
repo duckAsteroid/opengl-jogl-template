@@ -104,7 +104,7 @@ public class BlurKernel {
 	 */
 	public static double[] pascal(int n) {
 		double[] result = new double[n];
-		int C = 1;
+		double C = 1.0;
 		for (int i = 1; i <= result.length; i++) {
 			result[i - 1] = C;
 			C = C * (n - i) / i;

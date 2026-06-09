@@ -12,8 +12,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
-import static org.lwjgl.glfw.GLFW.*;
-
 /**
  * Renders a texture to current output with (or without) a gaussian blur in a single dimension (X/Y)
  */
@@ -29,29 +27,17 @@ public class BlurTextureRenderer extends AbstractPassthruRenderer {
 	// If true = X, else Y
 	private boolean axis = true;
 	private final String textureName;
-	private final boolean registerKeys;
 	private final ShaderVariables variables = new ShaderVariables();
 
 	private int kernelSize = 29;
 	private DiscreteSampleKernel cachedKernel = new BlurKernel(kernelSize).getDiscreteSampleKernel();
 
 	public BlurTextureRenderer(String sourceTexture) {
-		this(sourceTexture, true);
-	}
-
-	public BlurTextureRenderer(String sourceTexture, boolean registerKeys) {
 		this.textureName = sourceTexture;
-		this.registerKeys = registerKeys;
 	}
 
 	@Override
 	public void init(RenderContext ctx) throws IOException {
-		if (registerKeys) {
-			ctx.getKeyRegistry().registerKeyAction(GLFW_KEY_B, this::toggleBlur, "Toggle blurring on/off");
-			ctx.getKeyRegistry().registerKeyAction(GLFW_KEY_X, this::toggleAxis, "Toggle X/Y axis blurring");
-			ctx.getKeyRegistry().registerKeyAction(GLFW_KEY_RIGHT_BRACKET, this::increaseKernelSize, "Increase blur kernel size");
-			ctx.getKeyRegistry().registerKeyAction(GLFW_KEY_LEFT_BRACKET, this::decreaseKernelSize, "Decrease blur kernel size");
-		}
 		super.init(ctx);
 	}
 
