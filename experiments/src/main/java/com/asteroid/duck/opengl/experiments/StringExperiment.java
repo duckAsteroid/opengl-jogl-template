@@ -46,7 +46,7 @@ public class StringExperiment implements Experiment {
         ctx.getResourceManager().getTexture("molly.jpg", "molly.jpg");
         registerKeys(ctx.getKeyRegistry());
         var ftf = new FontTextureFactory(new Font("Times New Roman", Font.BOLD,24), true);
-        stringRenderer = new StringRenderer(ftf.createFontTexture(), maxLengthString());
+        stringRenderer = new StringRenderer(ftf.createFontTexture());
         stringRenderer.init(ctx);
         stringRenderer.setText(STRINGS[selectedStringIndex]);
 

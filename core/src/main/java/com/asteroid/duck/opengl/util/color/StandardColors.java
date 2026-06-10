@@ -171,6 +171,10 @@ public enum StandardColors implements Supplier<Vector4f> {
 		this.color = new Vector4f(r,g,b,1.0f);
 	}
 
+	public Vector4f withAlpha(float alpha) {
+		return new Vector4f(color.x(), color.y(), color.z(), alpha);
+	}
+
 	@Override
 	public Vector4f get() {
 		return color;

@@ -12,7 +12,9 @@ import com.asteroid.duck.opengl.util.resources.buffer.ebo.ElementBufferObject;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.*;
 import com.asteroid.duck.opengl.util.resources.font.FontTexture;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
+import com.asteroid.duck.opengl.util.resources.shader.ShaderSource;
 import com.asteroid.duck.opengl.util.resources.textureunit.TextureUnit;
+import org.intellij.lang.annotations.Language;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
 import org.slf4j.Logger;
@@ -39,6 +41,36 @@ public class StringRenderer implements RenderedItem {
     private static final Logger LOG = LoggerFactory.getLogger(StringRenderer.class);
     private static final List<Vertice> fourCorners = Vertice.standardFourVertices().toList();
     private static final int[] indices = Vertice.standardSixVertices().mapToInt(fourCorners::indexOf).toArray();
+
+    // language="GLSL"
+    private static final String VERTEX_GLSL = """
+            #version 460
+            in vec2 screenPosition;
+            in vec2 texturePosition;
+            out vec2 texCoords;
+            uniform mat4 projection;
+            uniform mat4 model;
+            void main() {
+                gl_Position = projection * model * vec4(screenPosition, 1.0, 1.0);
+                texCoords = texturePosition;
+            }
+            """;
+
+
+    // language="GLSL"
+    private static final String FRAGMENT_GLSL = """
+            #version 460
+            precision mediump float;
+            uniform sampler2D tex;
+            uniform vec4 textColor;
+            in vec2 texCoords;
+            out vec4 fragColor;
+            void main() {
+                vec4 color = texture(tex, texCoords);
+                float mask = color.r;
+                fragColor = vec4(textColor.rgb * mask, textColor.a * color.a);
+            }
+            """;
 
     private static final String TEXT_UPDATE   = "textUpdate";
     private static final String TEXT_COLOR    = "textColor";
@@ -86,7 +118,10 @@ public class StringRenderer implements RenderedItem {
     }
 
     private void initShader(RenderContext ctx) {
-        shaderProgram = ctx.getResourceManager().getSimpleShader("text");
+        shaderProgram = ShaderProgram.compile(
+                ShaderSource.fromClass(VERTEX_GLSL, StringRenderer.class),
+                ShaderSource.fromClass(FRAGMENT_GLSL, StringRenderer.class),
+                null);
         shaderProgram.use(ctx);
     }
 
