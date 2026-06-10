@@ -1,10 +1,14 @@
 package com.asteroid.duck.opengl.util.resources.font;
 
-import java.nio.FloatBuffer;
+import java.awt.Point;
+import java.awt.Rectangle;
 import java.util.*;
 import java.util.List;
 
+import com.asteroid.duck.opengl.util.geom.Vertice;
 import com.asteroid.duck.opengl.util.resources.Resource;
+import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexBufferObject;
+import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexElement;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 
 
@@ -106,45 +110,30 @@ public class FontTexture implements Resource {
 	}
 
 	/**
-	 * Compute the vertex data required to draw the text at the specified position and color.
+	 * Fill {@code vbo} with origin-relative screen and texture positions for each glyph in {@code text}.
+	 * The string baseline datum is at (0, 0) in string space; callers position the string via a model
+	 * matrix uniform rather than baking a screen offset into the vertex data.
 	 *
-	 * @param text     Text to draw
-	 * @param x        X coordinate of the text position
-	 * @param y        Y coordinate of the text position
-	 * @param c        Color to use
-	 * @param target   The float buffer (VBO) to write vertex data into
+	 * @param text      text to render
+	 * @param vbo       vertex buffer to write into (must have capacity for {@code text.length() * 4} vertices)
+	 * @param screenEl  the {@link VertexElement} that holds the 2D screen position in each vertex
+	 * @param texEl     the {@link VertexElement} that holds the 2D texture coordinate in each vertex
 	 */
-	public void computeVertexData(CharSequence text, float x, float y, Object c, FloatBuffer target) {
-		// FIXME - create a GlyphTextureVert that would have the shader, VAO, VBO and color etc
-		// it would use this texture and associated glyph data to compute the buffer when changed
-		int textHeight = getHeight(text);
-
-		float drawX = x;
-		float drawY = y;
-		if (textHeight > fontHeight) {
-			drawY += textHeight - fontHeight;
-		}
-
-		/*texture.bind();
-		renderer.begin();
+	public void computeVertexData(CharSequence text, VertexBufferObject vbo, VertexElement screenEl, VertexElement texEl) {
+		List<Vertice> corners = Vertice.standardFourVertices().toList();
+		Point cursor = new Point(0, 0);
 		for (int i = 0; i < text.length(); i++) {
-			char ch = text.charAt(i);
-			if (ch == '\n') {
-				/* Line feed, set x and y to draw at the next line /
-				drawY -= fontHeight;
-				drawX = x;
-				continue;
+			GlyphData glyph = glyphs.get(text.charAt(i));
+			if (glyph == null) continue;
+			Rectangle screen = glyph.rawBounds(cursor);
+			org.joml.Vector4f tex = glyph.normalBounds();
+			for (int j = 0; j < corners.size(); j++) {
+				Vertice v = corners.get(j);
+				vbo.setElement(i * 4 + j, screenEl, v.from(screen));
+				vbo.setElement(i * 4 + j, texEl,    v.from(tex));
 			}
-			if (ch == '\r') {
-				/* Carriage return, just skip it /
-				continue;
-			}
-			Glyph g = glyphs.get(ch);
-			renderer.drawTextureRegion(texture, drawX, drawY, g.x, g.y, g.width, g.height, c);
-			drawX += g.width();
+			cursor.x += glyph.advance();
 		}
-		renderer.end();
-*/
 	}
 
 
