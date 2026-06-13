@@ -21,7 +21,7 @@ public class LineAcquirer {
   private int selectedSource = 0;
 
   public void init(RenderContext ctx, AudioFormat ideal)  {
-    if (System.getProperty("simulate.audio", "true").equalsIgnoreCase("true")) {
+    if (System.getProperty("simulate.audio", "false").equalsIgnoreCase("true")) {
       StereoDataSource audio = getSampledWaveformData();
       sources.add(new SimulatedDataSource(ctx.getTimer(), audio));
     }

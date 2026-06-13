@@ -27,6 +27,7 @@ application {
 
 tasks.named('run', JavaExec) {
     systemProperty "slf4j.internal.verbosity", "WARN"
+    systemProperty "simulate.audio", "true"
     environment += [
             '__NV_PRIME_RENDER_OFFLOAD'  : '1',
             '__GLX_VENDOR_LIBRARY_NAME'  : 'nvidia',
@@ -41,7 +42,6 @@ tasks.named('startScripts', CreateStartScripts) {
                        '__GLX_VENDOR_LIBRARY_NAME=nvidia',
                        '__GL_THREADED_OPTIMIZATIONS=0']
         def envVarsScript = envVars.collect { "export ${it}" }.join('\n')
-        def x2 = 'export APP_MODE=production\nexport LOG_LEVEL=debug'
         // Inject them right after the shebang or near the top of the script
         final HEADER = '#!/bin/sh'
         unixScript.text = unixScript.text.replace(HEADER, HEADER + "\n\n${envVarsScript}")
