@@ -62,7 +62,7 @@ public class SimulatedDataSource implements AudioDataSource {
 	}
 
 	@Override
-	public int read(byte[] array, int start, int limit) {
+	public int read(byte[] array, int start, int length) {
 		double now = timer.elapsed();
 		double samplePeriod = 1.0 / format.getSampleRate();
 		// this is the maximum number of samples we can read (respecting our buffer limit)
@@ -70,8 +70,8 @@ public class SimulatedDataSource implements AudioDataSource {
 		if (samples <= 0)
 			return 0;
 
-		// this buffer is a short view onto the array calibrated to the start and limit given
-		ShortBuffer buffer = ByteBuffer.wrap(array, start, limit).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer();
+		// this buffer is a short view onto the array calibrated to the start and length given
+		ShortBuffer buffer = ByteBuffer.wrap(array, start, length).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer();
 
 		// Can the buffer take more than we can theoretically read
 		if (buffer.remaining() > samples) {
