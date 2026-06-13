@@ -70,6 +70,7 @@ public class AudioWave implements RenderedItem {
     private Uniform<Integer> uHead;
 
     private AudioReader audioReader;
+    private Thread audioReaderThread;
 
 
     @Override
@@ -85,8 +86,9 @@ public class AudioWave implements RenderedItem {
 
         // Start a Producer thread to continuously fill the GPU buffer with audio data
         this.audioReader = new AudioReader(gpuMapped, AUDIO_TEXTURE_BYTE_SIZE);
-        Thread audioReaderThread = new Thread(audioReader);
-        audioReaderThread.start();
+        this.audioReaderThread = new Thread(audioReader, "audio-reader");
+        this.audioReaderThread.setDaemon(true);
+        this.audioReaderThread.start();
         glLineWidth(6.0f);
         ctx.setDesiredUpdateFrequency(60.0);
     }
@@ -227,8 +229,23 @@ public class AudioWave implements RenderedItem {
 
     @Override
     public void dispose() {
+        // Signal the audio thread to stop and unblock it if it is waiting for a line
         audioReader.setRunning(false);
+        audioReader.setLine(null);
+        try {
+            if (audioReaderThread != null) {
+                audioReaderThread.join(2000);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        // Release GL resources in reverse-init order
+        vao.dispose();
         shader.dispose();
+        glDeleteBuffers(pboId);
+        glDeleteTextures(audioTextureId);
+        pboId = 0;
+        audioTextureId = 0;
     }
 
     public void setLineWidth(float v) {
