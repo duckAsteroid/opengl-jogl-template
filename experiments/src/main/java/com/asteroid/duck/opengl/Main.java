@@ -16,7 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.stream.Stream;
 
 import static org.lwjgl.glfw.GLFW.*;
 
@@ -28,13 +27,6 @@ public class Main extends GLWindow implements RenderContext {
 
     public static final int STEP = 10;
     public static final int LARGE_STEP = 100;
-
-    // replaced with the actual args in main()
-    public static String[] ARGS = {};
-
-    public static Stream<String> args() {
-        return Stream.of(ARGS);
-    }
 
     private final TimerImpl timer = new TimerImpl(TimeSource.glfwGetTimeInstance());
 
@@ -72,11 +64,10 @@ public class Main extends GLWindow implements RenderContext {
     public static void main(String[] args) throws Exception {
         String javaVersion = System.getProperty("java.version");
         System.out.println("Running with Java version: " + javaVersion);
-        Main.ARGS = args;
         Main main = null;
         try {
 
-            ExperimentChooser chooser = new ExperimentChooser();
+            ExperimentChooser chooser = new ExperimentChooser(args);
             Experiment experiment = chooser.get();
             LOG.info("Running experiment: {}", experiment.getClass().getName());
             
