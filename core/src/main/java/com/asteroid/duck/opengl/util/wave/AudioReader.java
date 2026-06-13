@@ -89,8 +89,7 @@ class AudioReader implements Runnable {
         catch(InterruptedException | BufferOverflowException e) {
             LOG.error("Audio reader thread, stopping.", e);
         }
-        System.out.println("chunk=" + chunkSize);
-        System.out.println("available=" + available);
+        LOG.debug("Audio reader stopped. chunk={}, available={}", chunkSize, available);
     }
 
     protected AudioDataSource waitForLine() throws InterruptedException {

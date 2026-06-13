@@ -7,6 +7,7 @@ import com.asteroid.duck.opengl.util.audio.LineAcquirer;
 import com.asteroid.duck.opengl.util.resources.buffer.BufferDrawMode;
 import com.asteroid.duck.opengl.util.resources.buffer.UpdateHint;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
+import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexBufferObject;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexDataStructure;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexElement;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexElementType;
@@ -20,6 +21,7 @@ import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.TargetDataLine;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Objects;
 import java.util.stream.IntStream;
 
 import static org.lwjgl.opengl.GL11.*;
@@ -61,6 +63,11 @@ public class AudioWave implements RenderedItem {
     //  each sample is a signed short (2 bytes), so we need to multiply by 2 to get the texture width in bytes
     private static final int AUDIO_TEXTURE_BYTE_SIZE = AUDIO_TEXTURE_WIDTH * 2;
 
+    private static final VertexElement POSITION = new VertexElement(VertexElementType.VEC_2F, "position");
+
+    /** Default amplitude: 10× exaggeration of the normalised audio signal. */
+    private AmplitudeFunction amplitudeFunction = AmplitudeFunction.constant(10f);
+    private volatile boolean amplitudeDirty = false;
 
     private ShaderProgram shader;
     private VertexArrayObject vao;
@@ -101,23 +108,63 @@ public class AudioWave implements RenderedItem {
     /**
      * Our VBO contains 1024 vertices, each with a 2D position.
      * The x coordinate is fixed and goes from 0 to 1 across the screen,
-     * while the y coordinate will be multiplied with audio data (from a texture) in the shader.
+     * while the y coordinate (amplitude) is set by {@link #amplitudeFunction} and multiplied
+     * with audio data in the shader.
      */
     private void initVbo(RenderContext ctx) {
         this.vao = new VertexArrayObject();
         vao.setDrawMode(BufferDrawMode.LINE_STRIP);
         vao.init(ctx);
-        // create VBO
-        var POSITION = new VertexElement(VertexElementType.VEC_2F, "position");
         VertexDataStructure dataStructure = new VertexDataStructure(POSITION);
         var vbo = vao.createVbo(dataStructure, SCREEN_WIDTH);
         vbo.init(ctx);
-        final float y = 10f;
-        IntStream.range(0, SCREEN_WIDTH).forEach(i -> {
-            float x = (((float) i / SCREEN_WIDTH ) * 2f) - 1f; // scale to -1 to 1 for NDC
-            vbo.setElement(i, POSITION, new Vector2f(x,y));
-        });
+        fillVboAmplitude(vbo);
         vbo.update(UpdateHint.STATIC);
+    }
+
+    private void fillVboAmplitude(VertexBufferObject vbo) {
+        AmplitudeFunction fn = this.amplitudeFunction;
+        IntStream.range(0, SCREEN_WIDTH).forEach(i -> {
+            float x = (((float) i / SCREEN_WIDTH) * 2f) - 1f;
+            vbo.setElement(i, POSITION, new Vector2f(x, fn.amplitudeAt(i, x)));
+        });
+    }
+
+    private void rebuildVboAmplitude() {
+        fillVboAmplitude(vao.getVbo());
+        vao.getVbo().update(UpdateHint.DYNAMIC);
+        amplitudeDirty = false;
+    }
+
+    /**
+     * Set how amplitude varies across the wave.
+     * The new function takes effect on the next rendered frame.
+     *
+     * @param fn per-vertex amplitude function; must not be null
+     * @see AmplitudeFunction#constant(float)
+     * @see AmplitudeFunction#ellipse(float)
+     */
+    public void setAmplitudeFunction(AmplitudeFunction fn) {
+        this.amplitudeFunction = Objects.requireNonNull(fn);
+        this.amplitudeDirty = true;
+    }
+
+    /** Return the current amplitude function. */
+    public AmplitudeFunction getAmplitudeFunction() {
+        return amplitudeFunction;
+    }
+
+    /** Convenience: uniform amplitude across the whole wave. */
+    public void setConstantAmplitude(float amplitude) {
+        setAmplitudeFunction(AmplitudeFunction.constant(amplitude));
+    }
+
+    /**
+     * Convenience: elliptical envelope — zero at the edges, {@code maxAmplitude} at centre.
+     * The wave will fit inside an ellipse of the given height.
+     */
+    public void setEllipticalAmplitude(float maxAmplitude) {
+        setAmplitudeFunction(AmplitudeFunction.ellipse(maxAmplitude));
     }
 
     // language=GLSL
@@ -208,6 +255,9 @@ public class AudioWave implements RenderedItem {
 
     @Override
     public void doRender(RenderContext ctx) {
+        if (amplitudeDirty) {
+            rebuildVboAmplitude();
+        }
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         shader.use(ctx);
         uHead.set(audioReader.getHead()); // pass the current head position to the shader
