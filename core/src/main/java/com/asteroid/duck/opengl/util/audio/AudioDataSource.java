@@ -32,10 +32,10 @@ public interface AudioDataSource {
 	 * Read raw audio data into the given array
 	 * @param array the array to read into
 	 * @param start start index in the array, the first byte read will go here
-	 * @param limit maximum number of bytes to read
+	 * @param length maximum number of bytes to read
 	 * @return number of bytes actually read
 	 */
-	int read(byte[] array, int start, int limit);
+	int read(byte[] array, int start, int length);
 	/**
 	 * Stop the data source (can be restarted)
 	 */
