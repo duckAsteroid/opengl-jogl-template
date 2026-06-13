@@ -38,6 +38,8 @@ public class ResourceManagerImpl implements Resource, ResourceManager {
 	private final NamedResourceManager<Texture> textures = new NamedResourceManager<>();
 	private final NamedResourceManager<ShaderProgram> shaders = new NamedResourceManager<>();
 	private final NamedResourceManager<TextureUnit> textureUnits = new NamedResourceManager<>();
+	// catch-all for resources that don't fit a named category
+	private final ResourceListManager<Resource> others = new ResourceListManager<>();
 
 	private final SortedSet<Integer> unallocatedTextureUnits = new TreeSet<>();
 
@@ -192,6 +194,11 @@ public class ResourceManagerImpl implements Resource, ResourceManager {
 		return group;
 	}
 
+	@Override
+	public void register(Resource resource) {
+		others.add(resource);
+	}
+
 	/**
 	 * Destroy and clear all managed resources. After calling this method the manager will have no cached resources.
 	 *
@@ -204,6 +211,7 @@ public class ResourceManagerImpl implements Resource, ResourceManager {
 		textures.dispose();
 		shaders.dispose();
 		textureUnits.dispose();
+		others.dispose();
 
 		initTextureUnits();
 	}

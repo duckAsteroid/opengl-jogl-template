@@ -225,6 +225,7 @@ public class AudioWave implements RenderedItem {
 
     private ByteBuffer initAudioBuffer(RenderContext ctx) {
         this.audioTextureId = glGenTextures();
+        // Raw bind: GL_TEXTURE_1D is not yet covered by an ExclusivityGroup in this project.
         glBindTexture(GL_TEXTURE_1D, audioTextureId);
 
         // 1. Set Wrapping to REPEAT so the uHead offset wraps automatically
@@ -241,7 +242,9 @@ public class AudioWave implements RenderedItem {
         glBindTexture(GL_TEXTURE_1D, 0);
 
 
-        // 1. Create a Pixel Buffer Object (PBO)
+        // Raw bind: the PBO uses GL44 persistent mapping (GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT),
+        // which requires glBufferStorage and a single persistent map for the audio producer thread.
+        // This doesn't fit the existing VertexBufferObject abstraction, so we manage it directly.
         this.pboId = glGenBuffers();
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pboId);
 
@@ -250,7 +253,16 @@ public class AudioWave implements RenderedItem {
         glBufferStorage(GL_PIXEL_UNPACK_BUFFER, AUDIO_TEXTURE_BYTE_SIZE, flags);
 
         // 3. Map it once and keep the reference
-        return glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, AUDIO_TEXTURE_BYTE_SIZE, flags);
+        ByteBuffer mapped = glMapBufferRange(GL_PIXEL_UNPACK_BUFFER, 0, AUDIO_TEXTURE_BYTE_SIZE, flags);
+
+        // Register both raw GL resources with the ResourceManager so they are lifecycle-tracked
+        // and cleaned up on shutdown even if dispose() is not called directly.
+        ctx.getResourceManager().register(() -> {
+            glDeleteTextures(audioTextureId);
+            glDeleteBuffers(pboId);
+        });
+
+        return mapped;
     }
 
     @Override
