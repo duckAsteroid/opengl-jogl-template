@@ -61,6 +61,13 @@ public class AudioWave implements RenderedItem {
     //  each sample is a signed short (2 bytes), so we need to multiply by 2 to get the texture width in bytes
     private static final int AUDIO_TEXTURE_BYTE_SIZE = AUDIO_TEXTURE_WIDTH * 2;
 
+    /**
+     * Amplitude scale factor stored as the Y component of each vertex.
+     * Multiplied by the normalised audio sample (in [-1, 1]) in the vertex shader.
+     * Values greater than 1.0 exaggerate quiet signals visually.
+     */
+    private static final float AMPLITUDE_SCALE = 10f;
+
 
     private ShaderProgram shader;
     private VertexArrayObject vao;
@@ -110,10 +117,9 @@ public class AudioWave implements RenderedItem {
         VertexDataStructure dataStructure = new VertexDataStructure(POSITION);
         var vbo = vao.createVbo(dataStructure, SCREEN_WIDTH);
         vbo.init(ctx);
-        final float y = 10f;
         IntStream.range(0, SCREEN_WIDTH).forEach(i -> {
-            float x = (((float) i / SCREEN_WIDTH ) * 2f) - 1f; // scale to -1 to 1 for NDC
-            vbo.setElement(i, POSITION, new Vector2f(x,y));
+            float x = (((float) i / SCREEN_WIDTH) * 2f) - 1f; // scale to -1 to 1 for NDC
+            vbo.setElement(i, POSITION, new Vector2f(x, AMPLITUDE_SCALE));
         });
         vbo.update(UpdateHint.STATIC);
     }
