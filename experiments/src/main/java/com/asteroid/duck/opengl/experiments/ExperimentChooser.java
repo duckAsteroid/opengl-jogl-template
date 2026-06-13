@@ -179,7 +179,7 @@ public class ExperimentChooser implements Supplier<Experiment> {
 				} catch (NumberFormatException e) {
 					System.err.println("Invalid number, try again...");
 				}
-			} while (number < 0 || number > experiments.size());
+			} while (number < 0 || number >= experiments.size());
 			Experiment selected = experiments.get(number);
 			writeLastExperiment(selected);
 			return Optional.of(selected);
