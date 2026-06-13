@@ -1,6 +1,5 @@
 package com.asteroid.duck.opengl.experiments;
 
-import com.asteroid.duck.opengl.Main;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -28,9 +28,11 @@ public class ExperimentChooser implements Supplier<Experiment> {
 
 	private static final Logger LOG = LoggerFactory.getLogger(ExperimentChooser.class);
 
+	private final String[] args;
 	private final List<Experiment> experiments;
 
-	public ExperimentChooser() {
+	public ExperimentChooser(String[] args) {
+		this.args = args != null ? args : new String[0];
 		ServiceLoader<Experiment> loader = ServiceLoader.load(Experiment.class);
 		this.experiments = loader.stream().map(ServiceLoader.Provider::get).toList();
 	}
@@ -50,56 +52,86 @@ public class ExperimentChooser implements Supplier<Experiment> {
 
 	private Optional<Experiment> fromSwingDialog(List<Experiment> experiments) {
 		if (isInteractive()) {
-			String[] experimentTitles = experiments.stream().map(Experiment::getTitle).toArray(String[]::new);
-			String[] descriptions = experiments.stream().map(Experiment::getDescription).toArray(String[]::new);
-			JPanel message = new JPanel();
-			message.setLayout(new BoxLayout(message, BoxLayout.Y_AXIS));
-			JComboBox<String> comboBox = new JComboBox<>(experimentTitles);
-			message.add(comboBox);
-			JLabel description = new JLabel("Please select above");
-			comboBox.addActionListener(e -> {
-				int index = comboBox.getSelectedIndex();
-				description.setText(descriptions[index]);
-				description.setToolTipText(descriptions[index]);
-				comboBox.setToolTipText(descriptions[index]);
-			});
-			message.add(description);
-			Optional<String> lastExperiment = readLastExperiment();
-			if (lastExperiment.isPresent()) {
-				// select the default
-				Optional<Experiment> first = experiments.stream().filter(exp -> lastExperiment.get().equalsIgnoreCase(exp.getClass().getName())).findFirst();
-				if (first.isPresent()) {
-					comboBox.setSelectedItem(first.get().getTitle());
-					JLabel countdown = new JLabel();
-					Timer timer = new Timer(1000, new ActionListener() {
-						int secondsRemaining = 6;
-
-						@Override
-						public void actionPerformed(ActionEvent e) {
-							if (secondsRemaining <= 0) {
-								Frame rootFrame = JOptionPane.getRootFrame();
-								rootFrame.dispose();
-							} else {
-								secondsRemaining--;
-								countdown.setText(String.format("%d seconds remaining...", secondsRemaining));
-							}
-						}
-					});
-					message.add(countdown);
-					timer.setRepeats(true);
-					timer.setInitialDelay(0);
-					timer.start();
-				}
+			try {
+				return fromSwingDialogUnchecked(experiments);
+			} catch (Exception e) {
+				LOG.warn("Error showing Swing dialog", e);
 			}
-			message.setSize(1024, 500);
-			int result = JOptionPane.showConfirmDialog(null, message, "Select an Experiment", JOptionPane.OK_CANCEL_OPTION);
-			if (result == JOptionPane.OK_OPTION || (lastExperiment.isPresent() && result == JOptionPane.CLOSED_OPTION)) {
-				String selectedTitle = (String) comboBox.getSelectedItem();
-				Optional<Experiment> selection = experiments.stream().filter(exp -> selectedTitle.equalsIgnoreCase(exp.getTitle())).findAny();
-				if (selection.isPresent()) {
-					writeLastExperiment(selection.get());
-					return selection;
-				}
+		}
+		return Optional.empty();
+	}
+
+	private Optional<Experiment> fromSwingDialogUnchecked(List<Experiment> experiments) {
+		String[] experimentTitles = experiments.stream().map(Experiment::getTitle).toArray(String[]::new);
+		String[] descriptions = experiments.stream().map(Experiment::getDescription).toArray(String[]::new);
+		JPanel message = new JPanel();
+		message.setLayout(new BoxLayout(message, BoxLayout.Y_AXIS));
+		JComboBox<String> comboBox = new JComboBox<>(experimentTitles);
+		message.add(comboBox);
+		JLabel description = new JLabel("Please select above");
+		comboBox.addActionListener(e -> {
+			int index = comboBox.getSelectedIndex();
+			description.setText(descriptions[index]);
+			description.setToolTipText(descriptions[index]);
+			comboBox.setToolTipText(descriptions[index]);
+		});
+		message.add(description);
+
+		// Build the dialog explicitly so the countdown timer can dismiss it via dialog.dispose()
+		JOptionPane optionPane = new JOptionPane(message, JOptionPane.PLAIN_MESSAGE, JOptionPane.OK_CANCEL_OPTION);
+		JDialog dialog = optionPane.createDialog(null, "Select an Experiment");
+
+		Optional<String> lastExperiment = readLastExperiment();
+		Timer autoSelectTimer = null;
+		if (lastExperiment.isPresent()) {
+			Optional<Experiment> first = experiments.stream()
+				.filter(exp -> lastExperiment.get().equalsIgnoreCase(exp.getClass().getName()))
+				.findFirst();
+			if (first.isPresent()) {
+				comboBox.setSelectedItem(first.get().getTitle());
+				JLabel countdown = new JLabel("5 seconds remaining...");
+				message.add(countdown);
+				autoSelectTimer = new Timer(1000, new ActionListener() {
+					int secondsRemaining = 5;
+
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						if (secondsRemaining <= 0) {
+							((Timer) e.getSource()).stop();
+							dialog.dispose();
+						} else {
+							countdown.setText(secondsRemaining + " seconds remaining...");
+							secondsRemaining--;
+						}
+					}
+				});
+				autoSelectTimer.setRepeats(true);
+				autoSelectTimer.setInitialDelay(0);
+				autoSelectTimer.start();
+			}
+		}
+
+		message.setPreferredSize(new java.awt.Dimension(1024, 200));
+		dialog.pack();
+		dialog.setVisible(true); // blocks until disposed or button pressed
+
+		if (autoSelectTimer != null) {
+			autoSelectTimer.stop();
+		}
+
+		// getValue() returns the Integer button constant when clicked, or non-Integer when auto-dismissed
+		Object value = optionPane.getValue();
+		boolean okPressed = Integer.valueOf(JOptionPane.OK_OPTION).equals(value);
+		boolean autoDismissed = !(value instanceof Integer);
+
+		if (okPressed || (lastExperiment.isPresent() && autoDismissed)) {
+			String selectedTitle = (String) comboBox.getSelectedItem();
+			Optional<Experiment> selection = experiments.stream()
+				.filter(exp -> selectedTitle.equalsIgnoreCase(exp.getTitle()))
+				.findAny();
+			if (selection.isPresent()) {
+				writeLastExperiment(selection.get());
+				return selection;
 			}
 		}
 		return Optional.empty();
@@ -127,10 +159,11 @@ public class ExperimentChooser implements Supplier<Experiment> {
 	}
 
 	private Optional<Experiment> fromArgs(List<Experiment> experiments) {
-		if (Main.ARGS != null && Main.ARGS.length > 0) {
-			return experiments.stream().filter(exp -> Main.ARGS[0].equalsIgnoreCase(exp.getTitle())).findAny();
+		if (args.length > 0) {
+			return experiments.stream()
+				.filter(exp -> args[0].equalsIgnoreCase(exp.getTitle()))
+				.findAny();
 		}
-		System.out.println("No arguments given");
 		return Optional.empty();
 	}
 
@@ -160,7 +193,7 @@ public class ExperimentChooser implements Supplier<Experiment> {
 		return Optional.empty();
 	}
 
-	public static Optional<Experiment> fromConsole(List<Experiment> experiments) {
+	public Optional<Experiment> fromConsole(List<Experiment> experiments) {
 		if (isInteractive()) {
 			if (System.console() == null) {
 				System.out.println("No console, cannot choose experiment");
@@ -187,7 +220,7 @@ public class ExperimentChooser implements Supplier<Experiment> {
 		return Optional.empty();
 	}
 
-	private static boolean isInteractive() {
-		return Main.args().noneMatch((arg) -> arg.equals("--interactive=false"));
+	private boolean isInteractive() {
+		return Arrays.stream(args).noneMatch(arg -> arg.equals("--interactive=false"));
 	}
 }
