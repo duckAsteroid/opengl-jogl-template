@@ -25,9 +25,9 @@ class AudioReader implements Runnable {
     private Stats available = StatsFactory.stats("Audio: Available");
     private byte[] audioChunk = new byte[CHUNK_SIZE];
     private final ByteBuffer gpuMapped;
-    private int head = 0;
+    private volatile int head = 0;
     private AudioDataSource mLine = null;
-    private boolean running = true;
+    private volatile boolean running = true;
     private final int audioTextureByteSize;
 
     public AudioReader(ByteBuffer gpuMapped, int audioTextureByteSize) {
