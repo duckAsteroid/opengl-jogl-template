@@ -40,4 +40,13 @@ public interface ResourceManager extends Resource, BindingContext {
 	TextureUnit nextTextureUnit();
 	Stream<TextureUnit> textureUnits();
 
+	/**
+	 * Register an arbitrary resource for lifecycle tracking. The resource's {@code dispose()}
+	 * will be called when this manager is disposed, ensuring cleanup even for resources that
+	 * don't fit into a named category (textures, shaders, texture units).
+	 *
+	 * @param resource the resource to track; null values are ignored
+	 */
+	void register(Resource resource);
+
 }
