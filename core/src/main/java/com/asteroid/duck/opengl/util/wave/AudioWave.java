@@ -224,6 +224,11 @@ public class AudioWave implements RenderedItem {
     }
 
     private ByteBuffer initAudioBuffer(RenderContext ctx) {
+        // NOTE: ResourceManager does not expose a register(Resource) method on its interface —
+        // it only provides named accessors for textures, shaders, and texture units. There is
+        // therefore no way to enroll the raw audioTextureId and pboId into lifecycle tracking
+        // here. Explicit cleanup via glDeleteTextures/glDeleteBuffers in dispose() is handled
+        // separately (see issue #5 / PR #20).
         this.audioTextureId = glGenTextures();
         // Raw bind: GL_TEXTURE_1D is not yet covered by an ExclusivityGroup in this project.
         glBindTexture(GL_TEXTURE_1D, audioTextureId);
@@ -239,8 +244,13 @@ public class AudioWave implements RenderedItem {
         // Format: Internal Format (RG16_SNORM), Width (2048), Format (RED+GREEN), Type (SHORT)
         glTexImage1D(GL_TEXTURE_1D, 0, GL_RG16_SNORM, AUDIO_BUFFER_SIZE, 0, GL_RG, GL_SHORT, (ByteBuffer)null);
 
+        // Unbind the texture after setup; the PBO stays bound until first render.
         glBindTexture(GL_TEXTURE_1D, 0);
 
+        // The PBO is created with GL_MAP_PERSISTENT_BIT: it must remain mapped for the lifetime
+        // of the AudioWave so the audio thread can write to it continuously. This precludes wrapping
+        // it in a VertexBufferObject or ExclusivityGroup — both of which may unmap or rebind. Raw
+        // GL calls are intentional here. Lifecycle cleanup is handled explicitly in dispose().
 
         // Raw bind: the PBO uses GL44 persistent mapping (GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT),
         // which requires glBufferStorage and a single persistent map for the audio producer thread.
@@ -273,6 +283,10 @@ public class AudioWave implements RenderedItem {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         shader.use(ctx);
         uHead.set(audioReader.getHead()); // pass the current head position to the shader
+
+        // Raw binds: the PBO and 1-D texture are managed outside ExclusivityGroup because the PBO
+        // is persistently mapped (see initAudioBuffer). Always unbind the PBO after use (below) to
+        // avoid corrupting subsequent glTexImage/glBufferData calls elsewhere.
 
         // transfer audio data from the PBO to the Texture on the GPU.
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pboId);
