@@ -2,6 +2,24 @@ plugins {
   id 'application'
 }
 
+// Resolve X11 display credentials at configuration time so that a stale Gradle
+// daemon (which may lack DISPLAY/XAUTHORITY in its env) can still inject the
+// correct values into the forked JVM.
+def resolveX11Env = { ->
+    def display = System.getenv('DISPLAY') ?: ':0'
+    def xauth = System.getenv('XAUTHORITY')
+    if (!xauth) {
+        // On GNOME/Mutter the auth file lives in /run/user/<uid>/
+        def uid = ['id', '-u'].execute().text.trim()
+        def runDir = new File("/run/user/${uid}")
+        def authFile = runDir.listFiles()?.find {
+            it.name.contains('Xwaylandauth') || it.name == '.Xauthority'
+        }
+        xauth = authFile?.absolutePath ?: "${System.getProperty('user.home')}/.Xauthority"
+    }
+    return ['DISPLAY': display, 'XAUTHORITY': xauth]
+}
+
 dependencies {
     implementation project(':core')
 
@@ -27,13 +45,13 @@ application {
 
 tasks.named('run', JavaExec) {
     systemProperty "slf4j.internal.verbosity", "WARN"
-    systemProperty "simulate.audio", "true"
+    environment += resolveX11Env()
     environment += [
             '__NV_PRIME_RENDER_OFFLOAD'  : '1',
             '__GLX_VENDOR_LIBRARY_NAME'  : 'nvidia',
             '__GL_THREADED_OPTIMIZATIONS': '0',
             '_JAVA_AWT_WM_NONREPARENTING': '1',
-            'GLFW_PLATFORM': 'x11']
+            'GLFW_PLATFORM'              : 'x11']
 }
 
 tasks.named('startScripts', CreateStartScripts) {
@@ -42,6 +60,7 @@ tasks.named('startScripts', CreateStartScripts) {
                        '__GLX_VENDOR_LIBRARY_NAME=nvidia',
                        '__GL_THREADED_OPTIMIZATIONS=0']
         def envVarsScript = envVars.collect { "export ${it}" }.join('\n')
+        def x2 = 'export APP_MODE=production\nexport LOG_LEVEL=debug'
         // Inject them right after the shebang or near the top of the script
         final HEADER = '#!/bin/sh'
         unixScript.text = unixScript.text.replace(HEADER, HEADER + "\n\n${envVarsScript}")
@@ -92,10 +111,13 @@ tasks.register("debugRun", JavaExec) {
           "slf4j.internal.verbosity": "WARN"
   ]
   systemProperties myProps
+  environment += resolveX11Env()
   environment += [
-          '__NV_PRIME_RENDER_OFFLOAD': '1',
-          '__GLX_VENDOR_LIBRARY_NAME': 'nvidia',
-          '__GL_THREADED_OPTIMIZATIONS': '0']
+          '__NV_PRIME_RENDER_OFFLOAD'  : '1',
+          '__GLX_VENDOR_LIBRARY_NAME'  : 'nvidia',
+          '__GL_THREADED_OPTIMIZATIONS': '0',
+          '_JAVA_AWT_WM_NONREPARENTING': '1',
+          'GLFW_PLATFORM'              : 'x11']
   //args = ["--interactive=false", "BasicTexture"]
 }
 
