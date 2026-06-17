@@ -2,7 +2,7 @@ package com.asteroid.duck.opengl.util.blur;
 
 /**
  * This represents a set of sample positions and weights to use in a GLSL Texture (sampler).
- * It exploits {@link org.lwjgl.opengl.GL#GL_LINEAR}
+ * It exploits GL_LINEAR filtering to reduce the number of samples needed for a blur effect.
  * @param offsets
  * @param weights
  */

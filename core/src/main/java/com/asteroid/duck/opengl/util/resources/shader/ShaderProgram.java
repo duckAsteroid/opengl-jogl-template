@@ -25,7 +25,7 @@ import static org.lwjgl.opengl.GL32.GL_GEOMETRY_SHADER;
 
 /**
  * A wrapper/utility class for working with shader programs.
- * Provides easy ways to load & compile shader source.
+ * Provides easy ways to load &amp; compile shader source.
  *
  * <p>To load shaders from resource files - see {@link ShaderLoader}</p>
  */

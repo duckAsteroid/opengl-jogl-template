@@ -13,7 +13,7 @@ import java.util.stream.Stream;
  * this manager is destroyed.
  * <p>
  * Example usage:
- * NamedResourceManager<Texture> nm = new NamedResourceManager<>();
+ * NamedResourceManager&lt;Texture&gt; nm = new NamedResourceManager&lt;&gt;();
  * nm.put("diffuse", texture);
  * Texture t = nm.get("diffuse");
  */
