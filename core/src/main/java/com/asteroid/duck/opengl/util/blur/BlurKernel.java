@@ -31,7 +31,7 @@ public class BlurKernel {
 	/**
 	 * Create a blur kernel of a certain size.
 	 * @param size the size of the kernel
-	 * @throws IllegalArgumentException if the size < 1 or not odd
+	 * @throws IllegalArgumentException if the size &lt; 1 or not odd
 	 */
 	public BlurKernel(int size) {
 		if (size <= 1) throw new IllegalArgumentException("Kernel size must be > 1");

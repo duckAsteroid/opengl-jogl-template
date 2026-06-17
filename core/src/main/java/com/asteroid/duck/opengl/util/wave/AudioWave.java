@@ -372,7 +372,6 @@ public class AudioWave implements RenderedItem {
      *   <li>Draws the 1 024-vertex line strip, with each vertex displaced vertically by the
      *       corresponding audio sample amplitude.</li>
      * </ol>
-     * </p>
      */
     @Override
     public void doRender(RenderContext ctx) {

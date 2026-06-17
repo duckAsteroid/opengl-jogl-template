@@ -19,7 +19,7 @@ import static org.lwjgl.opengl.GL30.*;
  * e.g. RGBA etc.
  */
 public enum DataFormat implements TextureFactory.FormatHelper {
-	/** Red, Green, Blue & Alpha - 4 bytes per pixel */
+	/** Red, Green, Blue &amp; Alpha - 4 bytes per pixel */
 	RGBA(GL_RGBA, GL_RGBA8, GL_UNSIGNED_BYTE, 4) {
 		public BufferedImage apply(Dimension d) {
 			var glAlphaColorModel = new ComponentColorModel(ColorSpace

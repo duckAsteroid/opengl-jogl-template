@@ -18,30 +18,14 @@ public class TranslateExample extends CompositeRenderItem implements Experiment 
 	@Override
 	public void init(RenderContext ctx) throws IOException {
 		ctx.setClearScreen(true);
-		double updatePeriod = 1.0 / 35.0; // in seconds
-		ctx.setDesiredUpdatePeriod(updatePeriod);
-		// load the test card image
-		Texture texture = ctx.getResourceManager().getTexture("testcard", "test-card.jpeg", ImageLoadingOptions.DEFAULT);
-		// load the translation map - it's a matrix (screen sized) of 2 * 16 bit floats
-		Texture translateMap = ctx.getResourceManager().getTexture("translate", "translate/bighalfwheel.1024x800.tab", ImageLoadingOptions.DEFAULT.withType(DataFormat.TWO_CHANNEL_16_BIT));
-		// offscreen texture
-		TextureOptions opts = new TextureOptions(DataFormat.GRAY, Filter.LINEAR, Wrap.REPEAT);
-		Texture offscreen = TextureFactory.createTexture(ctx.getWindow(), null, opts);
-		ctx.getResourceManager().putTexture("yabadabado", offscreen);
+		ctx.setDesiredUpdatePeriod(1.0 / 35.0);
+		ctx.getResourceManager().getTexture("testcard", "test-card.jpeg", ImageLoadingOptions.DEFAULT);
+		ctx.getResourceManager().getTexture("translate", "translate/bighalfwheel.1024x800.tab",
+				ImageLoadingOptions.DEFAULT.withType(DataFormat.TWO_CHANNEL_16_BIT));
 
-		// render the named image to the source texture every 5 seconds
-		ToggledRenderItem pictureRenderer = new ToggledRenderItem(new Frequency(1, 0.1d), new PassthruTextureRenderer("testcard"));
-		OffscreenTextureRenderer offscreenRenderer = new OffscreenTextureRenderer(pictureRenderer, offscreen);
-		add(offscreenRenderer);
-
-		// translate the offscreen texture
-		TranslateTextureRenderer translationStage = new TranslateTextureRenderer("yabadabado", "translate");
-    	OffscreenTextureRenderer offscreenTrans = new OffscreenTextureRenderer(translationStage, offscreen);
-    	add(offscreenTrans);
-
-		// render the offscreen to the screen
-		PassthruTextureRenderer screenRenderer = new PassthruTextureRenderer("yabadabado");
-    	add(screenRenderer);
+		RenderedItem source = new ToggledRenderItem(new Frequency(1, 0.1d), new PassthruTextureRenderer("testcard"));
+		add(new MapTransformRenderItem(source, "translate", "yabadabado",
+				new TextureOptions(DataFormat.GRAY, Filter.LINEAR, Wrap.REPEAT)));
 
 		super.init(ctx);
 	}
