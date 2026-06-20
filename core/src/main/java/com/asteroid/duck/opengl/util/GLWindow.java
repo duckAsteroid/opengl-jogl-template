@@ -17,19 +17,27 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import javax.imageio.ImageIO;
+
 import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.system.MemoryUtil.NULL;
+import static org.lwjgl.system.MemoryUtil.memAlloc;
+import static org.lwjgl.system.MemoryUtil.memFree;
 
 /// An abstract base class for creating OpenGL applications. Sets up a window with key handlers
 /// and responds to resize events.
@@ -59,6 +67,9 @@ public abstract class GLWindow implements RenderContext {
 	private boolean clearScreen = true;
     private boolean windowClosing = false;
 	private final Random random = new Random();
+
+	/** Non-null when a screenshot has been requested; cleared after the capture executes. */
+	private volatile Path pendingCapture = null;
 
 	public GLWindow(ResourceManager resourceManager, String title, int width, int height, String icon) {
         this.resourceManager = resourceManager;
@@ -208,6 +219,13 @@ public abstract class GLWindow implements RenderContext {
 			// ---------------------
 			render();
 
+			// capture before swap so the image matches exactly what hits the screen
+			Path capture = pendingCapture;
+			if (capture != null) {
+				pendingCapture = null;
+				captureFramebuffer(capture);
+			}
+
 			glfwSwapBuffers(windowHandle);
             windowClosing |= glfwWindowShouldClose(windowHandle);
 		}
@@ -239,6 +257,59 @@ public abstract class GLWindow implements RenderContext {
 		int maxKeyStrWidth = getKeyRegistry().stream().mapToInt(ka -> ka.getCombination().asSimpleString().length()).max().orElse(0);
 		for(KeyAction ka : getKeyRegistry()) {
 			System.out.printf("\t%-"+maxKeyStrWidth+ "s - %s%n", ka.getCombination().asSimpleString(), ka.getDescription());
+		}
+	}
+
+	@Override
+	public void captureNextFrame(Path destination) {
+		this.pendingCapture = destination;
+	}
+
+	/**
+	 * Reads the current framebuffer pixels via {@code glReadPixels}, flips the image vertically
+	 * (GL origin is bottom-left), then writes a PNG on a virtual thread.
+	 *
+	 * <p>Must be called on the GL thread after {@link #render()} and before
+	 * {@code glfwSwapBuffers} so that the framebuffer contents are complete and correct.</p>
+	 */
+	private void captureFramebuffer(Path path) {
+		try (MemoryStack stack = stackPush()) {
+			IntBuffer pw = stack.mallocInt(1), ph = stack.mallocInt(1);
+			glfwGetFramebufferSize(windowHandle, pw, ph);
+			int w = pw.get(0), h = ph.get(0);
+			int stride = w * 3;
+			ByteBuffer pixels = memAlloc(stride * h);
+			try {
+				glReadPixels(0, 0, w, h, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+				// Copy into an int[] on the GL thread (fast, no GL calls), then hand off to a
+				// virtual thread for the slow file I/O so the render loop is not stalled.
+				int[] rgb = new int[w * h];
+				for (int y = 0; y < h; y++) {
+					// GL stores rows bottom-to-top; invert so row 0 is the top of the image.
+					int src = (h - 1 - y) * stride;
+					for (int x = 0; x < w; x++) {
+						int i = src + x * 3;
+						rgb[y * w + x] = ((pixels.get(i) & 0xFF) << 16)
+								| ((pixels.get(i + 1) & 0xFF) << 8)
+								|  (pixels.get(i + 2) & 0xFF);
+					}
+				}
+				Thread.ofVirtual().start(() -> {
+					try {
+						if (path.getParent() != null) {
+							Files.createDirectories(path.getParent());
+						}
+						BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+						img.setRGB(0, 0, w, h, rgb, 0, w);
+						ImageIO.write(img, "PNG", path.toFile());
+						LOG.info("Screenshot saved: {}", path.toAbsolutePath());
+					} catch (IOException e) {
+						LOG.error("Failed to write screenshot to {}", path, e);
+					}
+				});
+			} finally {
+				memFree(pixels);
+			}
 		}
 	}
 

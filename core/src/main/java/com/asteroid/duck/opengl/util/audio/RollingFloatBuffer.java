@@ -91,6 +91,24 @@ public class RollingFloatBuffer {
 	}
 
 	/**
+	 * Read the most recent {@code count} samples into {@code dest[0..count-1]}, oldest first.
+	 *
+	 * <p>Safe to call from any thread concurrently with {@link #write}; the write position is
+	 * sampled once at the start of the call.</p>
+	 *
+	 * @param dest  destination array; must have length &gt;= count
+	 * @param count number of samples to read; clamped to the buffer length if larger
+	 */
+	public void readSamples(float[] dest, int count) {
+		final int pos = writePos;
+		int clamped = Math.min(count, buffer.length);
+		int start = ((pos - clamped) % buffer.length + buffer.length) % buffer.length;
+		for (int i = 0; i < clamped; i++) {
+			dest[i] = buffer[(start + i) % buffer.length];
+		}
+	}
+
+	/**
 	 * Increase the maximum audio value used for normalization.
 	 * @param i the amount to increase by
 	 */

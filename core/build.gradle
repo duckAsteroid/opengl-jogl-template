@@ -22,6 +22,9 @@ dependencies {
   // Core utilities
   implementation "org.joml:joml:${jomlVersion}"
 
+  // FFT for spectrum analysis
+  implementation 'com.github.wendykierp:JTransforms:3.1'
+
   // LWJGL platform BOM and core libs; runtime natives set for linux by default
   implementation platform("org.lwjgl:lwjgl-bom:${lwjglVersion}")
   implementation "org.lwjgl:lwjgl"

@@ -389,6 +389,7 @@ public class AudioWave implements RenderedItem {
 
         // transfer audio data from the PBO to the Texture on the GPU.
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pboId);
+        glActiveTexture(GL_TEXTURE0); // audio texture is bound to unit 0 (set in initShader) — be explicit
         glBindTexture(GL_TEXTURE_1D, audioTextureId);
 
         // This is the "Actual" Flush.
