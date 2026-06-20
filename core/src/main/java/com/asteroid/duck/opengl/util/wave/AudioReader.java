@@ -19,9 +19,11 @@ import static com.asteroid.duck.opengl.util.audio.LineAcquirer.IDEAL;
 
 class AudioReader implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(AudioReader.class);
-    // 32 stereo samples (2 channels, 2 bytes per sample)
-    public static final int CHUNK_SIZE = 16 * 2 * 2;
-    // debug the chunk size to check we're reading in the expected sizes (except maybe the first and last reads)
+    // TargetDataLine internal buffer: 128 stereo frames at 48 kHz ≈ 2.7 ms.
+    // Small enough that most drivers honour it; user accepts occasional dropouts.
+    public static final int LINE_BUFFER_SIZE = 128 * 2 * 2; // 512 bytes
+    // Per-iteration read chunk: 16 stereo frames ≈ 0.33 ms. Drain the line as fast as the driver fills it.
+    public static final int CHUNK_SIZE = 16 * 2 * 2; // 64 bytes
     private Stats chunkSize = StatsFactory.stats("Audio: Chunk Size");
     private Stats available = StatsFactory.stats("Audio: Available");
     private byte[] audioChunk = new byte[CHUNK_SIZE];
@@ -78,9 +80,16 @@ class AudioReader implements Runnable {
         try {
             while (running) {
                 line = waitForLine();
-                available.add(line.available());
-                // read a chunk from audio line
-                int read = line.read(audioChunk, 0, CHUNK_SIZE);
+                int avail = line.available();
+                if (avail <= 0) {
+                    // nothing ready yet — yield rather than blocking in read()
+                    Thread.yield();
+                    continue;
+                }
+                available.add(avail);
+                // drain only what is already in the line buffer so we never block
+                int toRead = Math.min(avail, CHUNK_SIZE);
+                int read = line.read(audioChunk, 0, toRead);
                 chunkSize.add(read);
 
                 // write it into the GPU-mapped PBO (if one was provided)
@@ -143,7 +152,7 @@ class AudioReader implements Runnable {
             if (line != null) {
                 try {
                     if (!line.isOpen()) {
-                        line.open(IDEAL, CHUNK_SIZE);
+                        line.open(IDEAL, LINE_BUFFER_SIZE);
                     }
                     if (!line.isRunning()) {
                         line.start();
