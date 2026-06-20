@@ -9,7 +9,7 @@ import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.texture.io.TextureData;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import com.asteroid.duck.opengl.util.resources.texture.TextureFactory;
-import com.asteroid.duck.opengl.util.resources.textureunit.TextureUnit;
+import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
 import com.asteroid.duck.opengl.util.resources.texture.io.ImageLoadingOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

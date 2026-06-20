@@ -3,6 +3,10 @@ package com.asteroid.duck.opengl.util.resources.framebuffer;
 import com.asteroid.duck.opengl.util.resources.Resource;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 
+import static org.lwjgl.opengl.GL11.GL_TEXTURE_2D;
+import static org.lwjgl.opengl.GL11.glBindTexture;
+import static org.lwjgl.opengl.GL13.GL_TEXTURE0;
+import static org.lwjgl.opengl.GL13.glActiveTexture;
 import static org.lwjgl.opengl.GL30.*;
 
 /**
@@ -32,7 +36,8 @@ public class FrameBuffer implements Resource {
 		this.target = target;
 		fbo = glGenFramebuffers();
 		bind();
-		target.bind();
+		glActiveTexture(GL_TEXTURE0); // unit 0 is the unmanaged scratch unit — never allocated by ResourceManager
+		glBindTexture(GL_TEXTURE_2D, target.getId());
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, target.getId(), 0);
 		glDrawBuffers(GL_COLOR_ATTACHMENT0);
 		final int fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);

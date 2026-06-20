@@ -10,6 +10,8 @@ import java.nio.ByteBuffer;
 import java.util.stream.Stream;
 
 import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL13.GL_TEXTURE0;
+import static org.lwjgl.opengl.GL13.glActiveTexture;
 
 /**
  * Represents an OpenGL Texture object. Typically, this is a pixel-based image in the graphics memory.
@@ -86,6 +88,7 @@ public class Texture implements Resource {
 		this.height = height;
 		if (dimensions != Dimensions.TWO_DIMENSION) throw new IllegalArgumentException("Texture type must be 2D");
 		// create texture
+		glActiveTexture(GL_TEXTURE0); // unit 0 is the unmanaged scratch unit — never allocated by ResourceManager
 		bind();
 		glTexImage2D(dimensions.openGlCode(), 0, this.internalFormat, width, height, 0, this.imageFormat, this.dataType, pixels);
 		// set Texture wrap and filter modes
@@ -101,6 +104,7 @@ public class Texture implements Resource {
 		this.height = height;
 		if (dimensions != Dimensions.TWO_DIMENSION) throw new IllegalArgumentException("Texture type must be 2D");
 		// create Texture
+		glActiveTexture(GL_TEXTURE0); // unit 0 is the unmanaged scratch unit — never allocated by ResourceManager
 		bind();
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 		glTexImage2D(dimensions.openGlCode(), 0, this.internalFormat, width, height, 0, this.imageFormat, this.dataType, data);
@@ -117,6 +121,7 @@ public class Texture implements Resource {
 		this.dimensions = Dimensions.ONE_DIMENSION;
 		this.wrap = Wrap.REPEAT;
 		// create Texture
+		glActiveTexture(GL_TEXTURE0); // unit 0 is the unmanaged scratch unit — never allocated by ResourceManager
 		bind();
 		glTexImage1D(this.dimensions.openGlCode(), 0, this.internalFormat, width, 0, this.imageFormat, GL_UNSIGNED_BYTE, data);
 		// set Texture wrap and filter modes
@@ -130,11 +135,11 @@ public class Texture implements Resource {
 		return id;
 	}
 
-	public void bind() {
+	void bind() {
 		glBindTexture(dimensions.openGlCode(), id);
 	}
 
-	public void unbind() {
+	void unbind() {
 		glBindTexture(dimensions.openGlCode(), 0);
 	}
 

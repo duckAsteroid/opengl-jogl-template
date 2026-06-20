@@ -9,6 +9,7 @@ import org.joml.Matrix4f;
 import org.joml.Vector4f;
 
 import java.awt.*;
+import java.nio.file.Path;
 import java.util.Random;
 
 /**
@@ -104,4 +105,28 @@ public interface RenderContext {
 	 * @return the random instance
 	 */
     Random getRandom();
+
+	/**
+	 * Request capture of the next rendered frame as a PNG file.
+	 *
+	 * <p>The capture is deferred: it occurs after the next {@link RenderedItem#doRender} pass
+	 * completes but before the framebuffer is swapped to screen, so the image reflects exactly
+	 * what will be displayed. The PNG is written on a background thread to avoid stalling the
+	 * render loop.</p>
+	 *
+	 * <p>Safe to call from any thread (including key callbacks). Only the most recently
+	 * requested path is captured if multiple calls arrive before a frame completes.</p>
+	 *
+	 * @param destination path for the PNG output file
+	 */
+	default void captureNextFrame(Path destination) { }
+
+	/**
+	 * Convenience overload: captures the next frame to a timestamped PNG in the working directory.
+	 *
+	 * @see #captureNextFrame(Path)
+	 */
+	default void captureNextFrame() {
+		captureNextFrame(Path.of("screenshot-" + System.currentTimeMillis() + ".png"));
+	}
 }
