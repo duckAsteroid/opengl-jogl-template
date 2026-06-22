@@ -6,6 +6,7 @@ import com.asteroid.duck.opengl.util.color.StandardColors;
 import com.asteroid.duck.opengl.util.resources.font.FontTexture;
 import com.asteroid.duck.opengl.util.resources.font.FontTextureFactory;
 import com.asteroid.duck.opengl.util.text.StringRenderer;
+import org.joml.Matrix4f;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +37,7 @@ public class TextExperiment implements Experiment {
 		backgroundTexture.init(ctx);
 		stringRenderer = new StringRenderer(fontTexture);
 		stringRenderer.init(ctx);
-		stringRenderer.setPosition(new Point(10, 200));
+		stringRenderer.setTransform(new Matrix4f().translate(10, 200, 0));
 		stringRenderer.setTextColor(StandardColors.BLACK.withAlpha(0.7f));
 		stringRenderer.setText("Hello World!");
 	}

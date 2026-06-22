@@ -20,7 +20,6 @@ import org.joml.Vector4f;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.awt.*;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
@@ -29,8 +28,21 @@ import java.util.Objects;
  * Renders a text string using a {@link FontTexture}.
  * <p>
  * VBO vertices are in string-relative (origin) space — the baseline datum sits at (0, 0). Screen
- * position is applied via a {@code model} matrix uniform, so calling {@link #setPosition} only
- * updates a uniform and never touches the vertex buffer.
+ * position, rotation, and scale are all applied via a single {@code model} matrix uniform, so
+ * calling {@link #setTransform} only updates a uniform and never touches the vertex buffer.
+ * <p>
+ * To position, rotate, or scale the text, build a JOML {@link Matrix4f} and pass it to
+ * {@link #setTransform}. The matrix is applied before the orthographic projection:
+ * <pre>{@code
+ * // translate only
+ * renderer.setTransform(new Matrix4f().translate(x, y, 0));
+ *
+ * // translate + rotate around the text origin
+ * renderer.setTransform(new Matrix4f().translate(x, y, 0).rotateZ(angle));
+ *
+ * // translate + uniform scale + rotate
+ * renderer.setTransform(new Matrix4f().translate(x, y, 0).rotateZ(angle).scale(s, s, 1));
+ * }</pre>
  * <p>
  * The VBO and EBO are allocated to exactly match the current text length. When the text length
  * changes the buffers are reallocated; when only the content changes (same length) the existing
@@ -80,7 +92,6 @@ public class StringRenderer implements RenderedItem {
 
     private final FontTexture fontTexture;
 
-    private Point position = new Point(0, 0);
     private String text;
 
     private ShaderProgram shaderProgram;
@@ -127,7 +138,6 @@ public class StringRenderer implements RenderedItem {
 
     private void initUniforms(RenderContext ctx) {
         shaderProgram.uniforms().get("projection", Matrix4f.class).set(ctx.ortho());
-        model.identity().translate(position.x, position.y, 0);
         shaderProgram.uniforms().get("model", Matrix4f.class).set(model);
         shaderProgram.uniforms().get("textColor", Vector4f.class).set(StandardColors.WHITE.color);
     }
@@ -146,30 +156,20 @@ public class StringRenderer implements RenderedItem {
     }
 
     /**
-     * Returns the screen position of the text baseline datum in AWT pixel coordinates.
-     * The origin (0, 0) is the top-left of the window; x increases rightward and y increases
-     * downward. The returned point is the baseline anchor: ascenders render above it (lower y)
-     * and descenders below (higher y).
-     */
-    public Point getPosition() {
-        return position;
-    }
-
-    /**
-     * Sets the screen position of the text baseline datum.
-     * Coordinates are in AWT pixel space: origin (0, 0) at the top-left of the window, x
-     * increasing rightward, y increasing downward. The point anchors the font baseline — glyphs
-     * with ascenders will render above this y value and descenders below it.
+     * Sets the full model transform applied to the text quad.
      * <p>
-     * This only updates the {@code model} matrix uniform; the vertex buffer is not rebuilt.
+     * The text vertices sit at origin in string space; the matrix maps them to screen space before
+     * the orthographic projection is applied. Callers can combine translation, rotation, and scale
+     * freely — e.g. {@code new Matrix4f().translate(x, y, 0).rotateZ(angle).scale(s, s, 1)}.
+     * <p>
+     * Only updates the {@code model} uniform; the vertex buffer is not rebuilt.
      *
-     * @param position baseline anchor in window pixel coordinates
+     * @param transform model matrix in screen/pixel space
      */
-    public void setPosition(Point position) {
-        this.position = position;
-        Point pos = new Point(position);
+    public void setTransform(Matrix4f transform) {
+        Matrix4f copy = new Matrix4f(transform);
         renderActions.enqueue(TEXT_POSITION, ctx -> {
-            model.identity().translate(pos.x, pos.y, 0);
+            model.set(copy);
             shaderProgram.uniforms().get("model", Matrix4f.class).set(model);
         });
     }

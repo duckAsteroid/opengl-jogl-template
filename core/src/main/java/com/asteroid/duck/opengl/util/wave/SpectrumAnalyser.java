@@ -61,7 +61,7 @@ public class SpectrumAnalyser implements RenderedItem {
     public static final int   DEFAULT_NUM_BINS    = 128;
 
     /** Default FFT window size in samples ({@value}). Must be a power of two. */
-    public static final int   DEFAULT_FFT_SIZE    = 2048;
+    public static final int   DEFAULT_FFT_SIZE    = 1024;
 
     /** Default capture sample rate in Hz ({@value}). Matches {@link com.asteroid.duck.opengl.util.audio.LineAcquirer#IDEAL}. */
     public static final float DEFAULT_SAMPLE_RATE = 48_000f;

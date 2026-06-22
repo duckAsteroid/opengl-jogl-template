@@ -6,6 +6,7 @@ import com.asteroid.duck.opengl.util.color.StandardColors;
 import com.asteroid.duck.opengl.util.keys.KeyRegistry;
 import com.asteroid.duck.opengl.util.resources.font.FontTextureFactory;
 import com.asteroid.duck.opengl.util.text.StringRenderer;
+import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 
 import java.awt.*;
@@ -13,6 +14,9 @@ import java.io.IOException;
 import java.util.Random;
 
 public class StringExperiment implements Experiment {
+    private static final float ROTATION_STEP = (float) Math.toRadians(5);
+    private static final float SCALE_FACTOR  = 1.1f;
+
     private static final String[] STRINGS = new String[]{
             "Hello, World!",
             "The quick brown fox jumps over the lazy dog.",
@@ -35,6 +39,10 @@ public class StringExperiment implements Experiment {
 
     private StringRenderer stringRenderer;
     private PassthruTextureRenderer textureRenderer;
+
+    private float tx = 0, ty = 0;
+    private float rotation = 0;
+    private float scale = 1.0f;
 
     @Override
     public String getDescription() {
@@ -60,13 +68,25 @@ public class StringExperiment implements Experiment {
     }
 
     private void registerKeys(KeyRegistry ctx) {
-        ctx.registerKeyAction(GLFW.GLFW_KEY_UP, GLFW.GLFW_MOD_SHIFT, () -> move(Direction.UP), "Move text up");
-        ctx.registerKeyAction(GLFW.GLFW_KEY_DOWN,  GLFW.GLFW_MOD_SHIFT,() -> move(Direction.DOWN), "Move text down");
-        ctx.registerKeyAction(GLFW.GLFW_KEY_LEFT, GLFW.GLFW_MOD_SHIFT, () -> move(Direction.LEFT), "Move text left");
+        ctx.registerKeyAction(GLFW.GLFW_KEY_UP,    GLFW.GLFW_MOD_SHIFT, () -> move(Direction.UP),    "Move text up");
+        ctx.registerKeyAction(GLFW.GLFW_KEY_DOWN,  GLFW.GLFW_MOD_SHIFT, () -> move(Direction.DOWN),  "Move text down");
+        ctx.registerKeyAction(GLFW.GLFW_KEY_LEFT,  GLFW.GLFW_MOD_SHIFT, () -> move(Direction.LEFT),  "Move text left");
         ctx.registerKeyAction(GLFW.GLFW_KEY_RIGHT, GLFW.GLFW_MOD_SHIFT, () -> move(Direction.RIGHT), "Move text right");
+
+        ctx.registerKeyAction(GLFW.GLFW_KEY_E, () -> { rotation -= ROTATION_STEP; applyTransform(); }, "Rotate text counter-clockwise");
+        ctx.registerKeyAction(GLFW.GLFW_KEY_R, () -> { rotation += ROTATION_STEP; applyTransform(); }, "Rotate text clockwise");
+        ctx.registerKeyAction(GLFW.GLFW_KEY_Z, () -> { scale *= SCALE_FACTOR;     applyTransform(); }, "Scale text up");
+        ctx.registerKeyAction(GLFW.GLFW_KEY_X, () -> { scale /= SCALE_FACTOR;     applyTransform(); }, "Scale text down");
+        ctx.registerKeyAction(GLFW.GLFW_KEY_0, () -> { tx = 0; ty = 0; rotation = 0; scale = 1.0f; applyTransform(); }, "Reset text transform");
 
         ctx.registerKeyAction(GLFW.GLFW_KEY_S, this::nextString, "Change string");
         ctx.registerKeyAction(GLFW.GLFW_KEY_C, this::nextColor, "Change color");
+    }
+
+    private void applyTransform() {
+        stringRenderer.setTransform(
+            new Matrix4f().translate(tx, ty, 0).rotateZ(rotation).scale(scale, scale, 1)
+        );
     }
     private final Random rnd = new Random();
 
@@ -92,11 +112,12 @@ public class StringExperiment implements Experiment {
     private void move(Direction direction) {
         final var amount = 5;
         switch (direction) {
-            case RIGHT -> stringRenderer.setPosition(new Point(stringRenderer.getPosition().x + amount, stringRenderer.getPosition().y));
-            case DOWN -> stringRenderer.setPosition(new Point(stringRenderer.getPosition().x, stringRenderer.getPosition().y + amount));
-            case LEFT -> stringRenderer.setPosition(new Point(stringRenderer.getPosition().x - amount, stringRenderer.getPosition().y));
-            case UP -> stringRenderer.setPosition(new Point(stringRenderer.getPosition().x, stringRenderer.getPosition().y - amount));
+            case RIGHT -> tx += amount;
+            case DOWN  -> ty += amount;
+            case LEFT  -> tx -= amount;
+            case UP    -> ty -= amount;
         }
+        applyTransform();
     }
 
     @Override
