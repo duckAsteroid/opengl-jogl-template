@@ -4,9 +4,10 @@
  * <p>All classes in this package implement
  * {@link com.asteroid.duck.opengl.util.RenderedItem} or serve as helpers that are consumed by
  * renderers. The shared audio capture infrastructure is
- * {@link com.asteroid.duck.opengl.util.wave.AudioReader}, which runs on a dedicated daemon thread
- * and writes PCM data into either a GPU-mapped PBO or a CPU-side
- * {@link com.asteroid.duck.opengl.util.audio.RollingFloatBuffer}.</p>
+ * {@link com.asteroid.duck.opengl.util.audio.AudioReader}, which runs on a dedicated daemon thread
+ * and writes PCM data into either a GPU-mapped PBO (via
+ * {@link com.asteroid.duck.opengl.util.audio.PboAudioSink}) or a CPU-side
+ * {@link com.asteroid.duck.opengl.util.audio.RollingAudioBuffer}.</p>
  *
  * <h2>Available renderers</h2>
  * <dl>
@@ -39,10 +40,11 @@
  *   <dt>{@link com.asteroid.duck.opengl.util.wave.AmplitudeFunction}</dt>
  *   <dd>Functional interface for per-vertex amplitude envelopes used by {@code AudioWave}.</dd>
  *
- *   <dt>{@link com.asteroid.duck.opengl.util.wave.AudioReader}</dt>
- *   <dd>Internal background-thread PCM reader. Not intended for direct use; obtain an
- *       audio source via {@link com.asteroid.duck.opengl.util.audio.LineAcquirer} and pass it
- *       to the renderer's {@code setLine()} method.</dd>
+ *   <dt>{@link com.asteroid.duck.opengl.util.audio.AudioReader}</dt>
+ *   <dd>Background-thread PCM reader (lives in the {@code audio} package). Create one per
+ *       experiment, pass a list of {@link com.asteroid.duck.opengl.util.audio.AudioSink}s, and
+ *       call {@code setLine()} with the source obtained from
+ *       {@link com.asteroid.duck.opengl.util.audio.LineAcquirer}.</dd>
  * </dl>
  */
 package com.asteroid.duck.opengl.util.wave;

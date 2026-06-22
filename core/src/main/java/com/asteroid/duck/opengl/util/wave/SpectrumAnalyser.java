@@ -31,7 +31,7 @@ import static org.lwjgl.system.MemoryUtil.*;
  * <h2>Signal path</h2>
  * <ol>
  *   <li>A background thread ({@link AudioReader}) reads PCM from a {@link AudioDataSource} and
- *       writes it into a {@link RollingFloatBuffer}.</li>
+ *       writes it into a {@link RollingAudioBuffer}.</li>
  *   <li>Each frame, {@link #doRender} pulls the latest {@code fftSize} samples, applies a Hann
  *       window, and runs a real FFT via {@link FFTProcessor}.</li>
  *   <li>The {@code numBins} log-frequency magnitude values (in dB, normalised to [0, 1]) are
