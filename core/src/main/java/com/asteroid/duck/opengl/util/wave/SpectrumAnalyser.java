@@ -3,7 +3,9 @@ package com.asteroid.duck.opengl.util.wave;
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.RenderedItem;
 import com.asteroid.duck.opengl.util.audio.AudioDataSource;
-import com.asteroid.duck.opengl.util.audio.RollingFloatBuffer;
+import com.asteroid.duck.opengl.util.audio.AudioReader;
+import com.asteroid.duck.opengl.util.audio.ChannelMode;
+import com.asteroid.duck.opengl.util.audio.RollingAudioBuffer;
 import com.asteroid.duck.opengl.util.resources.buffer.BufferDrawMode;
 import com.asteroid.duck.opengl.util.resources.buffer.UpdateHint;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
@@ -16,6 +18,7 @@ import org.joml.Vector2f;
 
 import java.io.IOException;
 import java.nio.FloatBuffer;
+import java.util.List;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL13.*;
@@ -95,7 +98,7 @@ public class SpectrumAnalyser implements RenderedItem {
 
     // ── Audio pipeline ──────────────────────────────────────────────────────────
     private final FFTProcessor     fftProcessor;
-    private final RollingFloatBuffer audioBuffer;
+    private final RollingAudioBuffer audioBuffer;
     private AudioReader audioReader;
     private Thread      audioReaderThread;
 
@@ -204,7 +207,7 @@ public class SpectrumAnalyser implements RenderedItem {
         this.fftProcessor = new FFTProcessor(fftSize, numBins, sampleRate,
                                              fMin, fMax, dBFloor, dBCeiling);
         // Ring buffer holds 4× the FFT window so the write head never laps the read head.
-        this.audioBuffer  = new RollingFloatBuffer(fftSize * 4);
+        this.audioBuffer  = new RollingAudioBuffer(fftSize * 4);
         this.sampleBuffer = new float[fftSize];
         this.magnitudes   = new float[numBins];
         this.peaks        = new float[numBins];
@@ -218,8 +221,7 @@ public class SpectrumAnalyser implements RenderedItem {
         initVbos(ctx);
         initShaders(ctx);
 
-        this.audioReader = new AudioReader(null, 0);
-        audioReader.setCpuBuffer(audioBuffer);
+        this.audioReader = new AudioReader(List.of(audioBuffer));
         this.audioReaderThread = new Thread(audioReader, "spectrum-audio-reader");
         audioReaderThread.setDaemon(true);
         audioReaderThread.start();
@@ -251,7 +253,7 @@ public class SpectrumAnalyser implements RenderedItem {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // 1. Compute FFT from the latest audio samples.
-        audioBuffer.readSamples(sampleBuffer, fftSize);
+        audioBuffer.readSamples(sampleBuffer, fftSize, ChannelMode.MONO_BLEND);
         fftProcessor.process(sampleBuffer, magnitudes);
 
         // 2. Update peak-hold: rise instantly, fall at PEAK_DECAY_PER_FRAME per frame.

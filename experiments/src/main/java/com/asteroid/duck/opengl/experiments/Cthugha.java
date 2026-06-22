@@ -10,6 +10,7 @@ import com.asteroid.duck.opengl.util.keys.KeyRegistry;
 import com.asteroid.duck.opengl.util.palette.PaletteRenderer;
 import com.asteroid.duck.opengl.util.resources.texture.*;
 import com.asteroid.duck.opengl.util.resources.texture.io.ImageLoadingOptions;
+import com.asteroid.duck.opengl.util.audio.PboAudioSink;
 import com.asteroid.duck.opengl.util.wave.AudioWave;
 import org.joml.Vector4f;
 
@@ -30,6 +31,7 @@ public class Cthugha extends CompositeRenderItem implements Experiment {
 
 	private double frequency = 25.0;
 	private OffscreenBlurTextureRenderer blurStage;
+	private PboAudioSink audioSink;
 
 	public static final String OFFSCREEN_TEXTURE_NAME = "yabadabado";
 
@@ -62,7 +64,8 @@ public class Cthugha extends CompositeRenderItem implements Experiment {
 		add(blurStage);
 
 		// wave
-		AudioWave polyline = new AudioWave();
+		audioSink = PboAudioSink.create(AudioWave.AUDIO_BUFFER_SIZE, ctx);
+		AudioWave polyline = new AudioWave(audioSink);
 		polyline.setLineWidth(1.0f);
 		polyline.setLineColour(new Vector4f(1.0f));
 		OffscreenTextureRenderer waveRenderStage = new OffscreenTextureRenderer(polyline, offscreen);
@@ -100,6 +103,7 @@ public class Cthugha extends CompositeRenderItem implements Experiment {
 	@Override
 	public void doRender(RenderContext ctx) {
 		ctx.setDesiredUpdatePeriod(1.0 / frequency);
+		audioSink.upload();
 		super.doRender(ctx);
 	}
 }

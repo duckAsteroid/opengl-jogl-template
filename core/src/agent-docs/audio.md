@@ -1,32 +1,147 @@
 # Audio Visualisation
 
-## AudioWave — pre-built waveform renderer
+## Architecture overview
 
-`AudioWave` is a `RenderedItem` that captures real-time stereo PCM audio and draws it as a
-scrolling line strip. Drop it into any experiment.
+The audio pipeline is split into three independent layers:
+
+```
+AudioDataSource (hardware line)
+  └─ AudioReader (background thread)
+       └─ AudioSink.write(byte[], offset, length)
+            ├─ PboAudioSink  → GL 1-D texture  → AudioWave / RadialWave (GPU waveform)
+            └─ RollingAudioBuffer → float[]    → SpectrumAnalyser (CPU FFT)
+```
+
+**Key principle:** `AudioWave` and `RadialWave` are pure renderers — they do not own threads,
+manage PBOs, or know about audio capture. The experiment creates and wires up the pieces.
+
+---
+
+## PboAudioSink — the shared GPU audio texture
+
+`PboAudioSink` owns a persistently-mapped PBO and a `GL_RG16_SNORM` 1-D texture.
+It implements `AudioSink` so `AudioReader` writes raw PCM bytes into it directly.
+
+### Creating and disposing
 
 ```java
-// Fields:
-private final AudioWave audioWave = new AudioWave();
-private final LineAcquirer lineAcquirer = new LineAcquirer();
+// Factory — must be called on the GL thread (inside init())
+PboAudioSink audioSink = PboAudioSink.create(AudioWave.AUDIO_BUFFER_SIZE, ctx);
+// Disposal is registered with ctx.getResourceManager() automatically — no manual dispose() needed.
+```
 
-// init():
-audioWave.init(ctx);
-lineAcquirer.init(ctx, LineAcquirer.IDEAL);   // IDEAL = 48 kHz, 16-bit stereo
-audioWave.setLine(lineAcquirer.getSelectedSource());
+`stereoFrames` controls the ring-buffer size. Use the `AUDIO_BUFFER_SIZE` constant from the
+renderer you plan to use (`AudioWave.AUDIO_BUFFER_SIZE` or `RadialWave.AUDIO_BUFFER_SIZE`;
+both are `2048`).
 
+### Per-frame upload
+
+Call `upload()` **exactly once per frame**, before any renderer that uses this sink:
+
+```java
 // doRender():
+audioSink.upload();          // DMA: PBO → GL_RG16_SNORM texture (one call, any number of renderers)
 audioWave.doRender(ctx);
+radialWave.doRender(ctx);    // both see identical data
+```
 
-// dispose():
-audioWave.dispose();
+`upload()` calls `glTexSubImage1D` with the PBO bound to `GL_PIXEL_UNPACK_BUFFER`, giving the
+GPU direct access to the mapped write buffer with no intermediate copy.
+
+### Implements AudioSink
+
+```java
+public interface AudioSink {
+    void write(byte[] data, int offset, int length);
+}
+```
+
+`PboAudioSink.write()` is safe to call from the `AudioReader` background thread. Internally it
+ring-wraps into the persistently-mapped `ByteBuffer`; a `volatile int head` is advanced after
+each write so the GL thread can snapshot it without locking.
+
+---
+
+## AudioReader — the capture thread
+
+`AudioReader` runs a single background thread that drains an `AudioDataSource` and fans out
+to one or more `AudioSink` implementations.
+
+```java
+AudioReader audioReader = new AudioReader(List.of(audioSink));   // one or more sinks
+Thread audioReaderThread = new Thread(audioReader, "audio-reader");
+audioReaderThread.setDaemon(true);
+audioReaderThread.start();
+audioReader.setLine(lineAcquirer.getSelectedSource());           // start capturing
 ```
 
 ### Switching audio source at runtime (safe from any thread)
 
 ```java
-lineAcquirer.next();                                    // advance to next device
-audioWave.setLine(lineAcquirer.getSelectedSource());
+lineAcquirer.next();
+audioReader.setLine(lineAcquirer.getSelectedSource());
+```
+
+### Shutdown
+
+```java
+audioReader.setRunning(false);
+audioReader.setLine(null);
+audioReaderThread.join(2000);
+```
+
+---
+
+## LineAcquirer — audio device discovery
+
+```java
+LineAcquirer lineAcquirer = new LineAcquirer();
+lineAcquirer.init(ctx, LineAcquirer.IDEAL);   // IDEAL = 48 kHz, 16-bit stereo
+
+AudioDataSource current  = lineAcquirer.getSelectedSource();
+AudioDataSource next     = lineAcquirer.next();      // returns old source, advances index
+AudioDataSource previous = lineAcquirer.previous();  // wraps around
+```
+
+Pass `-Dsimulate.audio=true` to prepend a `SimulatedDataSource` to the list (useful for
+headless testing and CI).
+
+---
+
+## AudioWave — scrolling horizontal waveform renderer
+
+`AudioWave` draws a scrolling `GL_LINE_STRIP` of 1 024 vertices displaced vertically by the
+audio amplitude. It is a pure `RenderedItem` — no threads, no PBO management.
+
+```java
+// Fields:
+private PboAudioSink audioSink;
+private AudioReader audioReader;
+private Thread audioReaderThread;
+private AudioWave audioWave;
+private final LineAcquirer lineAcquirer = new LineAcquirer();
+
+// init():
+audioSink = PboAudioSink.create(AudioWave.AUDIO_BUFFER_SIZE, ctx);
+audioWave  = new AudioWave(audioSink);
+audioWave.init(ctx);
+
+lineAcquirer.init(ctx, LineAcquirer.IDEAL);
+audioReader = new AudioReader(List.of(audioSink));
+audioReaderThread = new Thread(audioReader, "audio-reader");
+audioReaderThread.setDaemon(true);
+audioReaderThread.start();
+audioReader.setLine(lineAcquirer.getSelectedSource());
+
+// doRender():
+audioSink.upload();
+audioWave.doRender(ctx);
+
+// dispose():
+audioWave.dispose();
+audioReader.setRunning(false);
+audioReader.setLine(null);
+audioReaderThread.join(2000);
 ```
 
 ### Channel modes
@@ -41,7 +156,7 @@ audioWave.setChannelMode(AudioWave.CHANNEL_STEREO);  // two lines: L above, R be
 ### Visual properties (applied on next frame, safe from any thread)
 
 ```java
-audioWave.setLineWidth(4.0f);                          // GL line width in pixels
+audioWave.setLineWidth(4.0f);
 audioWave.setLineColour(StandardColors.CYAN.color);
 audioWave.setAmplitudeFunction(AmplitudeFunction.constant(10f));   // flat envelope
 audioWave.setAmplitudeFunction(AmplitudeFunction.ellipse(10f));    // tapers to 0 at edges
@@ -49,48 +164,25 @@ audioWave.setAmplitudeFunction(AmplitudeFunction.ellipse(10f));    // tapers to 
 
 ---
 
-## AmplitudeFunction — custom amplitude envelopes
+## RadialWave — circular radial waveform renderer
 
-`AmplitudeFunction` is a `@FunctionalInterface` mapping `(vertexIndex, normalisedX) → amplitude`.
-`normalisedX` is in `[-1, 1]`. The returned value is stored in each vertex's Y component and
-multiplied by the normalised audio sample `[-1, 1]` in the vertex shader.
-
-```java
-// Built-in factories:
-AmplitudeFunction flat    = AmplitudeFunction.constant(10f);
-AmplitudeFunction tapered = AmplitudeFunction.ellipse(10f);
-
-// Custom:
-AmplitudeFunction custom = (index, x) -> 8f * (float) Math.abs(Math.cos(Math.PI * x));
-
-audioWave.setAmplitudeFunction(custom);
-```
-
----
-
-## RadialWave — pre-built radial waveform renderer
-
-`RadialWave` is a `RenderedItem` that captures real-time stereo PCM audio and draws it as a
-closed circle deformed by the waveform. Each of the 1 024 vertices sits on a base circle at
-radius `uRadius`; positive audio samples push the vertex outward and negative samples pull it
-inward. The circle is drawn as a `GL_LINE_LOOP` and automatically corrects for non-square
-viewports via an internal aspect-ratio uniform.
+`RadialWave` draws a `GL_LINE_LOOP` of 1 024 vertices arranged around a circle, displaced
+radially by the audio amplitude. Same pure-renderer pattern as `AudioWave`.
 
 ```java
-// Fields:
-private final RadialWave radialWave = new RadialWave();
-private final LineAcquirer lineAcquirer = new LineAcquirer();
-
 // init():
+audioSink  = PboAudioSink.create(RadialWave.AUDIO_BUFFER_SIZE, ctx);
+radialWave = new RadialWave(audioSink);
 radialWave.init(ctx);
-lineAcquirer.init(ctx, LineAcquirer.IDEAL);
-radialWave.setLine(lineAcquirer.getSelectedSource());
+// ... AudioReader setup as above ...
 
 // doRender():
+audioSink.upload();
 radialWave.doRender(ctx);
 
 // dispose():
 radialWave.dispose();
+// ... AudioReader shutdown as above ...
 ```
 
 ### Channel modes
@@ -104,34 +196,80 @@ radialWave.setChannelMode(RadialWave.CHANNEL_RIGHT);
 ### Visual properties (applied on next frame, safe from any thread)
 
 ```java
-radialWave.setLineWidth(3.0f);                         // GL line width in pixels
+radialWave.setLineWidth(3.0f);
 radialWave.setLineColour(StandardColors.CYAN.color);
-
-// Base circle radius in NDC-y units (0 = centre, 1 = top/bottom screen edge)
-radialWave.setRadius(0.5f);    // default
-
-// How far a full-scale audio sample displaces the circle edge, in NDC-y units
-radialWave.setAmplitude(0.3f); // default
-
-// Move the circle centre (NDC coordinates)
-radialWave.setCenter(new Vector2f(0.0f, 0.0f)); // default = screen centre
+radialWave.setRadius(0.5f);               // base circle radius in NDC-y units
+radialWave.setAmplitude(0.3f);            // displacement scale in NDC-y units
+radialWave.setCenter(new Vector2f(0f, 0f)); // NDC centre (default = screen centre)
 ```
 
-### Aspect-ratio correction
-
-`RadialWave` installs a `ResizeListener` in `init()` that keeps a volatile `currentAspect`
-field (width / height) in sync with the window. The value is pushed to the `uAspect` uniform
-each frame in `doRender()`, so the circle stays visually round as the window is resized without
-any additional work from the caller.
+`RadialWave` automatically corrects for non-square viewports via an internal aspect-ratio
+uniform — the circle stays visually round as the window is resized.
 
 ---
 
-## SpectrumAnalyser — pre-built FFT spectrum renderer
+## Sharing a PboAudioSink between multiple renderers
 
-`SpectrumAnalyser` is a `RenderedItem` that captures real-time PCM audio, runs a windowed FFT
-each frame, and draws a classic bar-chart spectrum display. Bars use a log frequency scale
-(20 Hz–20 kHz by default) and log amplitude (dB), both configurable. White horizontal
-peak-hold ticks decay slowly above each bar.
+Because `AudioWave` and `RadialWave` accept a `PboAudioSink` in their constructors and only
+hold references to `getTextureId()` and `getHead()`, any number of renderers can share a
+single sink. One `upload()` call per frame is enough — both renderers sample the same texture.
+
+```java
+// Both buffer size constants are 2048, so either works:
+audioSink  = PboAudioSink.create(AudioWave.AUDIO_BUFFER_SIZE, ctx);
+
+audioWave  = new AudioWave(audioSink);
+radialWave = new RadialWave(audioSink);
+audioWave.init(ctx);
+radialWave.init(ctx);
+
+// One AudioReader writes into one sink:
+audioReader = new AudioReader(List.of(audioSink));
+
+// doRender() — one upload, two renders, identical audio data:
+audioSink.upload();
+audioWave.doRender(ctx);
+radialWave.doRender(ctx);
+
+// dispose() — both renderers, one thread shutdown:
+audioWave.dispose();
+radialWave.dispose();
+audioReader.setRunning(false);
+audioReader.setLine(null);
+audioReaderThread.join(2000);
+```
+
+You can also fan the `AudioReader` into multiple sinks simultaneously (e.g. a `PboAudioSink`
+for the waveform and a `RollingAudioBuffer` for the FFT analyser):
+
+```java
+audioReader = new AudioReader(List.of(pboSink, rollingBuffer));
+```
+
+---
+
+## AmplitudeFunction — custom amplitude envelopes for AudioWave
+
+`AmplitudeFunction` is a `@FunctionalInterface` mapping `(vertexIndex, normalisedX) → amplitude`.
+`normalisedX` is in `[-1, 1]`. The returned value is stored in each vertex's Y component and
+multiplied by the normalised audio sample `[-1, 1]` in the vertex shader.
+
+```java
+AmplitudeFunction flat    = AmplitudeFunction.constant(10f);
+AmplitudeFunction tapered = AmplitudeFunction.ellipse(10f);
+
+// Custom:
+AmplitudeFunction custom = (index, x) -> 8f * (float) Math.abs(Math.cos(Math.PI * x));
+
+audioWave.setAmplitudeFunction(custom);
+```
+
+---
+
+## SpectrumAnalyser — FFT spectrum renderer
+
+`SpectrumAnalyser` is a self-contained `RenderedItem` that manages its own `AudioReader` and
+CPU ring buffer internally. It draws a log-frequency bar chart with peak-hold ticks.
 
 ```java
 // Fields:
@@ -157,9 +295,7 @@ lineAcquirer.next();
 analyser.setLine(lineAcquirer.getSelectedSource());
 ```
 
-### Construction parameters and defaults
-
-The no-arg constructor uses sensible defaults. Pass all parameters to the full constructor:
+### Construction parameters
 
 ```java
 new SpectrumAnalyser(
@@ -174,52 +310,26 @@ new SpectrumAnalyser(
 );
 ```
 
-`numBins` and `fftSize` are independent: more bins gives finer visual resolution (up to the
-limit imposed by `fftSize/2` linear FFT bins); a larger `fftSize` gives better low-frequency
-resolution at the cost of latency.
-
 ### Visual behaviour
 
-- **Bar gradient** — each bar is shaded green at the bottom → yellow → red at the top,
-  driven by the screen-space Y position of the fragment.
-- **Peak hold** — the white tick for bar `i` rises instantly to the current magnitude and
-  then falls at `1/60` per frame (approximately 1 second for a full-scale peak to decay to
-  silence at 60 fps).
-- **Texture data format** — a 1-D `GL_RG32F` texture of width `numBins` is uploaded each
-  frame: R channel = current magnitude [0, 1], G channel = peak-hold level [0, 1].  Both
-  bar and peak shaders sample this texture by `gl_VertexID` rather than by vertex position,
-  so the geometry VBOs contain only static X coordinates and never need updating at runtime.
+- **Bar gradient** — green at the bottom → yellow → red at the top, driven by screen-space Y.
+- **Peak hold** — each white tick rises instantly and decays at ~1 full-scale unit per second.
+- **Texture format** — `GL_RG32F` 1-D texture of width `numBins` uploaded each frame:
+  R = current magnitude [0, 1], G = peak-hold level [0, 1].
 
-### Signal path (for debugging)
+### Signal path
 
 ```
 AudioReader thread
-  └─ RollingFloatBuffer (CPU ring buffer, 4 × fftSize samples)
-       └─ readSamples() → float[fftSize] (render thread, each frame)
+  └─ RollingAudioBuffer (CPU ring buffer, 4 × fftSize stereo frames)
+       └─ readSamples(float[], fftSize, ChannelMode.MONO_BLEND)  [render thread, each frame]
             └─ FFTProcessor.process()
                  ├─ Hann window
-                 ├─ FloatFFT_1D.realForward() (JTransforms)
+                 ├─ FloatFFT_1D.realForward()  (JTransforms)
                  └─ log-frequency bin mapping → dB normalisation → float[numBins]
                       └─ glTexSubImage1D → GL_RG32F 1-D texture
-                           ├─ bar shader (GL_TRIANGLES, numBins × 6 vertices)
+                           ├─ bar shader  (GL_TRIANGLES, numBins × 6 vertices)
                            └─ peak shader (GL_LINES, numBins × 2 vertices)
-```
-
----
-
-## LineAcquirer — audio source discovery
-
-```java
-LineAcquirer la = new LineAcquirer();
-la.init(ctx, LineAcquirer.IDEAL);
-
-AudioDataSource current  = la.getSelectedSource();
-AudioDataSource next     = la.next();      // returns old source, advances index
-AudioDataSource previous = la.previous();  // wraps around
-
-// Check simulate.audio system property:
-// -Dsimulate.audio=true  → a SimulatedDataSource is prepended to the source list
-// -Dsimulate.audio=false → only real hardware lines (default)
 ```
 
 ---
@@ -228,6 +338,8 @@ AudioDataSource previous = la.previous();  // wraps around
 
 | Constraint | Detail |
 |---|---|
-| **AudioWave thread** | `AudioWave` starts a background `"audio-reader"` daemon thread in `init()`. `dispose()` stops it and joins with a 2 s timeout before releasing GPU resources. |
-| **RadialWave thread** | `RadialWave` follows the same pattern as `AudioWave`: a `"radial-audio-reader"` daemon thread is started in `init()` and stopped with a 2 s join in `dispose()`. |
-| **SpectrumAnalyser thread** | `SpectrumAnalyser` starts a `"spectrum-audio-reader"` daemon thread in `init()` (CPU-only `AudioReader`, no PBO). `dispose()` stops it and joins with a 2 s timeout before releasing GL resources. |
+| **GL thread for PboAudioSink** | `PboAudioSink.create()` and `upload()` must be called on the GL thread. `write()` is safe from the audio thread. |
+| **upload() once per frame** | Call `audioSink.upload()` exactly once per frame before any renderer that shares that sink. Calling it multiple times per frame wastes a DMA transfer; skipping it leaves the texture stale. |
+| **AUDIO_BUFFER_SIZE compatibility** | `AudioWave.AUDIO_BUFFER_SIZE` and `RadialWave.AUDIO_BUFFER_SIZE` are both `2048`. Pass either constant to `PboAudioSink.create()` when sharing between them. |
+| **SpectrumAnalyser is self-contained** | Unlike `AudioWave` and `RadialWave`, `SpectrumAnalyser` owns its own `AudioReader` thread. Do not pass a shared `PboAudioSink` to it; use `setLine()` to give it an `AudioDataSource` directly. |
+| **AudioReader thread lifecycle** | Start before calling `setLine()`; stop with `setRunning(false)` + `setLine(null)` + `join(2000)` in `dispose()`. |

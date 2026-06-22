@@ -92,7 +92,7 @@ public class ExperimentChooser implements Supplier<Experiment> {
 				JLabel countdown = new JLabel("5 seconds remaining...");
 				message.add(countdown);
 				autoSelectTimer = new Timer(1000, new ActionListener() {
-					int secondsRemaining = 5;
+					int secondsRemaining = 15;
 
 					@Override
 					public void actionPerformed(ActionEvent e) {

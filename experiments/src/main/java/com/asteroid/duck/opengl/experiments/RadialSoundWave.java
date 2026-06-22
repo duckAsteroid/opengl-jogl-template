@@ -1,12 +1,15 @@
 package com.asteroid.duck.opengl.experiments;
 
 import com.asteroid.duck.opengl.util.RenderContext;
+import com.asteroid.duck.opengl.util.audio.AudioReader;
 import com.asteroid.duck.opengl.util.audio.LineAcquirer;
+import com.asteroid.duck.opengl.util.audio.PboAudioSink;
 import com.asteroid.duck.opengl.util.color.StandardColors;
 import com.asteroid.duck.opengl.util.keys.KeyCombination;
 import com.asteroid.duck.opengl.util.wave.RadialWave;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Random;
 
 public class RadialSoundWave implements Experiment {
@@ -22,7 +25,11 @@ public class RadialSoundWave implements Experiment {
 	private static final float AMPLITUDE_MAX  = 1.0f;
 	private static final float AMPLITUDE_STEP = 1.5f; // multiplicative per keypress
 
-	private final RadialWave radialWave = new RadialWave();
+	private PboAudioSink audioSink;
+	private AudioReader audioReader;
+	private Thread audioReaderThread;
+	private RadialWave radialWave;
+
 	private final LineAcquirer lineAcquirer = new LineAcquirer();
 	private final Random random = new Random();
 	private float lineWidth = 3.0f;
@@ -37,17 +44,24 @@ public class RadialSoundWave implements Experiment {
 
 	@Override
 	public void init(RenderContext ctx) throws IOException {
+		audioSink = PboAudioSink.create(RadialWave.AUDIO_BUFFER_SIZE, ctx);
+		radialWave = new RadialWave(audioSink);
 		radialWave.init(ctx);
+
 		lineAcquirer.init(ctx, LineAcquirer.IDEAL);
-		radialWave.setLine(lineAcquirer.getSelectedSource());
+		audioReader = new AudioReader(List.of(audioSink));
+		audioReaderThread = new Thread(audioReader, "audio-reader");
+		audioReaderThread.setDaemon(true);
+		audioReaderThread.start();
+		audioReader.setLine(lineAcquirer.getSelectedSource());
 
 		ctx.getKeyRegistry().registerKeyAction(KeyCombination.simple('J'), () -> {
 			lineAcquirer.next();
-			radialWave.setLine(lineAcquirer.getSelectedSource());
+			audioReader.setLine(lineAcquirer.getSelectedSource());
 		}, "Switch to the next audio input line");
 		ctx.getKeyRegistry().registerKeyAction(KeyCombination.simple('H'), () -> {
 			lineAcquirer.previous();
-			radialWave.setLine(lineAcquirer.getSelectedSource());
+			audioReader.setLine(lineAcquirer.getSelectedSource());
 		}, "Switch to the previous audio input line");
 		ctx.getKeyRegistry().registerKeyAction(KeyCombination.simple('C'), () -> {
 			StandardColors[] colours = StandardColors.values();
@@ -85,11 +99,19 @@ public class RadialSoundWave implements Experiment {
 
 	@Override
 	public void doRender(RenderContext ctx) {
+		audioSink.upload();
 		radialWave.doRender(ctx);
 	}
 
 	@Override
 	public void dispose() {
 		radialWave.dispose();
+		audioReader.setRunning(false);
+		audioReader.setLine(null);
+		try {
+			audioReaderThread.join(2000);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
 	}
 }
