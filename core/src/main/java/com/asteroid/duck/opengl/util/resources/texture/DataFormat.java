@@ -42,31 +42,31 @@ public enum DataFormat implements TextureFactory.FormatHelper {
 			buffer.order(ByteOrder.nativeOrder());
 			for (int y = 0; y < img.getHeight(); y++) {
 				for (int x = 0; x < img.getWidth(); x++) {
-					float v = getLuminance(new Color(img.getRGB(x, y)));
-					buffer.putFloat(v);
+					buffer.putFloat(luminance(new Color(img.getRGB(x, y))));
 				}
 			}
 			buffer.flip();
 			return buffer;
 		}
-
-		public float getLuminance(Color color) {
-			// Get the RGB values
-			int r = color.getRed();
-			int g = color.getGreen();
-			int b = color.getBlue();
-
-			// Normalize the RGB values to the range 0-1
-			float rf = r / 255f;
-			float gf = g / 255f;
-			float bf = b / 255f;
-
-			// Calculate the luminance
-			float luminance = 0.2126f * rf + 0.7152f * gf + 0.0722f * bf;
-
-			return luminance;
+	},
+	/** 1 channel greyscale using 16-bit normalized fixed point per pixel (65536 palette entries) */
+	GRAY_16(GL_RED, GL_R16, GL_UNSIGNED_SHORT, 2) {
+		public BufferedImage apply(Dimension d) {
+			return new BufferedImage(d.width, d.height, BufferedImage.TYPE_BYTE_GRAY);
 		}
 
+		public ByteBuffer pixelData(BufferedImage img) {
+			ByteBuffer buffer = ByteBuffer.allocateDirect(img.getWidth() * img.getHeight() * 2);
+			buffer.order(ByteOrder.nativeOrder());
+			for (int y = 0; y < img.getHeight(); y++) {
+				for (int x = 0; x < img.getWidth(); x++) {
+					// scale luminance 0.0-1.0 → 0-65535 for GL_R16 unsigned normalized
+					buffer.putShort((short)(luminance(new Color(img.getRGB(x, y))) * 65535f));
+				}
+			}
+			buffer.flip();
+			return buffer;
+		}
 	},
 	/** 2 channel RED/GREEN using 2 x 16 bit unsigned ints per pixel */
 	TWO_CHANNEL_16_BIT(GL_RG_INTEGER, GL_RG16UI, GL_UNSIGNED_SHORT, 4) {
@@ -122,5 +122,11 @@ public enum DataFormat implements TextureFactory.FormatHelper {
 		imageBuffer.put(data, 0, data.length);
 		imageBuffer.flip();
 		return imageBuffer;
+	}
+
+	static float luminance(Color color) {
+		return 0.2126f * (color.getRed() / 255f)
+			+ 0.7152f * (color.getGreen() / 255f)
+			+ 0.0722f * (color.getBlue() / 255f);
 	}
 }

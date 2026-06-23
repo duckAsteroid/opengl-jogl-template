@@ -21,9 +21,9 @@ public class PalettePicture extends PaletteRenderer implements Experiment {
 	@Override
 	public void init(RenderContext ctx) throws IOException {
 		// this is our one channel grey scale picture
-		Texture gray = ctx.getResourceManager().getTexture("gray", "window.jpeg", ImageLoadingOptions.DEFAULT.withType(DataFormat.GRAY));
+		Texture gray = ctx.getResourceManager().getTexture("gray", "window.jpeg", ImageLoadingOptions.DEFAULT.withType(DataFormat.GRAY_16));
 		// this is our palette
-		Texture palette = ctx.getResourceManager().getTexture("palette", "palettes/FIRE2.MAP.png", ImageLoadingOptions.DEFAULT.withSingleLine());
+		Texture palette = ctx.getResourceManager().getTexture("palette", "palettes/FIRE2.MAP.png", ImageLoadingOptions.DEFAULT);
 		super.init(ctx);
 	}
 }

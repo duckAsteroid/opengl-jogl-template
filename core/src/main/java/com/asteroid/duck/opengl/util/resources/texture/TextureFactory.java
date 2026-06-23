@@ -72,13 +72,7 @@ public class TextureFactory {
 
 		options.dataFormat().verify(data);
 
-		if (data.size().height == 1) {
-			tex.generate1D(data.size().width, data.buffer());
-			return tex;
-		}
-		else {
-			tex.generate(data.size().width, data.size().height, data.buffer());
-		}
+		tex.generate(data.size().width, data.size().height, data.buffer());
 		return tex;
 	}
 

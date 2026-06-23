@@ -123,7 +123,7 @@ public class Texture implements Resource {
 		// create Texture
 		glActiveTexture(GL_TEXTURE0); // unit 0 is the unmanaged scratch unit — never allocated by ResourceManager
 		bind();
-		glTexImage1D(this.dimensions.openGlCode(), 0, this.internalFormat, width, 0, this.imageFormat, GL_UNSIGNED_BYTE, data);
+		glTexImage1D(this.dimensions.openGlCode(), 0, this.internalFormat, width, 0, this.imageFormat, this.dataType, data);
 		// set Texture wrap and filter modes
 		wrap.openGlParamsStream().forEach(param -> glTexParameteri(dimensions.openGlCode(), param, wrap.openGlCode()));
 		filter.openGlParamsStream().forEach(param -> glTexParameteri(dimensions.openGlCode(), param, filter.openGlCode()));
