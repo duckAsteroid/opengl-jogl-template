@@ -25,7 +25,7 @@ uniform vec2 dimensions;
 
 void main() {
     // center colour of our matrix
-    fragColor = texture2D(tex, texCoords) * (blur ? weights[0] : 1.0);
+    fragColor = texture(tex, texCoords) * (blur ? weights[0] : 1.0);
     if (blur) {
         // now iterate over surrounding texture fetches and using their weights combine to blur
         float dimension = x ? dimensions.x : dimensions.y;
@@ -33,18 +33,18 @@ void main() {
             float delta =  offsets[i] / dimension;
             if (x) {
                 // plus
-                fragColor += texture2D(tex, (texCoords + vec2(delta, 0.0))) *
+                fragColor += texture(tex, (texCoords + vec2(delta, 0.0))) *
                 weights[i];
                 // minus
-                fragColor += texture2D(tex, (texCoords - vec2(delta, 0.0))) *
+                fragColor += texture(tex, (texCoords - vec2(delta, 0.0))) *
                 weights[i];
             }
             else {
                 // plus
-                fragColor += texture2D(tex, (texCoords + vec2(0.0, delta))) *
+                fragColor += texture(tex, (texCoords + vec2(0.0, delta))) *
                 weights[i];
                 // minus
-                fragColor += texture2D(tex, (texCoords - vec2(0.0, delta))) *
+                fragColor += texture(tex, (texCoords - vec2(0.0, delta))) *
                 weights[i];
             }
         }

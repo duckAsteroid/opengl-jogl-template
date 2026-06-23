@@ -62,17 +62,17 @@ public class BlurTextureRenderer extends AbstractPassthruRenderer {
 			uniform vec2 dimensions;
 
 			void main() {
-			    fragColor = texture2D(tex, texCoords) * (blur ? weights[0] : 1.0);
+			    fragColor = texture(tex, texCoords) * (blur ? weights[0] : 1.0);
 			    if (blur) {
 			        float dimension = x ? dimensions.x : dimensions.y;
 			        for (int i = 1; i < kernelSize; i++) {
 			            float delta = offsets[i] / dimension;
 			            if (x) {
-			                fragColor += texture2D(tex, (texCoords + vec2(delta, 0.0))) * weights[i];
-			                fragColor += texture2D(tex, (texCoords - vec2(delta, 0.0))) * weights[i];
+			                fragColor += texture(tex, (texCoords + vec2(delta, 0.0))) * weights[i];
+			                fragColor += texture(tex, (texCoords - vec2(delta, 0.0))) * weights[i];
 			            } else {
-			                fragColor += texture2D(tex, (texCoords + vec2(0.0, delta))) * weights[i];
-			                fragColor += texture2D(tex, (texCoords - vec2(0.0, delta))) * weights[i];
+			                fragColor += texture(tex, (texCoords + vec2(0.0, delta))) * weights[i];
+			                fragColor += texture(tex, (texCoords - vec2(0.0, delta))) * weights[i];
 			            }
 			        }
 			    }
