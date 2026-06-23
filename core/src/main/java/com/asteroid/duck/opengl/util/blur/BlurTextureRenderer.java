@@ -3,6 +3,7 @@ package com.asteroid.duck.opengl.util.blur;
 import com.asteroid.duck.opengl.util.AbstractPassthruRenderer;
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
+import com.asteroid.duck.opengl.util.resources.shader.ShaderSource;
 import com.asteroid.duck.opengl.util.resources.shader.vars.ShaderVariable;
 import com.asteroid.duck.opengl.util.resources.shader.vars.ShaderVariables;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
@@ -28,6 +29,56 @@ public class BlurTextureRenderer extends AbstractPassthruRenderer {
 	private boolean axis = true;
 	private final String textureName;
 	private final ShaderVariables variables = new ShaderVariables();
+
+	// language=GLSL
+	private static final String VERTEX_SHADER = """
+			#version 330
+			in vec2 screenPosition;
+			in vec2 texturePosition;
+			out vec2 texCoords;
+
+			void main() {
+			    gl_Position = vec4(screenPosition, 0.0, 1.0);
+			    texCoords = texturePosition;
+			}
+			""";
+
+	// language=GLSL
+	private static final String FRAGMENT_SHADER = """
+			#version 460
+			#define MAX_KERNEL_SIZE 64
+
+			precision mediump float;
+
+			uniform sampler2D tex;
+			in vec2 texCoords;
+			out vec4 fragColor;
+			uniform bool x;
+			uniform bool blur;
+			uniform float multiplier = 0.99;
+			uniform int kernelSize;
+			uniform float offsets[MAX_KERNEL_SIZE];
+			uniform float weights[MAX_KERNEL_SIZE];
+			uniform vec2 dimensions;
+
+			void main() {
+			    fragColor = texture2D(tex, texCoords) * (blur ? weights[0] : 1.0);
+			    if (blur) {
+			        float dimension = x ? dimensions.x : dimensions.y;
+			        for (int i = 1; i < kernelSize; i++) {
+			            float delta = offsets[i] / dimension;
+			            if (x) {
+			                fragColor += texture2D(tex, (texCoords + vec2(delta, 0.0))) * weights[i];
+			                fragColor += texture2D(tex, (texCoords - vec2(delta, 0.0))) * weights[i];
+			            } else {
+			                fragColor += texture2D(tex, (texCoords + vec2(0.0, delta))) * weights[i];
+			                fragColor += texture2D(tex, (texCoords - vec2(0.0, delta))) * weights[i];
+			            }
+			        }
+			    }
+			    fragColor *= multiplier;
+			}
+			""";
 
 	private int kernelSize = 29;
 	private DiscreteSampleKernel cachedKernel = new BlurKernel(kernelSize).getDiscreteSampleKernel();
@@ -57,7 +108,10 @@ public class BlurTextureRenderer extends AbstractPassthruRenderer {
 		addVariable(ShaderVariable.intVariable("kernelSize", ctx2 -> cachedKernel.size()));
 		addVariable(ShaderVariable.floatArrayVariable("offsets", () -> cachedKernel.floatOffsets()));
 		addVariable(ShaderVariable.floatArrayVariable("weights", () -> cachedKernel.floatWeights()));
-		return ctx.getResourceManager().getShaderLoader().LoadSimpleShaderProgram("blur");
+		return ShaderProgram.compile(
+				ShaderSource.fromClass(VERTEX_SHADER, BlurTextureRenderer.class),
+				ShaderSource.fromClass(FRAGMENT_SHADER, BlurTextureRenderer.class),
+				null);
 	}
 
 	public void addVariable(ShaderVariable<?> var) {
