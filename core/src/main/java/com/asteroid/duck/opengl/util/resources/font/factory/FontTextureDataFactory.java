@@ -124,7 +124,7 @@ public class FontTextureDataFactory {
 		g.setFont(font);
 		g.setPaint(java.awt.Color.WHITE);
 		// the position for the glyph to be rendered onto the image
-		int x = imageWidth / 2;
+		int x = padding.left();
 		int y = baseline;
 		g.drawString(charStr, x, y);
 

@@ -63,8 +63,8 @@ public class AudioWave implements RenderedItem {
 
     private static final VertexElement POSITION = new VertexElement(VertexElementType.VEC_2F, "position");
 
-    /** Default amplitude: 10× exaggeration of the normalised audio signal. */
-    private AmplitudeFunction amplitudeFunction = AmplitudeFunction.constant(10f);
+    /** Default amplitude: 1× maps the full normalised audio signal to the full screen height. */
+    private AmplitudeFunction amplitudeFunction = AmplitudeFunction.constant(1f);
     private volatile boolean amplitudeDirty = false;
 
     private final PboAudioSink audioSink;
