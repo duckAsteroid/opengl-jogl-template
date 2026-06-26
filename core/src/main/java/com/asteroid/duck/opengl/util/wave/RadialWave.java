@@ -69,6 +69,7 @@ public class RadialWave implements RenderedItem {
     private Uniform<Vector4f> uColour;
 
     private volatile float currentAspect = 1.0f;
+    private volatile boolean clearBeforeRender = true;
 
     private static final String ACTION_LINE_WIDTH   = "lineWidth";
     private static final String ACTION_LINE_COLOUR  = "lineColour";
@@ -171,7 +172,9 @@ public class RadialWave implements RenderedItem {
 
     @Override
     public void doRender(RenderContext ctx) {
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        if (clearBeforeRender) {
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        }
         shader.use(ctx);
         renderActions.processAll(ctx);
         glActiveTexture(GL_TEXTURE0);
@@ -212,5 +215,10 @@ public class RadialWave implements RenderedItem {
     public void setCenter(Vector2f center) {
         Vector2f copy = new Vector2f(center);
         renderActions.enqueue(ACTION_CENTER, ctx -> uCenter.set(copy));
+    }
+
+    /** When {@code false}, skips {@code glClear} on each frame — useful when compositing over another renderer. */
+    public void setClearBeforeRender(boolean clear) {
+        this.clearBeforeRender = clear;
     }
 }

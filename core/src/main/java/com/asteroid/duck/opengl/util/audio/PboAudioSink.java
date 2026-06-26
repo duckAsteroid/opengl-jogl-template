@@ -27,7 +27,8 @@ import static org.lwjgl.opengl.GL44.*;
  *   <li>Register with an {@link AudioReader} so the audio thread writes into it.</li>
  *   <li>Call {@link #upload()} once per frame on the GL thread before any visualiser that reads
  *       from the texture renders.</li>
- *   <li>Pass {@link #getTextureId()} and {@link #getHead()} to visualisers that need them.</li>
+ *   <li>Pass {@link #getTextureId()} and {@link #getHead()} (in stereo frames / texels) to
+ *       visualisers that need them.</li>
  * </ol>
  *
  * <p>Disposal is registered with the {@link com.asteroid.duck.opengl.util.resources.manager.ResourceManager}
@@ -121,9 +122,13 @@ public class PboAudioSink implements AudioSink {
         return textureId;
     }
 
-    /** Current write-head position in bytes; pass to the {@code uHead} shader uniform. */
+    /**
+     * Current write-head position in <em>stereo frames</em> (texels); pass to the
+     * {@code uHead} shader uniform. Shaders sample the audio texture with
+     * {@code texelFetch}, so the index must be in texel units, not bytes.
+     */
     public int getHead() {
-        return head;
+        return head / 4;
     }
 
     /** Release the PBO and texture. Called automatically via the ResourceManager at shutdown. */

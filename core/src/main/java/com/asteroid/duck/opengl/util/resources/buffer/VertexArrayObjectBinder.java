@@ -6,6 +6,7 @@ import com.google.auto.service.AutoService;
 
 import static org.lwjgl.opengl.GL30.glBindVertexArray;
 
+@SuppressWarnings("rawtypes")
 @AutoService(Binder.class)
 public class VertexArrayObjectBinder implements Binder<VertexArrayObject> {
     @Override

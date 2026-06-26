@@ -93,6 +93,8 @@ public class AudioWave implements RenderedItem {
 
     private int channelMode = CHANNEL_BLEND;
 
+    private volatile boolean clearBeforeRender = true;
+
     public AudioWave(PboAudioSink audioSink) {
         this.audioSink = Objects.requireNonNull(audioSink);
     }
@@ -197,7 +199,9 @@ public class AudioWave implements RenderedItem {
         if (amplitudeDirty) {
             rebuildVboAmplitude();
         }
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        if (clearBeforeRender) {
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        }
         shader.use(ctx);
         renderActions.processAll(ctx);
         glActiveTexture(GL_TEXTURE0);
@@ -236,5 +240,10 @@ public class AudioWave implements RenderedItem {
     public void setLineColour(Vector4f colour) {
         Vector4f copy = new Vector4f(colour);
         renderActions.enqueue(ACTION_LINE_COLOUR, ctx -> uColour.set(copy));
+    }
+
+    /** When {@code false}, skips {@code glClear} on each frame — useful when compositing over another renderer. */
+    public void setClearBeforeRender(boolean clear) {
+        this.clearBeforeRender = clear;
     }
 }

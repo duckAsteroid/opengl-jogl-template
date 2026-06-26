@@ -6,6 +6,7 @@ import com.google.auto.service.AutoService;
 
 import static org.lwjgl.opengl.GL11.glBindTexture;
 
+@SuppressWarnings("rawtypes")
 @AutoService(Binder.class)
 public class TextureBinder implements Binder<Texture> {
     @Override

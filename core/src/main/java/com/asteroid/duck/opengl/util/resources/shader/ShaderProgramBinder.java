@@ -6,6 +6,7 @@ import com.google.auto.service.AutoService;
 
 import static org.lwjgl.opengl.GL20.glUseProgram;
 
+@SuppressWarnings("rawtypes")
 @AutoService(Binder.class)
 public class ShaderProgramBinder implements Binder<ShaderProgram> {
     @Override

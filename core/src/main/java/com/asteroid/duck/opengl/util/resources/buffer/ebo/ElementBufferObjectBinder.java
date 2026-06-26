@@ -12,6 +12,7 @@ import static org.lwjgl.opengl.GL15.glBindBuffer;
  *
  * <p>Used by the resource binding/exclusivity system to ensure correct OpenGL bind/unbind calls.</p>
  */
+@SuppressWarnings("rawtypes")
 @AutoService(Binder.class)
 public class ElementBufferObjectBinder implements Binder<ElementBufferObject> {
     @Override
