@@ -8,16 +8,23 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 /**
- * NamedResourceManager extends ResourceManager to provide a simple name->resource mapping.
- * It registers resources with the inherited tracking mechanisms so they are destroyed when
- * this manager is destroyed.
- * <p>
- * Example usage:
+ * Extends {@link ResourceListManager} with a {@code String → Resource} name-lookup map.
+ * Resources registered here are also tracked by the parent list manager, so they are disposed
+ * automatically when {@link #dispose()} is called.
+ *
+ * <p>Example usage:</p>
+ * <pre>
  * NamedResourceManager&lt;Texture&gt; nm = new NamedResourceManager&lt;&gt;();
  * nm.put("diffuse", texture);
  * Texture t = nm.get("diffuse");
+ * </pre>
+ *
+ * @param <R> the type of {@link Resource} stored in this manager; all values in the map share
+ *            this type, which allows the manager to dispose them uniformly at shutdown
  */
 public class NamedResourceManager<R extends Resource> extends ResourceListManager<R> {
+    /** Default constructor; creates an empty manager with no resources. */
+    public NamedResourceManager() {}
     private final Map<String, R> map = Collections.synchronizedMap(new java.util.HashMap<>());
 
     /**
@@ -58,14 +65,20 @@ public class NamedResourceManager<R extends Resource> extends ResourceListManage
     }
 
     /**
-     * Returns true if a mapping exists for the name.
+     * Returns {@code true} if a resource is currently mapped under the given name.
+     *
+     * @param name the logical name to look up
+     * @return {@code true} if the name is present in the map; {@code false} otherwise
      */
     public boolean contains(String name) {
         return map.containsKey(name);
     }
 
     /**
-     * Stream the name->resource entries (snapshot).
+     * Stream a snapshot of all name-to-resource mappings currently in this manager.
+     * The snapshot is taken under synchronisation so it reflects a consistent state.
+     *
+     * @return a stream of {@link java.util.Map.Entry} pairs; the stream is not backed by the live map
      */
     public Stream<Map.Entry<String, R>> entries() {
         synchronized (map) {

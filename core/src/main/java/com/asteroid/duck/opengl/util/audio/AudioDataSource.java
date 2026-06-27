@@ -8,6 +8,11 @@ import javax.sound.sampled.TargetDataLine;
  * Our interface into an underlying (possibly simulated) audio data source
  */
 public interface AudioDataSource {
+    /**
+     * A human-readable name for this source, used in log messages and UI.
+     *
+     * @return display name; never {@code null}
+     */
 	String getName();
 	/**
 	 * Open using a given format
@@ -17,6 +22,12 @@ public interface AudioDataSource {
 	 */
 	void open(AudioFormat format, int bufferSize) throws LineUnavailableException;
 
+    /**
+     * Returns {@code true} if the line has been opened via {@link #open} and not yet closed.
+     * A source that is open but not {@linkplain #isRunning() running} has been paused.
+     *
+     * @return {@code true} if the underlying line is open
+     */
 	boolean isOpen();
 
 	/**
@@ -46,5 +57,11 @@ public interface AudioDataSource {
 	 */
 	void close();
 
+    /**
+     * Returns {@code true} if the source has been {@linkplain #start() started} and is actively
+     * delivering audio data. A line can be open but not running if it has been stopped.
+     *
+     * @return {@code true} if the source is currently capturing and delivering data
+     */
 	boolean isRunning();
 }

@@ -32,6 +32,19 @@ public class Rectangle {
     private final ElementBufferObject ebo;
     private final VertexBufferObject vbo;
 
+    /**
+     * Allocate and upload the VAO, VBO, and EBO for a screen-aligned rectangle.
+     *
+     * <p>The four corners are computed by mapping {@link #SCREEN_NORMAL} and {@link #TEXTURE_NORMAL}
+     * through the standard {@link Vertice} layout. The EBO indexes the corners into two clockwise
+     * triangles. All data is uploaded with {@link UpdateHint#STATIC}.</p>
+     *
+     * @param ctx                   the render context used to initialise GL objects
+     * @param scrnPosVertexAttrName GLSL {@code in} variable name for the 2-D screen position attribute;
+     *                              must match the vertex shader exactly and be non-blank
+     * @param texPosVertexAttrName  GLSL {@code in} variable name for the 2-D texture coordinate attribute;
+     *                              must match the vertex shader exactly and be non-blank
+     */
     public Rectangle(RenderContext ctx, String scrnPosVertexAttrName, String texPosVertexAttrName) {
         require(scrnPosVertexAttrName, "Screen position vertex attribute name");
         var scrnPos = new VertexElement(VertexElementType.VEC_2F, scrnPosVertexAttrName);
@@ -72,23 +85,47 @@ public class Rectangle {
         }
     }
 
+    /**
+     * Return the VAO that owns the VBO and EBO for this rectangle.
+     *
+     * @return the vertex array object; valid after construction, until {@link #destroy()} is called
+     */
     public VertexArrayObject getVertexArrayObject() {
         return vao;
     }
 
+    /**
+     * Return the element buffer object that indexes the four corners into two triangles.
+     *
+     * @return the EBO; valid after construction, until {@link #destroy()} is called
+     */
     public ElementBufferObject getElementBufferObject() {
         return ebo;
     }
 
+    /**
+     * Return the vertex buffer object that holds the per-corner screen and texture positions.
+     *
+     * @return the VBO; valid after construction, until {@link #destroy()} is called
+     */
     public VertexBufferObject getVertexBufferObject() {
         return vbo;
     }
 
+    /**
+     * Release all GL resources (VBO and EBO). The VAO itself is not explicitly freed here;
+     * callers that hold a reference to it are responsible for disposing it separately if needed.
+     */
     public void destroy() {
         vbo.dispose();
         ebo.dispose();
     }
 
+    /**
+     * Draw the rectangle using the currently bound shader program.
+     *
+     * @param ctx the render context; passed through to the VAO's render method
+     */
     public void render(RenderContext ctx) {
         vao.doRender(ctx);
     }

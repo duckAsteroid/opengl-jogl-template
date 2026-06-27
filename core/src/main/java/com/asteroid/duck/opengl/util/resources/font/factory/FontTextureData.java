@@ -16,6 +16,11 @@ import java.util.Map;
  */
 public record FontTextureData(Map<Character, GlyphImage> glyphImages, Map<Character, GlyphData> glyphData,
                               BufferedImage combined) {
+	/**
+	 * Pixel dimensions of the combined glyph-strip image.
+	 *
+	 * @return a new {@link Dimension} with the width and height of {@link #combined()}
+	 */
 	public Dimension combinedSize() {
 		return new Dimension(combined.getWidth(), combined.getHeight());
 	}

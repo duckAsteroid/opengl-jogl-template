@@ -7,7 +7,10 @@ import static org.lwjgl.opengl.GL11.*;
  * LINEAR interpolation or NEAREST neighbour
  */
 public enum Filter implements OpenGLCoded {
-	LINEAR(GL_LINEAR), NEAREST(GL_NEAREST);
+    /** Bilinear interpolation: smooths between adjacent texels; ideal for most 2D rendering. */
+	LINEAR(GL_LINEAR),
+    /** Nearest-neighbour selection: returns the single closest texel with no blending; preserves sharp pixel edges. */
+	NEAREST(GL_NEAREST);
 
 	private final int openGlCode;
 

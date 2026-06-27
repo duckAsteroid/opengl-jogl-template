@@ -15,6 +15,8 @@ import static org.lwjgl.opengl.GL15.glBindBuffer;
 @SuppressWarnings("rawtypes")
 @AutoService(Binder.class)
 public class ElementBufferObjectBinder implements Binder<ElementBufferObject> {
+    /** Default constructor; instances are created by {@link java.util.ServiceLoader}. */
+    public ElementBufferObjectBinder() {}
     @Override
     public Class<ElementBufferObject> resourceType() {
         return ElementBufferObject.class;

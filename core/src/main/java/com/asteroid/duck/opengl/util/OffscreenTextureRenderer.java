@@ -16,6 +16,13 @@ public class OffscreenTextureRenderer implements RenderedItem {
 	private final RenderedItem renderedItem;
 	private final FrameBuffer  fbo;
 
+	/**
+	 * Create an offscreen renderer that draws {@code renderedItem} into {@code targetTexture}.
+	 *
+	 * @param renderedItem  the render item whose output should go to the offscreen buffer
+	 * @param targetTexture the texture to render into; must already have been allocated
+	 *                      with the desired dimensions before {@link #init} is called
+	 */
 	public OffscreenTextureRenderer(RenderedItem renderedItem, Texture targetTexture) {
 		this.renderedItem = renderedItem;
 		this.fbo = new FrameBuffer(targetTexture);

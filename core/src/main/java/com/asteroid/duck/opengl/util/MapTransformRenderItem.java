@@ -13,6 +13,7 @@ import java.io.IOException;
  */
 public class MapTransformRenderItem extends CompositeRenderItem {
 
+    /** Default texture options: RGBA format, linear filtering, repeat wrapping. */
     public static final TextureOptions STANDARD_OPTS = new TextureOptions(DataFormat.RGBA, Filter.LINEAR, Wrap.REPEAT);
 
     private final RenderedItem source;
@@ -20,10 +21,25 @@ public class MapTransformRenderItem extends CompositeRenderItem {
     private final String offscreenName;
     private final TextureOptions opts;
 
+    /**
+     * Create a map-transform pipeline with {@link #STANDARD_OPTS}.
+     *
+     * @param source          the renderer whose output is the first frame's input
+     * @param mapTextureName  logical name of the displacement/translation map texture in the resource manager
+     * @param offscreenName   logical name under which the shared offscreen texture is registered
+     */
     public MapTransformRenderItem(RenderedItem source, String mapTextureName, String offscreenName) {
         this(source, mapTextureName, offscreenName, STANDARD_OPTS);
     }
 
+    /**
+     * Create a map-transform pipeline with custom texture options.
+     *
+     * @param source          the renderer whose output is the first frame's input
+     * @param mapTextureName  logical name of the displacement/translation map texture
+     * @param offscreenName   logical name for the shared offscreen texture
+     * @param opts            texture format, filter, and wrap settings for the offscreen buffer
+     */
     public MapTransformRenderItem(RenderedItem source, String mapTextureName, String offscreenName, TextureOptions opts) {
         this.source = source;
         this.mapTextureName = mapTextureName;

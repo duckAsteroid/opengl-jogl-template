@@ -95,6 +95,12 @@ public class AudioWave implements RenderedItem {
 
     private volatile boolean clearBeforeRender = true;
 
+    /**
+     * Create a waveform visualiser that reads from the given audio sink.
+     *
+     * @param audioSink the shared audio sink whose texture and write-head position are read each
+     *                  frame; must have been created with at least {@link #AUDIO_BUFFER_SIZE} frames
+     */
     public AudioWave(PboAudioSink audioSink) {
         this.audioSink = Objects.requireNonNull(audioSink);
     }
@@ -135,12 +141,20 @@ public class AudioWave implements RenderedItem {
     /**
      * Set how amplitude varies across the wave.
      * The new function takes effect on the next rendered frame.
+     *
+     * @param fn the new amplitude envelope; use {@link AmplitudeFunction#constant} for a flat
+     *           waveform or {@link AmplitudeFunction#ellipse} to taper to zero at the edges
      */
     public void setAmplitudeFunction(AmplitudeFunction fn) {
         this.amplitudeFunction = Objects.requireNonNull(fn);
         this.amplitudeDirty = true;
     }
 
+    /**
+     * Returns the amplitude envelope currently applied during VBO construction.
+     *
+     * @return the current {@link AmplitudeFunction}; never {@code null}
+     */
     public AmplitudeFunction getAmplitudeFunction() {
         return amplitudeFunction;
     }
@@ -229,20 +243,45 @@ public class AudioWave implements RenderedItem {
         shader.dispose();
     }
 
+    /**
+     * Set the GL line width used when drawing the waveform strip.
+     * Enqueued as a render action so it takes effect at the start of the next frame.
+     *
+     * @param v line width in pixels; values &gt; 1.0 produce thicker strokes
+     */
     public void setLineWidth(float v) {
         renderActions.enqueue(ACTION_LINE_WIDTH, ctx -> glLineWidth(v));
     }
 
+    /**
+     * Select which channel(s) to visualise. Enqueued as a render action.
+     *
+     * @param mode one of {@link #CHANNEL_BLEND}, {@link #CHANNEL_LEFT}, {@link #CHANNEL_RIGHT},
+     *             or {@link #CHANNEL_STEREO}
+     */
     public void setChannelMode(int mode) {
         renderActions.enqueue(ACTION_CHANNEL_MODE, ctx -> this.channelMode = mode);
     }
 
+    /**
+     * Set the RGBA colour of the waveform line. Enqueued as a render action; the supplied vector
+     * is copied so the caller may reuse or modify it after this call.
+     *
+     * @param colour the desired line colour as an RGBA vector in [0, 1] per component
+     */
     public void setLineColour(Vector4f colour) {
         Vector4f copy = new Vector4f(colour);
         renderActions.enqueue(ACTION_LINE_COLOUR, ctx -> uColour.set(copy));
     }
 
-    /** When {@code false}, skips {@code glClear} on each frame — useful when compositing over another renderer. */
+    /**
+     * Control whether the framebuffer is cleared before each frame.
+     * Set to {@code false} when compositing this waveform over another rendered layer
+     * (e.g. a spectrum background), so the underlying content is preserved.
+     *
+     * @param clear {@code true} to call {@code glClear} at the start of each frame (default);
+     *              {@code false} to skip the clear and draw on top of whatever is already in the buffer
+     */
     public void setClearBeforeRender(boolean clear) {
         this.clearBeforeRender = clear;
     }

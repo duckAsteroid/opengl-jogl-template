@@ -20,6 +20,12 @@ public class RenderActionQueue {
     private final Set<String> singletonTypes;
     private final ReentrantLock lock = new ReentrantLock(false);
 
+    /**
+     * Create a queue with the given action type names declared as singletons.
+     *
+     * @param singletonTypes zero or more action type strings that should be deduplicated;
+     *                       only the most recently enqueued action of each type is retained
+     */
     public RenderActionQueue(String ... singletonTypes) {
         this(new HashSet<>(Arrays.asList(singletonTypes)));
     }

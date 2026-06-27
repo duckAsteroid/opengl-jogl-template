@@ -7,6 +7,7 @@ import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
 import com.asteroid.duck.opengl.util.resources.buffer.BufferDrawMode;
 import com.asteroid.duck.opengl.util.resources.buffer.UpdateHint;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
+import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexBufferObject;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexDataStructure;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexElement;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexElementType;
@@ -47,6 +48,7 @@ public class RadialWave implements RenderedItem {
     public static final int AUDIO_BUFFER_SIZE = SAMPLE_COUNT * 2;
 
     private static final VertexElement DIRECTION = new VertexElement(VertexElementType.VEC_2F, "direction");
+    private static final VertexElement AMPLITUDE = new VertexElement(VertexElementType.FLOAT, "amplitude");
 
     /** Visualise the L+R average as a single line. */
     public static final int CHANNEL_BLEND = 0;
@@ -54,6 +56,10 @@ public class RadialWave implements RenderedItem {
     public static final int CHANNEL_LEFT  = 1;
     /** Visualise the right channel only. */
     public static final int CHANNEL_RIGHT = 2;
+
+    /** Default amplitude function: uniform scale of 1× around the full circle. */
+    private AmplitudeFunction amplitudeFunction = AmplitudeFunction.constant(1f);
+    private volatile boolean amplitudeDirty = false;
 
     private final PboAudioSink audioSink;
 
@@ -85,6 +91,7 @@ public class RadialWave implements RenderedItem {
     private static final String VERTEX_SHADER = """
             #version 330 core
             in vec2 direction;
+            in float amplitude;
             uniform sampler1D uAudioTex;
             uniform int uHead;
             uniform int uChannel;
@@ -98,7 +105,7 @@ public class RadialWave implements RenderedItem {
                 vec2 stereo = texelFetch(uAudioTex, sampleIndex, 0).rg;
                 float sample = (uChannel == 0) ? (stereo.r + stereo.g) * 0.5
                              : (uChannel == 1) ? stereo.r : stereo.g;
-                float r = uRadius + sample * uAmplitude;
+                float r = uRadius + sample * uAmplitude * amplitude;
                 vec2 pos = uCenter + vec2(direction.x * r / uAspect, direction.y * r);
                 gl_Position = vec4(pos, 0.0, 1.0);
             }
@@ -115,6 +122,12 @@ public class RadialWave implements RenderedItem {
             }
         """;
 
+    /**
+     * Create a radial waveform visualiser that reads from the given audio sink.
+     *
+     * @param audioSink the shared audio sink; must have been created with at least
+     *                  {@link #AUDIO_BUFFER_SIZE} frames via {@link PboAudioSink#create}
+     */
     public RadialWave(PboAudioSink audioSink) {
         this.audioSink = Objects.requireNonNull(audioSink);
     }
@@ -136,13 +149,28 @@ public class RadialWave implements RenderedItem {
         this.vao = new VertexArrayObject();
         vao.setDrawMode(BufferDrawMode.LINE_LOOP);
         vao.init(ctx);
-        var vbo = vao.createVbo(new VertexDataStructure(DIRECTION), SAMPLE_COUNT);
+        var vbo = vao.createVbo(new VertexDataStructure(DIRECTION, AMPLITUDE), SAMPLE_COUNT);
         vbo.init(ctx);
         IntStream.range(0, SAMPLE_COUNT).forEach(i -> {
             float angle = (float) (2.0 * Math.PI * i / SAMPLE_COUNT);
             vbo.setElement(i, DIRECTION, new Vector2f((float) Math.cos(angle), (float) Math.sin(angle)));
         });
+        fillVboAmplitude(vbo);
         vbo.update(UpdateHint.STATIC);
+    }
+
+    private void fillVboAmplitude(VertexBufferObject vbo) {
+        AmplitudeFunction fn = this.amplitudeFunction;
+        IntStream.range(0, SAMPLE_COUNT).forEach(i -> {
+            float x = (((float) i / SAMPLE_COUNT) * 2f) - 1f;
+            vbo.setElement(i, AMPLITUDE, fn.amplitudeAt(i, x));
+        });
+    }
+
+    private void rebuildVboAmplitude() {
+        fillVboAmplitude(vao.getVbo());
+        vao.getVbo().update(UpdateHint.DYNAMIC);
+        amplitudeDirty = false;
     }
 
     private void initShader(RenderContext ctx) {
@@ -172,6 +200,9 @@ public class RadialWave implements RenderedItem {
 
     @Override
     public void doRender(RenderContext ctx) {
+        if (amplitudeDirty) {
+            rebuildVboAmplitude();
+        }
         if (clearBeforeRender) {
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         }
@@ -191,33 +222,94 @@ public class RadialWave implements RenderedItem {
         shader.dispose();
     }
 
+    /**
+     * Set the GL line width used when drawing the waveform circle.
+     * Enqueued as a render action so it takes effect at the start of the next frame.
+     *
+     * @param v line width in pixels; values &gt; 1.0 produce thicker strokes
+     */
     public void setLineWidth(float v) {
         renderActions.enqueue(ACTION_LINE_WIDTH, ctx -> glLineWidth(v));
     }
 
+    /**
+     * Set the RGBA colour of the radial waveform line. Enqueued as a render action; the vector
+     * is copied so the caller may reuse or modify it after this call.
+     *
+     * @param colour the desired line colour as an RGBA vector in [0, 1] per component
+     */
     public void setLineColour(Vector4f colour) {
         Vector4f copy = new Vector4f(colour);
         renderActions.enqueue(ACTION_LINE_COLOUR, ctx -> uColour.set(copy));
     }
 
+    /**
+     * Select which channel(s) to visualise. Enqueued as a render action.
+     *
+     * @param mode one of {@link #CHANNEL_BLEND}, {@link #CHANNEL_LEFT}, or {@link #CHANNEL_RIGHT}
+     */
     public void setChannelMode(int mode) {
         renderActions.enqueue(ACTION_CHANNEL_MODE, ctx -> uChannel.set(mode));
     }
 
+    /**
+     * Set the base radius of the circle in NDC units. Enqueued as a render action.
+     *
+     * @param r the base circle radius; 0.5 fills roughly half the shorter screen dimension
+     */
     public void setRadius(float r) {
         renderActions.enqueue(ACTION_RADIUS, ctx -> uRadius.set(r));
     }
 
+    /**
+     * Set the radial displacement scale for audio samples. Enqueued as a render action.
+     * Acts as a global multiplier on top of the per-vertex {@link AmplitudeFunction}.
+     *
+     * @param a scale factor applied to the normalised audio sample before adding to the radius;
+     *          larger values produce more pronounced radial excursion
+     */
     public void setAmplitude(float a) {
         renderActions.enqueue(ACTION_AMPLITUDE, ctx -> uAmplitude.set(a));
     }
 
+    /**
+     * Set how amplitude varies around the circle.
+     * The new function takes effect on the next rendered frame.
+     *
+     * @param fn the new amplitude envelope; use {@link AmplitudeFunction#constant} for uniform
+     *           excursion or {@link AmplitudeFunction#ellipse} to taper to zero at the seam
+     */
+    public void setAmplitudeFunction(AmplitudeFunction fn) {
+        this.amplitudeFunction = Objects.requireNonNull(fn);
+        this.amplitudeDirty = true;
+    }
+
+    /**
+     * Returns the amplitude envelope currently applied during VBO construction.
+     *
+     * @return the current {@link AmplitudeFunction}; never {@code null}
+     */
+    public AmplitudeFunction getAmplitudeFunction() {
+        return amplitudeFunction;
+    }
+
+    /**
+     * Set the centre of the circle in NDC coordinates. Enqueued as a render action; the vector
+     * is copied so the caller may reuse it after this call.
+     *
+     * @param center the circle centre in NDC ({@code (0,0)} is the screen centre)
+     */
     public void setCenter(Vector2f center) {
         Vector2f copy = new Vector2f(center);
         renderActions.enqueue(ACTION_CENTER, ctx -> uCenter.set(copy));
     }
 
-    /** When {@code false}, skips {@code glClear} on each frame — useful when compositing over another renderer. */
+    /**
+     * Control whether the framebuffer is cleared before each frame.
+     *
+     * @param clear {@code true} to clear on each frame (default); {@code false} to skip and
+     *              composite the radial wave over whatever was previously rendered
+     */
     public void setClearBeforeRender(boolean clear) {
         this.clearBeforeRender = clear;
     }

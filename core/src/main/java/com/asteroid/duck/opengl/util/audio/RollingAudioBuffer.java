@@ -25,8 +25,11 @@ public class RollingAudioBuffer implements AudioSink {
     private volatile int writePos;
 
     /**
+     * Create a ring buffer large enough to hold the given number of stereo frames.
+     *
      * @param stereoFrameCapacity number of stereo frames this buffer can hold;
-     *                            should be at least 4× the FFT window size
+     *                            should be at least 4× the FFT window size to give the reader
+     *                            enough history to work with without the writer overwriting it
      */
     public RollingAudioBuffer(int stereoFrameCapacity) {
         this.data = new byte[stereoFrameCapacity * 4]; // 4 bytes per stereo frame

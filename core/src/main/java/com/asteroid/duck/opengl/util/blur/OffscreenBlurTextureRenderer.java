@@ -21,6 +21,7 @@ import java.util.List;
  */
 public class OffscreenBlurTextureRenderer extends CompositeRenderItem {
 	private static final Logger LOG = LoggerFactory.getLogger(OffscreenBlurTextureRenderer.class);
+	/** Default offscreen texture options: RGBA, linear filtering, repeat wrapping. */
 	public static final TextureOptions STANDARD_TEXTURE_OPTS = new TextureOptions(DataFormat.RGBA, Filter.LINEAR, Wrap.REPEAT);
 
 	private float multiplier = 0.99f;
@@ -30,14 +31,33 @@ public class OffscreenBlurTextureRenderer extends CompositeRenderItem {
 	private final String sourceTextureName;
 	private final List<BlurTextureRenderer> stages = new ArrayList<>();
 
+	/**
+	 * Create a single-pass blur renderer with default texture options.
+	 *
+	 * @param source the logical name of the texture to blur (must be registered in the resource manager)
+	 */
 	public OffscreenBlurTextureRenderer(String source) {
 		this(source, 1, STANDARD_TEXTURE_OPTS);
 	}
 
+	/**
+	 * Create a single-pass blur renderer with custom texture options.
+	 *
+	 * @param source  the logical name of the texture to blur
+	 * @param options offscreen texture format, filter, and wrap settings
+	 */
 	public OffscreenBlurTextureRenderer(String source, TextureOptions options) {
 		this(source, 1, options);
 	}
 
+	/**
+	 * Create a multi-pass blur renderer.
+	 *
+	 * @param source  the logical name of the texture to blur
+	 * @param passes  number of full X+Y blur passes; each pass adds blur in quadrature so the
+	 *                effective blur grows as √passes; must be ≥ 1
+	 * @param options offscreen texture format, filter, and wrap settings
+	 */
 	public OffscreenBlurTextureRenderer(String source, int passes, TextureOptions options) {
 		if (passes < 1) throw new IllegalArgumentException("passes must be >= 1");
 		this.sourceTextureName = source;
@@ -81,10 +101,12 @@ public class OffscreenBlurTextureRenderer extends CompositeRenderItem {
 		super.init(ctx);
 	}
 
+	/** Increase the Gaussian kernel size by 2 (next valid odd size). Propagated to all blur stages. */
 	public void increaseKernelSize() {
 		setKernelSize(getKernelSize() + 2);
 	}
 
+	/** Decrease the Gaussian kernel size by 2 (previous valid odd size, minimum 3). Propagated to all blur stages. */
 	public void decreaseKernelSize() {
 		setKernelSize(getKernelSize() - 2);
 	}
@@ -96,15 +118,28 @@ public class OffscreenBlurTextureRenderer extends CompositeRenderItem {
 		stages.forEach(s -> s.setKernelSize(size));
 	}
 
+	/**
+	 * Returns the current per-frame brightness multiplier applied by the blur shader.
+	 * Values below 1.0 cause the image to fade over time, creating a trail effect.
+	 *
+	 * @return the current multiplier; starts at 0.99
+	 */
 	public float multiplier() {
 		return multiplier;
 	}
 
+	/**
+	 * Scale the current multiplier by {@code v} (multiplicative adjustment).
+	 * Use values slightly below 1.0 to darken gradually and slightly above 1.0 to brighten.
+	 *
+	 * @param v the scale factor applied to the current {@link #multiplier()}
+	 */
 	public void multiply(float v) {
 		multiplier *= v;
 		LOG.info("multiplier={}", multiplier);
 	}
 
+	/** Toggle the blur shader on or off for all stages (passes through texels unmodified when off). */
 	public void toggleBlur() {
 		stages.forEach(BlurTextureRenderer::toggleBlur);
 	}

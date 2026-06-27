@@ -9,6 +9,13 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
+/**
+ * Renders two GL textures blended together using a time-varying mix factor.
+ *
+ * <p>The blend amount oscillates sinusoidally once per second, producing a smooth
+ * cross-fade between the named textures. This renderer manages its own shader program
+ * and full-screen quad geometry, and disposes all resources on {@link #dispose()}.</p>
+ */
 public class MultiTextureRenderer implements RenderedItem {
 
 	private static final Logger LOG = LoggerFactory.getLogger(MultiTextureRenderer.class);
@@ -23,10 +30,21 @@ public class MultiTextureRenderer implements RenderedItem {
 	private TextureUnit[] textureUnits;
 	private Triangles renderedShape;
 
+	/**
+	 * Create a renderer with a single texture name (convenience wrapper).
+	 *
+	 * @param textureName the logical name of the texture to display
+	 */
 	public MultiTextureRenderer(String textureName) {
 		this(new String[]{textureName});
 	}
 
+	/**
+	 * Create a renderer that samples from multiple named textures.
+	 *
+	 * @param textureNames the logical names of the textures to blend; at least two are expected
+	 *                     for the cross-fade effect to be visible
+	 */
 	public MultiTextureRenderer(String ... textureNames) {
 		this.textureNames = textureNames;
 	}

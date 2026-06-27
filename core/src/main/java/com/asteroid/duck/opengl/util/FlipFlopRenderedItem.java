@@ -10,6 +10,12 @@ public class FlipFlopRenderedItem implements RenderedItem {
 	private final RenderedItem itemB;
 	private boolean a_active = true;
 
+	/**
+	 * Create a flip-flop that alternates between two child render items on consecutive frames.
+	 *
+	 * @param itemA the render item used on even frames (the first frame rendered)
+	 * @param itemB the render item used on odd frames
+	 */
 	public FlipFlopRenderedItem(RenderedItem itemA, RenderedItem itemB) {
 		this.itemA = itemA;
 		this.itemB = itemB;

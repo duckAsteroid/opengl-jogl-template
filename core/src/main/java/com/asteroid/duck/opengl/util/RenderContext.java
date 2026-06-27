@@ -30,8 +30,19 @@ public interface RenderContext {
 	 */
 	Rectangle getWindow();
 
-	// listener for resize events (see above window dimensions)
+	/**
+	 * Register a listener that is notified whenever the window's framebuffer is resized.
+	 * Safe to call at any time, including from within a render callback.
+	 *
+	 * @param listener the resize callback to add; no-op if already registered
+	 */
 	void addResizeListener(ResizeListener listener);
+
+	/**
+	 * Deregister a previously added resize listener.
+	 *
+	 * @param listener the callback to remove; no-op if it was never registered
+	 */
 	void removeResizeListener(ResizeListener listener);
 
 	/**
@@ -66,6 +77,11 @@ public interface RenderContext {
 	 * @return the current background colour
 	 */
 	Vector4f getBackgroundColor();
+	/**
+	 * Set the RGBA colour the screen is cleared to each frame when {@link #isClearScreen()} is {@code true}.
+	 *
+	 * @param vector4f the new background colour as an RGBA vector in [0, 1] per component
+	 */
 	void setBackgroundColor(Vector4f vector4f);
 
 	/**
@@ -74,6 +90,12 @@ public interface RenderContext {
 	 * @return current desired update period in seconds
 	 */
 	Double getDesiredUpdatePeriod();
+	/**
+	 * Set the target frame period directly in seconds.
+	 * A value of {@code null} removes the cap and lets the loop run as fast as possible.
+	 *
+	 * @param period the desired frame period in seconds, or {@code null} for uncapped
+	 */
 	void setDesiredUpdatePeriod(Double period);
 
 	/**
@@ -84,6 +106,12 @@ public interface RenderContext {
 		return getDesiredUpdatePeriod() == null ? null : 1.0 / getDesiredUpdatePeriod();
 	}
 
+	/**
+	 * Set the target frame rate in hertz. Converts to a period and delegates to
+	 * {@link #setDesiredUpdatePeriod}. Pass {@code null} to remove the cap.
+	 *
+	 * @param frequencyInHertz the desired update rate in Hz, or {@code null} for uncapped
+	 */
 	default void setDesiredUpdateFrequency(Double frequencyInHertz) {
 		if (frequencyInHertz != null) {
 			setDesiredUpdatePeriod(1.0 / frequencyInHertz);

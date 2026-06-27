@@ -37,6 +37,15 @@ public class FontTexture implements Resource {
 	 */
 	private final int fontHeight;
 
+	/**
+	 * Create a font texture from pre-built glyph metrics and the combined glyph strip texture.
+	 *
+	 * <p>The glyph map is wrapped in an unmodifiable view so callers cannot mutate it after
+	 * construction. Font height is derived as the tallest glyph in the map.</p>
+	 *
+	 * @param glyphs  per-character layout data, keyed by character; must not be empty
+	 * @param texture the GPU texture containing all glyph images arranged in a horizontal strip
+	 */
 	public FontTexture(Map<Character, GlyphData> glyphs, Texture texture) {
 		this.glyphs = Collections.unmodifiableMap(glyphs);
 		this.texture = texture;
@@ -46,6 +55,12 @@ public class FontTexture implements Resource {
 						.max().orElseThrow();
 	}
 
+	/**
+	 * Look up the glyph metadata for a single character.
+	 *
+	 * @param c the character to look up
+	 * @return the {@link GlyphData} for {@code c}, or {@code null} if the font does not contain it
+	 */
 	public GlyphData getGlyph(char c) {
 		return glyphs.get(c);
 	}
@@ -143,10 +158,22 @@ public class FontTexture implements Resource {
 	}
 
 
+	/**
+	 * Returns the GPU texture containing the full glyph strip image.
+	 * Bind this before issuing draw calls for text rendered with this font.
+	 *
+	 * @return the OpenGL texture handle; never {@code null} after construction
+	 */
 	public Texture getTexture() {
 		return texture;
 	}
 
+	/**
+	 * All glyph metadata sorted left-to-right by their X position in the texture strip.
+	 * Useful for iterating over the atlas in strip order (e.g. for debugging or atlas export).
+	 *
+	 * @return an immutable sorted list of all glyph data records
+	 */
 	public List<GlyphData> glyphs() {
 		return glyphs.values().stream().sorted(Comparator.comparingInt(value -> value.bounds().x)).toList();
 	}

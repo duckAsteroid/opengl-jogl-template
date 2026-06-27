@@ -133,9 +133,17 @@ public class FFTProcessor {
         }
     }
 
-    /** Number of audio samples consumed per {@link #process} call. */
+    /**
+     * Number of audio samples consumed per {@link #process} call.
+     *
+     * @return FFT window size in samples; always a power of two
+     */
     public int getFftSize() { return fftSize; }
 
-    /** Number of output frequency bars written by {@link #process}. */
+    /**
+     * Number of output frequency bars written by {@link #process}.
+     *
+     * @return the bar count passed at construction
+     */
     public int getNumBins() { return numBins; }
 }

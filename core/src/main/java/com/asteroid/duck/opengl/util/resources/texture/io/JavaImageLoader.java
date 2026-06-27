@@ -19,6 +19,11 @@ import java.nio.ByteBuffer;
 public class JavaImageLoader implements TextureDataLoader {
 	private static final Logger log = LoggerFactory.getLogger(JavaImageLoader.class);
 	private final Loader loader;
+	/**
+	 * Create a loader that reads image data via the given classpath/file-system abstraction.
+	 *
+	 * @param loader the resource loader used to open image streams by path
+	 */
 	public JavaImageLoader(Loader loader) {
 		this.loader = loader;
 	}

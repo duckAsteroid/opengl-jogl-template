@@ -23,15 +23,38 @@ public class ExclusivityGroup<T extends Resource> {
     // A lock to ensure thread-safe access to the binding and unbinding operations
     private final ReentrantLock lock = new ReentrantLock(false);
 
+    /**
+     * Create an exclusivity group that delegates bind/unbind operations to the given binder.
+     *
+     * @param bindingContext the context this group belongs to; passed through to {@link BoundResource}
+     *                       so callers can access context-level services from the bound handle
+     * @param binder         the GL-level binder for resources of type {@code T}
+     */
     public ExclusivityGroup(BindingContext bindingContext, Binder<T> binder) {
         this.bindingContext = bindingContext;
         this.binder = binder;
     }
 
+    /**
+     * Returns the {@link BindingContext} associated with this group.
+     *
+     * @return the context passed at construction; never {@code null}
+     */
     public BindingContext context() {
         return bindingContext;
     }
 
+    /**
+     * Bind {@code resource} as the exclusively active resource of type {@code T}.
+     *
+     * <p>If {@code resource} is already bound (reference equality via {@link Objects#equals}),
+     * a new {@link BoundResource} handle is returned without issuing a redundant GL call.
+     * Otherwise the previous resource is implicitly displaced by calling {@link Binder#bind}.</p>
+     *
+     * @param resource the resource to bind; must not be {@code null}
+     * @return a handle that releases the binding when {@link BoundResource#unbind()} is called,
+     *         or {@code null} if the binder threw a {@link BindingException}
+     */
     public BoundResource<T> bind(T resource) {
         Objects.requireNonNull(resource, "Resource must not be null");
         try {
@@ -53,6 +76,16 @@ public class ExclusivityGroup<T extends Resource> {
         }
     }
 
+    /**
+     * Release the binding for {@code resource}, restoring the GL target to its unbound state.
+     *
+     * <p>After this call, another resource of the same type may be bound without interference.
+     * The {@link Binder#unbind} implementation is responsible for issuing the GL call (e.g.
+     * {@code glBindBuffer(target, 0)}).</p>
+     *
+     * @param resource the resource to unbind; must currently be bound
+     * @throws BindingException if the underlying GL unbind call fails
+     */
     public void unbind(T resource) throws BindingException {
         try {
             lock.lock();

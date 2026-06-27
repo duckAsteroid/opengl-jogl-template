@@ -18,9 +18,11 @@ public class RawLoader implements TextureDataLoader {
     private final Dimension size;
     private final Loader loader;
     /**
-     * Constructs a new RawLoader with the given size.
+     * Create a loader that reads raw RGBA bytes and presents them as textures of a fixed size.
      *
-     * @param size The size of the texture data.
+     * @param size   the width and height of every texture produced by this loader; the raw file must
+     *               contain exactly {@code width * height * 4} bytes (RGBA)
+     * @param loader the underlying resource loader used to open the raw file by relative path
      */
     public RawLoader(Dimension size, Loader loader) {
         this.size = size;

@@ -32,15 +32,32 @@ public class PaletteRenderer extends AbstractPassthruRenderer {
 	private TextureUnit paletteUnit;
 	private final String paletteName;
 
+	/**
+	 * Create a palette renderer for the named indexed texture using the default {@code "palette"} palette texture.
+	 *
+	 * @param name logical name of the indexed source texture in the resource manager
+	 */
 	public PaletteRenderer(String name) {
 		this(name, "palette");
 	}
 
+	/**
+	 * Create a palette renderer with explicit texture names.
+	 *
+	 * @param name        logical name of the indexed source texture
+	 * @param paletteName logical name of the 1-D RGBA palette texture in the resource manager;
+	 *                    each texel maps one palette index to an output colour
+	 */
 	private PaletteRenderer(String name, String paletteName) {
 		this.textureName = name;
 		this.paletteName = paletteName;
 	}
 
+	/**
+	 * Create a 256-entry greyscale palette where index {@code i} maps to RGB({@code i},{@code i},{@code i}).
+	 *
+	 * @return a 256×1 RGBA {@link TextureData} suitable for upload as a palette texture
+	 */
 	public static TextureData greyScale() {
 		ByteBuffer raw = BufferUtils.createByteBuffer(256 * 4);
 		for (int i = 0; i < 256; i++) {
@@ -53,6 +70,12 @@ public class PaletteRenderer extends AbstractPassthruRenderer {
 		return new TextureData(raw, new Dimension(256, 1));
 	}
 
+	/**
+	 * Create a 256-entry test palette with a cycling RGB pattern: red sweeps 0–255, green wraps
+	 * 128→255→0→127, and blue sweeps 255→0. Useful for verifying palette lookup is working correctly.
+	 *
+	 * @return a 256×1 RGBA {@link TextureData} suitable for upload as a palette texture
+	 */
 	public static TextureData rbgTestScale() {
 		ByteBuffer raw = BufferUtils.createByteBuffer(256 * 4);
 		int g = 128;
@@ -70,7 +93,13 @@ public class PaletteRenderer extends AbstractPassthruRenderer {
 		return new TextureData(raw, new Dimension(256, 1));
 	}
 
-	// Dump a PNG with the rgbTestScale in it
+	/**
+	 * CLI entry point: renders the {@link #rbgTestScale()} palette to a PNG file named {@code test.png}
+	 * in the current working directory. Useful for visually verifying the palette colours.
+	 *
+	 * @param args command-line arguments (ignored)
+	 * @throws IOException if the PNG file cannot be written
+	 */
 	public static void main(String[] args) throws IOException {
 		BufferedImage image = new BufferedImage(256, 1, BufferedImage.TYPE_INT_ARGB);
 		TextureData data = rbgTestScale();

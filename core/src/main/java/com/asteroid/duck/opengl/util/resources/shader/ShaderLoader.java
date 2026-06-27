@@ -12,15 +12,35 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Loads GLSL shader source files from a classpath-rooted {@link com.asteroid.duck.opengl.util.resources.io.Loader},
+ * processes {@code #include} directives, and compiles the result into a {@link ShaderProgram}.
+ *
+ * <p>Include processing is enabled by default and can be disabled with the system property
+ * {@code -Dshader.ignore.includes=true}. Includes are resolved relative to the shader root loader.</p>
+ */
 public class ShaderLoader  {
 	private static final Logger LOG = LoggerFactory.getLogger(ShaderLoader.class);
 	private final static boolean performIncludesProcessing = !Boolean.getBoolean("shader.ignore.includes");
 	private final Loader loader;
 
+	/**
+	 * Create a shader loader that resolves source files via the given loader.
+	 *
+	 * @param root the loader used to open shader source files by relative path
+	 */
 	public ShaderLoader(Loader root) {
 		this.loader = root;
 	}
 
+	/**
+	 * Load a shader program whose sources follow the standard {@code <name>/vertex.glsl} and
+	 * {@code <name>/frag.glsl} layout under the loader root.
+	 *
+	 * @param simple the shader directory name (e.g. {@code "passthru"})
+	 * @return the compiled and linked shader program
+	 * @throws IOException if either source file cannot be read
+	 */
 	public ShaderProgram LoadSimpleShaderProgram(String simple) throws IOException {
 		return LoadShaderProgram(simple+"/vertex.glsl", simple+"/frag.glsl", null);
 	}

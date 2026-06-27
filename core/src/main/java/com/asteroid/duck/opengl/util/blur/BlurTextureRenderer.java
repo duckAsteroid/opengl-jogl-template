@@ -14,7 +14,20 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 
 /**
- * Renders a texture to current output with (or without) a gaussian blur in a single dimension (X/Y)
+ * Renders a texture to the current output with an optional single-axis Gaussian blur.
+ *
+ * <p>The blur is implemented as a separable two-pass filter: run one instance with the X axis
+ * enabled, write the result to an intermediate texture, then run a second instance with the Y axis
+ * enabled. Alternatively, use {@link OffscreenBlurTextureRenderer} which wires both passes
+ * together automatically.</p>
+ *
+ * <p>The kernel is computed by {@link BlurKernel} and collapsed to a linear-interpolation
+ * optimised {@link DiscreteSampleKernel} that halves the number of texture fetches per fragment.
+ * The kernel is recomputed whenever {@link #setKernelSize} is called.</p>
+ *
+ * <p>Blur can be toggled off at runtime via {@link #setBlur(boolean)} or {@link #toggleBlur()},
+ * which causes the fragment shader to pass the source texel through unchanged (still multiplied
+ * by the {@code multiplier} uniform for feedback-style effects).</p>
  */
 public class BlurTextureRenderer extends AbstractPassthruRenderer {
 	private static final Logger LOG = LoggerFactory.getLogger(BlurTextureRenderer.class);
@@ -83,6 +96,13 @@ public class BlurTextureRenderer extends AbstractPassthruRenderer {
 	private int kernelSize = 29;
 	private DiscreteSampleKernel cachedKernel = new BlurKernel(kernelSize).getDiscreteSampleKernel();
 
+	/**
+	 * Create a blur renderer that samples from the named texture.
+	 *
+	 * @param sourceTexture the {@link com.asteroid.duck.opengl.util.resources.manager.ResourceManager}
+	 *                      key of the texture to blur; the texture must be registered before
+	 *                      {@link #init} is called
+	 */
 	public BlurTextureRenderer(String sourceTexture) {
 		this.textureName = sourceTexture;
 	}
@@ -114,6 +134,13 @@ public class BlurTextureRenderer extends AbstractPassthruRenderer {
 				null);
 	}
 
+	/**
+	 * Register an additional {@link ShaderVariable} whose value will be pushed to the shader
+	 * on every render. Use this to drive custom uniforms (e.g. the {@code multiplier} decay
+	 * factor) from external state without subclassing.
+	 *
+	 * @param var the variable binding to add; must not be {@code null}
+	 */
 	public void addVariable(ShaderVariable<?> var) {
 		variables.add(var);
 	}
@@ -124,36 +151,73 @@ public class BlurTextureRenderer extends AbstractPassthruRenderer {
 		super.doRenderWithShader(ctx);
 	}
 
+	/**
+	 * Returns {@code true} if the Gaussian blur pass is currently active.
+	 * When {@code false}, the fragment shader passes source texels through unchanged
+	 * (still subject to the {@code multiplier} decay).
+	 *
+	 * @return {@code true} if blurring is enabled
+	 */
 	public boolean isBlur() {
     return blur;
   }
 
+	/**
+	 * Enable or disable the blur pass.
+	 *
+	 * @param blur {@code true} to apply the Gaussian kernel; {@code false} to pass through
+	 */
 	public void setBlur(boolean blur) {
 		this.blur = blur;
 	}
 
+	/**
+	 * Returns {@code true} if blurring along the X (horizontal) axis, {@code false} for Y (vertical).
+	 *
+	 * @return {@code true} for horizontal blur, {@code false} for vertical
+	 */
 	public boolean isXAxis() {
     return axis;
   }
 
+	/**
+	 * Set which axis to blur along. Combine with a second pass on the other axis for a full 2-D blur.
+	 *
+	 * @param axis {@code true} for horizontal (X) blur; {@code false} for vertical (Y) blur
+	 */
 	public void setXAxis(boolean axis) {
     this.axis = axis;
   }
 
+	/** Toggle the blur on/off. Prints the new state to stdout (useful for key-binding debug). */
 	public void toggleBlur() {
 		blur = !blur;
 		System.out.println("Blur="+blur);
 	}
 
+	/** Toggle between X and Y axis. Prints the new axis to stdout (useful for key-binding debug). */
 	public void toggleAxis() {
 		axis = !axis;
 		System.out.println("Axis="+( axis ? "x" : "y"));
 	}
 
+	/**
+	 * Returns the current odd kernel size (e.g. 29). A larger size produces a wider, softer blur
+	 * at the cost of more per-fragment texture samples.
+	 *
+	 * @return the kernel size; always odd and in [{@value #MIN_KERNEL_SIZE}, {@value #MAX_KERNEL_SIZE}]
+	 */
 	public int getKernelSize() {
 		return kernelSize;
 	}
 
+	/**
+	 * Set the blur kernel size. The value is clamped to [{@value #MIN_KERNEL_SIZE},
+	 * {@value #MAX_KERNEL_SIZE}] and rounded up to the next odd number if even. A new
+	 * {@link DiscreteSampleKernel} is computed immediately if the size changed.
+	 *
+	 * @param size desired kernel size in texels; must be a positive odd integer within range
+	 */
 	public void setKernelSize(int size) {
 		if (size < MIN_KERNEL_SIZE) size = MIN_KERNEL_SIZE;
 		if (size > MAX_KERNEL_SIZE) size = MAX_KERNEL_SIZE;
@@ -165,10 +229,18 @@ public class BlurTextureRenderer extends AbstractPassthruRenderer {
 		}
 	}
 
+	/**
+	 * Increase the kernel size by 2 (the next larger odd value).
+	 * Clamped at {@value #MAX_KERNEL_SIZE}.
+	 */
 	public void increaseKernelSize() {
 		setKernelSize(kernelSize + 2);
 	}
 
+	/**
+	 * Decrease the kernel size by 2 (the next smaller odd value).
+	 * Clamped at {@value #MIN_KERNEL_SIZE}.
+	 */
 	public void decreaseKernelSize() {
 		setKernelSize(kernelSize - 2);
 	}

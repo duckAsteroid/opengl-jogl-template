@@ -6,18 +6,51 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * An immutable description of a keyboard gesture: one or more non-modifier keys held together
+ * with zero or more modifier keys (Shift, Ctrl, Alt, Super).
+ *
+ * <p>Used as the trigger in {@link KeyAction} registrations. {@link KeyRegistry} matches incoming
+ * GLFW key events against registered combinations to dispatch the correct action.</p>
+ *
+ * @param keys      the set of non-modifier keys that must be pressed; typically a singleton
+ * @param modifiers the modifier keys that must be active simultaneously; may be empty
+ */
 public record KeyCombination(Set<Key> keys, Set<Key> modifiers) implements Comparable<KeyCombination> {
+	/**
+	 * Create a combination for a single unmodified alphabetic key.
+	 *
+	 * @param key an upper-case ASCII letter (e.g. {@code 'A'}); must be recognised by
+	 *            {@link Keys#keyFor(char)}
+	 * @return a {@link KeyCombination} with no modifiers
+	 */
 	public static KeyCombination simple(char key) {
 		Key keyed = Keys.instance().keyFor(key);
 		return new KeyCombination(Set.of(keyed), Collections.emptySet());
 	}
 
+	/**
+	 * Create a combination for a single alphabetic key held with one or more named modifier keys.
+	 *
+	 * @param key  an upper-case ASCII letter
+	 * @param mods GLFW modifier names (e.g. {@code "SHIFT"}, {@code "CONTROL"}) as understood by
+	 *             {@link Keys#keyForName(String)}
+	 * @return a {@link KeyCombination} matching the key pressed with all listed modifiers
+	 */
 	public static KeyCombination simpleWithMods(char key, String ... mods) {
 		Key keyed = Keys.instance().keyFor(key);
 		Set<Key> modSet = Arrays.stream(mods).map(m -> Keys.instance().keyForName(m)).collect(Collectors.toSet());
 		return new KeyCombination(Set.of(keyed), modSet);
 	}
 
+	/**
+	 * Format this combination as a compact human-readable string suitable for console output.
+	 *
+	 * <p>Example: {@code "A[SHIFT|CONTROL]"} for Ctrl+Shift+A, or just {@code "F"} for an
+	 * unmodified key.</p>
+	 *
+	 * @return the formatted combination string; non-empty
+	 */
 	public String asSimpleString() {
 		String mods = "";
 		if (!modifiers.isEmpty()) {

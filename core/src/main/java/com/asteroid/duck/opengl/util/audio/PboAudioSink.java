@@ -117,7 +117,12 @@ public class PboAudioSink implements AudioSink {
         glBindTexture(GL_TEXTURE_1D, 0);
     }
 
-    /** GL handle for the 1-D audio texture. Pass to visualisers so they can bind it for sampling. */
+    /**
+     * Returns the GL handle for the 1-D {@code GL_RG16_SNORM} audio texture.
+     * Pass to visualisers so they can bind the texture before sampling it in the vertex shader.
+     *
+     * @return the OpenGL texture object name; valid for the lifetime of this sink
+     */
     public int getTextureId() {
         return textureId;
     }
@@ -126,6 +131,8 @@ public class PboAudioSink implements AudioSink {
      * Current write-head position in <em>stereo frames</em> (texels); pass to the
      * {@code uHead} shader uniform. Shaders sample the audio texture with
      * {@code texelFetch}, so the index must be in texel units, not bytes.
+     *
+     * @return the write-head position as a texel index in [0, stereoFrames)
      */
     public int getHead() {
         return head / 4;

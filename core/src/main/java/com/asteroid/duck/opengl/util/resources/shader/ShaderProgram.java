@@ -49,12 +49,29 @@ public class ShaderProgram implements Resource {
 		this.uniforms = new Uniforms(this);
 	}
 
+	/**
+	 * Return the OpenGL program handle assigned by the driver when the program was linked.
+	 *
+	 * @return the non-zero GL program ID
+	 */
 	public int id() {
 		return id;
 	}
 
-
-
+	/**
+	 * Compile and link vertex, fragment, and optional geometry shader sources into a ready-to-use program.
+	 *
+	 * <p>Each shader source is compiled individually; the three (or two) shader objects are
+	 * then attached to a new program and linked. After a successful link the individual shader
+	 * objects are deleted — only the linked program is retained. Throws {@link RuntimeException}
+	 * if any stage fails to compile or the program fails to link.</p>
+	 *
+	 * @param vertexSource   GLSL source for the vertex stage; must not be null or blank
+	 * @param fragmentSource GLSL source for the fragment stage; must not be null or blank
+	 * @param geometrySource GLSL source for the optional geometry stage; may be {@code null} or blank
+	 *                       to omit the geometry stage
+	 * @return a linked and ready-to-use {@link ShaderProgram}
+	 */
 	public static ShaderProgram compile(ShaderSource vertexSource, ShaderSource fragmentSource, ShaderSource geometrySource) {
 		Objects.requireNonNull(vertexSource, "Source for vertex shader must not be null");
 		if (vertexSource.isSourceBlank()) throw new IllegalArgumentException("Source for vertex shader must not be blank");
@@ -102,7 +119,12 @@ public class ShaderProgram implements Resource {
 	}
 
 
+	/**
+	 * Strategy for checking whether a GL shader or program object compiled/linked successfully.
+	 * Each constant queries the appropriate GL status flag and returns any error log on failure.
+	 */
 	public enum CompilationChecker implements Function<Integer, Optional<String>> {
+		/** Checks whether an individual shader object compiled without errors, using {@code GL_COMPILE_STATUS}. */
 		SHADER {
 			@Override
 			public Optional<String> apply(Integer shader) {
@@ -116,6 +138,7 @@ public class ShaderProgram implements Resource {
 			}
 		}
 		,
+		/** Checks whether a program object linked without errors, using {@code GL_LINK_STATUS}. */
 		PROGRAM{
 			@Override
 			public Optional<String> apply(Integer program) {
@@ -145,6 +168,13 @@ public class ShaderProgram implements Resource {
 		return uniforms;
 	}
 
+	/**
+	 * Return a cached map of shader variables for the given type (uniforms or attributes),
+	 * introspecting the linked program on the first call and returning the cached result thereafter.
+	 *
+	 * @param type the category of variable to fetch ({@link VariableType#UNIFORM} or {@link VariableType#ATTRIBUTE})
+	 * @return an unmodifiable view of variable name → {@link Variable} for all active variables of that type
+	 */
 	public Map<String, Variable> get(VariableType type) {
 		if (!variableCache.containsKey(type)) {
 			variableCache.put(type, read(type));
@@ -165,6 +195,17 @@ public class ShaderProgram implements Resource {
 		return new VertexDataStructure(elements);
 	}
 
+	/**
+	 * Introspect the linked GL program and read all active variables of the given type directly
+	 * from the driver, bypassing the cache.
+	 *
+	 * <p>Uses {@code glGetActiveUniform} / {@code glGetActiveAttrib} (delegated via {@link VariableType})
+	 * to enumerate each variable's name, data type, and array size. The result is stored in the
+	 * cache by {@link #get(VariableType)} on subsequent calls.</p>
+	 *
+	 * @param type the variable category to enumerate
+	 * @return a fresh name → {@link Variable} map; never {@code null}
+	 */
 	public Map<String, Variable> read(VariableType type) {
 		try(MemoryStack stack = MemoryStack.stackPush()) {
 			// how many variables of this type?
@@ -201,6 +242,13 @@ public class ShaderProgram implements Resource {
 		}
 	}
 
+	/**
+	 * Query the linked program for the location of a vertex attribute by name.
+	 *
+	 * @param attributeName the exact GLSL {@code in} variable name to look up
+	 * @return the non-negative attribute location assigned by the linker
+	 * @throws IllegalArgumentException if the attribute name is not found in the linked program
+	 */
 	public int getAttributeLocation(String attributeName) {
 		int location = glGetAttribLocation(id, attributeName);
 		if (location < 0) {
@@ -209,6 +257,14 @@ public class ShaderProgram implements Resource {
 		return location;
 	}
 
+	/**
+	 * Install this shader program as the current GL program via the context's exclusivity group.
+	 *
+	 * <p>Using the {@link com.asteroid.duck.opengl.util.resources.bound.ExclusivityGroup} ensures
+	 * that only one shader is active at a time and that the previous binding is properly released.</p>
+	 *
+	 * @param ctx the render context providing access to the resource manager
+	 */
 	public void use(RenderContext ctx) {
 		var binder = ctx.getResourceManager().exclusivityGroup(ShaderProgram.class);
 		binder.bind(this);
@@ -225,10 +281,20 @@ public class ShaderProgram implements Resource {
 		return sb;
 	}
 
+	/**
+	 * Return a compact human-readable identifier for this program, suitable for log lines.
+	 *
+	 * @return a string of the form {@code ShaderProgram(id=N)}
+	 */
 	public String shortDebugName() {
 		return debugBuilder().toString();
 	}
 
+	/**
+	 * Append the source locations (vertex, fragment, and optional geometry) to a debug string builder.
+	 *
+	 * @param sb the builder to append to; each stage is written on its own indented line
+	 */
 	public void renderShaderSource(StringBuilder sb) {
 		sb.append('\t').append("vertex=").append(vertex.location()).append("\n");
 		sb.append('\t').append("fragment=").append(fragment.location()).append("\n");
@@ -237,22 +303,36 @@ public class ShaderProgram implements Resource {
 		}
 	}
 
+	/**
+	 * Append a summary of all active uniform variables to a debug string builder.
+	 *
+	 * @param sb the builder to append to; output is {@code uniforms={name type, …}}
+	 */
 	public void renderUniforms(StringBuilder sb) {
 		Map<String, Variable> vars = get(VariableType.UNIFORM);
 		String uniforms = vars.values().stream().sorted().map(Objects::toString).collect(Collectors.joining(", ", "uniforms={", "}; "));
 		sb.append('\t').append(uniforms).append("\n");
 	}
 
+	/**
+	 * Append a summary of all active vertex attribute variables to a debug string builder.
+	 *
+	 * @param sb the builder to append to; output is {@code attributes={name type, …}}
+	 */
 	public void renderAttributes(StringBuilder sb) {
 		Map<String, Variable> vars = get(VariableType.ATTRIBUTE);
 		String attributes = vars.values().stream().sorted().map(Objects::toString).collect(Collectors.joining(", ","attributes={", "}; "));
 		sb.append('\t').append(attributes).append("\n");
 	}
 
+	/** {@link #DEBUG} flag: include shader source in {@link #toString()} output. */
 	public static final int SHADER_SOURCE = 1;
+	/** {@link #DEBUG} flag: include uniform variable listing in {@link #toString()} output. */
 	public static final int UNIFORMS = 2;
+	/** {@link #DEBUG} flag: include attribute variable listing in {@link #toString()} output. */
 	public static final int ATTRIBUTES = 4;
 
+	/** Bitmask controlling which sections are included when {@link #toString()} is called; default {@code 0} (none). */
 	public static int DEBUG = 0;
 
 	@Override

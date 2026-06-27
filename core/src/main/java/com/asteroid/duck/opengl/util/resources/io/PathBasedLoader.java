@@ -11,6 +11,12 @@ import java.nio.file.Path;
 public class PathBasedLoader implements Loader {
     private final Path basePath;
 
+    /**
+     * Create a loader rooted at the given file-system path.
+     *
+     * @param basePath the directory from which relative resource paths are resolved;
+     *                 must exist and be readable at the time resources are opened
+     */
     public PathBasedLoader(Path basePath) {
         this.basePath = basePath;
     }

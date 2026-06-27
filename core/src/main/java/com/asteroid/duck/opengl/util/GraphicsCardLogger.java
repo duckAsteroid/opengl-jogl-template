@@ -9,8 +9,24 @@ import static org.lwjgl.opengl.GL11.GL_RENDERER;
 import static org.lwjgl.opengl.GL11.glGetString;
 import static org.lwjgl.system.MemoryUtil.NULL;
 
+/**
+ * Minimal GLFW/OpenGL bootstrap that prints the GPU renderer string and exits.
+ *
+ * <p>Run via {@code ./gradlew :experiments:graphicsCardLogger} to confirm which physical GPU
+ * LWJGL is using on the current system — useful for diagnosing Optimus / prime-offload issues
+ * where the discrete GPU may not be selected by default.</p>
+ */
 public class GraphicsCardLogger {
 
+    /** Default constructor; this class is only ever used via {@link #main}. */
+    public GraphicsCardLogger() {}
+
+    /**
+     * Initialise GLFW, create a minimal window to obtain an OpenGL context, print the
+     * {@code GL_RENDERER} string (which identifies the active GPU), then tear everything down.
+     *
+     * @param args command-line arguments (ignored)
+     */
     public static void main(String[] args) {
         GLFWErrorCallback.createPrint(System.err).set();
 

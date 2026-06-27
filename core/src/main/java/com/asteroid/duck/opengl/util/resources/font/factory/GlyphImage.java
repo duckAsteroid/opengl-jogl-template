@@ -37,12 +37,17 @@ public record GlyphImage(BufferedImage image, Point datum, Rectangle bounds) {
 
 
 	/**
-	 * Render this glyph image into the font image strip
+	 * Render this glyph image into the font image strip and return its layout metadata.
 	 *
-	 * @param x            the X location where the image is to be rendered
-	 * @param g            the graphics 2D in the strip image (where we render to)
+	 * <p>The glyph is placed at {@code x + padding.left()} horizontally and {@code padding.top()}
+	 * vertically within the strip. The returned {@link GlyphData} records the destination rectangle
+	 * and normalised texture coordinates so the glyph can later be recovered for text rendering.</p>
 	 *
-	 * @return the resulting GlyphData of the rendered section - allowing us to recover the glyph later
+	 * @param padding   inset applied to all four sides of the glyph placement within the strip
+	 * @param x         the left edge of this glyph's slot in the strip, in pixels (before padding)
+	 * @param g         the {@link Graphics2D} context of the combined strip image to draw into
+	 * @param imageSize the full pixel dimensions of the strip image, used to compute normalised UV coords
+	 * @return the glyph's position, datum offset, and normalised texture bounds in the strip
 	 */
 	public GlyphData renderToStrip(Padding padding, int x, Graphics2D g, Dimension imageSize) {
 		Rectangle destination = new Rectangle(x + padding.left(), padding.top(), bounds.width, bounds.height);

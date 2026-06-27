@@ -35,14 +35,23 @@ public class FileSystemFontTextureDataCache {
 
 	private final Path root;
 
+	/**
+	 * Create a cache that stores and retrieves font texture data under the given root directory.
+	 *
+	 * @param root the base directory; font variants are stored in subdirectories structured as
+	 *             {@code <fontName>/<style>/<size>/<aa|raw>/}
+	 */
 	public FileSystemFontTextureDataCache(Path root) {
 		this.root = root;
 	}
 
 	/**
-	 * Used to refer to a particular Font
-	 * @param font
-	 * @param antiAlias
+	 * Uniquely identifies a rendered font variant by family, style, size, and anti-aliasing choice.
+	 * Used as a cache key to locate the corresponding directory under the cache root.
+	 *
+	 * @param font      the AWT {@link Font} describing the family, style (bold/italic), and point size
+	 * @param antiAlias {@code true} if the glyphs were rendered with anti-aliasing; the cache stores
+	 *                  the two variants ({@code aa} and {@code raw}) in separate subdirectories
 	 */
 	public record FontLocator(Font font, boolean antiAlias) {
 		static String style(Font font) {
@@ -76,11 +85,29 @@ public class FileSystemFontTextureDataCache {
 			return result;
 		}
 
+		/**
+		 * Derive the relative subdirectory path for this font variant.
+		 *
+		 * <p>Layout: {@code <fullFontName>/<style>/<pointSize>/<aa|raw>}.
+		 * The path is relative to the cache root and can be resolved against it to get the
+		 * absolute directory for this variant.</p>
+		 *
+		 * @return the relative cache path for this font variant
+		 */
 		public Path asPath() {
 			return Path.of(font.getFontName(), style(font),Integer.toString(font.getSize()), antiAlias ? "aa" : "raw");
 		}
 	}
 
+	/**
+	 * Scan the cache root and return a stream of all font variants found on disk.
+	 *
+	 * <p>Traverses the three-level directory tree ({@code name/style/size/alias}) and constructs
+	 * a {@link FontLocator} for each leaf directory. Directories that do not conform to the
+	 * expected structure are silently skipped.</p>
+	 *
+	 * @return a stream of all discoverable font variants; empty if the root is missing or unreadable
+	 */
 	public Stream<FontLocator> load() {
 		try(Stream<Path> fontNames = Files.list(root)) {
 			// Stream of font folders (e.g., Arial, Courier)
@@ -140,6 +167,12 @@ public class FileSystemFontTextureDataCache {
 		}
 	}
 
+	/**
+	 * Load the cached {@link FontTextureData} for a specific font variant, if it exists.
+	 *
+	 * @param fontLocator identifies the font variant to load
+	 * @return the cached atlas data, or empty if no cache entry exists for this variant
+	 */
 	public Optional<FontTextureData> load(FontLocator fontLocator) {
 		final var fontPath = root.resolve(fontLocator.asPath());
 		if (Files.exists(fontPath)) {
@@ -173,6 +206,17 @@ public class FileSystemFontTextureDataCache {
 		throw new UnsupportedOperationException();
 	}
 
+	/**
+	 * Persist the given font texture data to disk under the directory derived from {@code locator}.
+	 *
+	 * <p>If the target directory already exists the data is not overwritten; a warning is logged
+	 * instead. This prevents accidental corruption of an existing cache entry.</p>
+	 *
+	 * @param locator         identifies the font variant being stored
+	 * @param fontTextureData the atlas data to persist; contains the combined strip image,
+	 *                        individual glyph images, and per-glyph metrics
+	 * @throws IOException if directory creation or image/data I/O fails
+	 */
 	public void store(FontLocator locator, FontTextureData fontTextureData) throws IOException {
 		final var fontPath = root.resolve(locator.asPath());
 		if (!Files.exists(fontPath)) {

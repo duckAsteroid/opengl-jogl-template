@@ -19,6 +19,12 @@ public class TextureFactory {
 	private static final Set<String> IMAGE_FORMATS = Set.of("png", "jpg", "jpeg");
 
 	interface FormatHelper {
+        /**
+         * Create a blank {@link BufferedImage} of the appropriate raster type for this format.
+         *
+         * @param dimension pixel dimensions of the image to create
+         * @return a new, transparent (if applicable) image in this format's raster type
+         */
 		BufferedImage apply(Dimension dimension);
 		int internalFormat();
 		int imageFormat();

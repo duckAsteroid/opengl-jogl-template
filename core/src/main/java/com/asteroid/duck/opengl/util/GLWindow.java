@@ -71,6 +71,22 @@ public abstract class GLWindow implements RenderContext {
 	/** Non-null when a screenshot has been requested; cleared after the capture executes. */
 	private volatile Path pendingCapture = null;
 
+	/**
+	 * Create and display a GLFW window with an OpenGL 3.3 Core Profile context.
+	 *
+	 * <p>The constructor performs all GLFW and GL initialisation synchronously on the calling
+	 * thread. Key and framebuffer-size callbacks are installed before the window is shown. If
+	 * running on Linux, X11 is forced to avoid libdecor issues on Wayland compositors.</p>
+	 *
+	 * @param resourceManager the resource manager that owns all GL handles for this window;
+	 *                        it is disposed when the window closes
+	 * @param title           the window title; displayed in the title bar augmented with the
+	 *                        current pixel resolution
+	 * @param width           the initial window width in screen coordinates (not framebuffer pixels)
+	 * @param height          the initial window height in screen coordinates
+	 * @param icon            classpath path to a PNG icon image, or {@code null} to use the
+	 *                        system default window icon
+	 */
 	public GLWindow(ResourceManager resourceManager, String title, int width, int height, String icon) {
         this.resourceManager = resourceManager;
 		this.windowTitle = title;
@@ -175,6 +191,17 @@ public abstract class GLWindow implements RenderContext {
 		this.clearScreen = clearScreen;
 	}
 
+	/**
+	 * GLFW key callback: translates a raw key event into a {@link KeyCombination} and dispatches
+	 * it to the {@link KeyRegistry}. Only {@code GLFW_PRESS} events are forwarded; held and
+	 * released events are ignored.
+	 *
+	 * @param window     the GLFW window handle (unused; context is current)
+	 * @param key        GLFW key code of the pressed key
+	 * @param scancode   platform-specific scan code (unused)
+	 * @param actionCode GLFW action code ({@code GLFW_PRESS}, {@code GLFW_RELEASE}, etc.)
+	 * @param mode       GLFW modifier bitmask at the time of the press
+	 */
 	public final void keyCallback(long window, int key, int scancode, int actionCode, int mode) {
 		if (actionCode == GLFW_PRESS) {
 			Optional<Key> knownKey = Keys.instance().keyFor(key);
@@ -186,6 +213,15 @@ public abstract class GLWindow implements RenderContext {
 		}
 	}
 
+	/**
+	 * GLFW framebuffer-size callback: updates the GL viewport and cached window rectangle,
+	 * then notifies all registered {@link ResizeListener}s.
+	 * Called automatically by GLFW on the render thread when the window is resized.
+	 *
+	 * @param window the GLFW window handle (unused; context is already current)
+	 * @param width  new framebuffer width in pixels
+	 * @param height new framebuffer height in pixels
+	 */
 	public void frameBufferSizeCallback(long window, int width, int height) {
 		glViewport(0, 0, width, height);
 		this.window = readWindow();
@@ -195,10 +231,27 @@ public abstract class GLWindow implements RenderContext {
 		}
 	}
 
+    /**
+     * GLFW window-close callback: sets the closing flag so {@link #displayLoop()} exits cleanly
+     * after the current frame completes. The actual GLFW window destruction happens in
+     * {@link #displayLoop()} to keep all GL and GLFW calls on the render thread.
+     *
+     * @param l the GLFW window handle (unused)
+     */
     public void windowCloseCallback(long l) {
         windowClosing = true;
     }
 
+	/**
+	 * Run the main render loop: calls {@link #init()}, {@link #registerKeys()}, and
+	 * {@link #printInstructions()} once, then enters the frame loop until the window closes.
+	 *
+	 * <p>Each frame: polls events, optionally clears the screen, calls {@link #render()},
+	 * processes any pending screenshot capture, and swaps buffers. On exit, calls
+	 * {@link #dispose()} and tears down GLFW.</p>
+	 *
+	 * @throws IOException if {@link #init()} or {@link #render()} throws
+	 */
 	public void displayLoop() throws IOException {
 		// initialize
 		// ---------------
@@ -242,16 +295,40 @@ public abstract class GLWindow implements RenderContext {
 		glfwTerminate();
 	}
 
+	/**
+	 * Clear the colour buffer to {@link #getBackgroundColor()}.
+	 * Called each frame when {@link #isClearScreen()} is {@code true}.
+	 */
 	public void clearScreen() {
 		glClearColor(backgroundColor.x, backgroundColor.y, backgroundColor.z, backgroundColor.w);
 		glClear(GL_COLOR_BUFFER_BIT);
 	}
 
+	/**
+	 * Register keyboard shortcuts with the {@link KeyRegistry}.
+	 * Called once during {@link #displayLoop()} before the frame loop begins.
+	 */
 	public abstract void registerKeys();
 
+	/**
+	 * Initialise GL resources for this window.
+	 * Called once at the start of {@link #displayLoop()}; allocate shaders, buffers, and textures here.
+	 *
+	 * @throws IOException if resource loading fails
+	 */
 	public abstract void init() throws IOException;
+
+	/**
+	 * Render one frame. Called every iteration of the display loop after optional screen clearing.
+	 *
+	 * @throws IOException if rendering fails due to an I/O-backed resource
+	 */
 	public abstract void render() throws IOException;
 
+	/**
+	 * Print the registered key bindings to standard output.
+	 * Called once after {@link #registerKeys()} so the user sees the controls on startup.
+	 */
 	public void printInstructions() {
 		System.out.println("Keys:");
 		int maxKeyStrWidth = getKeyRegistry().stream().mapToInt(ka -> ka.getCombination().asSimpleString().length()).max().orElse(0);
@@ -313,6 +390,11 @@ public abstract class GLWindow implements RenderContext {
 		}
 	}
 
+	/**
+	 * Free all GLFW callbacks, dispose the {@link ResourceManager}, and release the error callback.
+	 * Called automatically at the end of {@link #displayLoop()}; subclasses that override this
+	 * must call {@code super.dispose()}.
+	 */
 	public void dispose() {
 		if (glfwKeyCallback != null) glfwKeyCallback.close();
 		if (glfwFramebufferSizeCallback != null) glfwFramebufferSizeCallback.close();
@@ -322,16 +404,19 @@ public abstract class GLWindow implements RenderContext {
 	}
 
 
+	/** Reset the window to its initial width and height and clear the scale step counter. */
 	public void resetWindowSize() {
 		windowScale = 0;
 		glfwSetWindowSize(windowHandle, initialWidth, initialHeight);
 	}
 
+	/** Double the window size by incrementing the scale step; each step multiplies dimensions by 2. */
 	public void scaleWindowUp() {
 		windowScale++;
 		applyWindowScale();
 	}
 
+	/** Halve the window size by decrementing the scale step. */
 	public void scaleWindowDown() {
 		windowScale--;
 		applyWindowScale();
@@ -343,6 +428,14 @@ public abstract class GLWindow implements RenderContext {
 		glfwSetWindowSize(windowHandle, Math.max(w, 1), Math.max(h, 1));
 	}
 
+	/**
+	 * Toggle between windowed and fullscreen mode on the monitor that currently contains the
+	 * largest area of this window.
+	 *
+	 * <p>When entering fullscreen the current windowed rectangle is saved so it can be restored
+	 * exactly when toggling back. Uses the native monitor's video mode to set resolution and
+	 * refresh rate.</p>
+	 */
 	public void toggleFullscreen() {
 		if (windowed == null) {
 			windowed = readWindow();
@@ -355,6 +448,16 @@ public abstract class GLWindow implements RenderContext {
 		}
 	}
 
+	/**
+	 * Determine which monitor has the greatest overlap with the given window.
+	 *
+	 * <p>Iterates all connected monitors and computes the intersection area with the window
+	 * rectangle; returns the monitor with the largest overlap. Falls back to the primary monitor
+	 * if no overlap is found (e.g. window is off-screen).</p>
+	 *
+	 * @param window the GLFW window handle
+	 * @return the GLFW monitor handle that best contains the window
+	 */
 	protected static long glfwGetCurrentMonitor(long window) {
 		int[] wx = {0}, wy = {0}, ww = {0}, wh = {0};
 		int[] mx = {0}, my = {0}, mw = {0}, mh = {0};
@@ -389,6 +492,10 @@ public abstract class GLWindow implements RenderContext {
 
 		return bestmonitor;
 	}
+	/**
+	 * Request a clean shutdown by signalling GLFW to close the window.
+	 * The loop exits after the current frame finishes; {@link #dispose()} is still called.
+	 */
 	protected void exit() {
 		System.out.println("Exit");
 		glfwSetWindowShouldClose(windowHandle, true);
@@ -398,6 +505,12 @@ public abstract class GLWindow implements RenderContext {
 		glfwSetWindowTitle(windowHandle,windowTitle + " ["+windowSizeString()+"]");
 	}
 
+	/**
+	 * Returns a compact string describing the current window pixel dimensions (e.g. {@code "1920x1080"}).
+	 * Used to augment the window title bar.
+	 *
+	 * @return the window size as {@code "<width>x<height>"}
+	 */
 	public String windowSizeString() {
 		return window.getWidth()+"x"+window.getHeight();
 	}
@@ -416,6 +529,11 @@ public abstract class GLWindow implements RenderContext {
 		resizeListeners.remove(listener);
 	}
 
+	/**
+	 * Returns the current window dimensions as a 2D float vector.
+	 *
+	 * @return {@code (width, height)} in pixels; same values as {@link #getWindow()}.width/height
+	 */
 	public Vector2f getWindowDimensions() {
 		return new Vector2f(window.width, window.height);
 	}

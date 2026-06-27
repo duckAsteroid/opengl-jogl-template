@@ -1,10 +1,16 @@
 package com.asteroid.duck.opengl.util.timer;
 
 /**
- * A timer that only ever holds fixed values for elapsed and now.
- * It's like a snapshot in time.
- * @param elapsed
- * @param now
+ * An immutable {@link Timer} snapshot that always returns fixed values for elapsed time and the
+ * current timestamp.
+ *
+ * <p>Useful in tests, offline rendering, or any context where real wall-clock time should be
+ * decoupled from the values presented to renderers. Because the values never change, every call
+ * to {@link #elapsed()} or {@link #now()} returns the same result for the lifetime of the
+ * record.</p>
+ *
+ * @param elapsed the frozen elapsed time in seconds, returned by {@link #elapsed()}
+ * @param now     the frozen current timestamp in seconds, returned by {@link #now()}
  */
 public record StaticTimer(double elapsed, double now) implements Timer {
 

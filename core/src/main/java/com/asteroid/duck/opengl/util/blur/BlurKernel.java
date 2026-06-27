@@ -24,8 +24,27 @@ import java.util.stream.IntStream;
  * do the right amount of texel blending for the given weights and distance required.</p>
  */
 public class BlurKernel {
+    /**
+     * Unnormalised half-kernel sample positions, counting from the centre texel outward.
+     * {@code offsets[0]} is always {@code 0.0} (the centre tap); subsequent values are
+     * {@code 1.0, 2.0, …} in integer steps before the linear-interpolation optimisation
+     * is applied by {@link #getDiscreteSampleKernel()}.
+     */
 	public final double[] offsets;
+
+    /**
+     * Normalised Gaussian weights corresponding to each position in {@link #offsets}.
+     * The weights sum to 1.0 across both halves of the symmetric kernel (the centre weight
+     * {@code weights[0]} counts once; all others count twice). Pass to the shader via
+     * the {@code weights} uniform after converting to {@code float[]} with
+     * {@link DiscreteSampleKernel#floatWeights()}.
+     */
 	public final double[] weights;
+
+    /**
+     * The odd kernel size this instance was constructed with (e.g. 13, 29, 65).
+     * Equals {@link #offsets}{@code .length} and {@link #weights}{@code .length}.
+     */
 	public final int size;
 
 	/**
@@ -54,6 +73,18 @@ public class BlurKernel {
 		this.offsets = DoubleStream.iterate(0, o -> o + 1).limit(weights.length).toArray();
 	}
 
+    /**
+     * Collapse adjacent non-centre weight pairs into single linear-interpolation samples,
+     * exploiting the GPU's bilinear filter to perform two texture lookups in one instruction.
+     *
+     * <p>Each pair of consecutive non-centre taps is replaced by a single sample positioned
+     * between them at the weighted midpoint. The combined weight is the sum of the pair. If
+     * the non-centre count is odd, the last tap is kept as-is. The result is a
+     * {@link DiscreteSampleKernel} with roughly half as many taps as this full kernel, ready
+     * to be uploaded to the shader as two {@code float[]} uniforms.</p>
+     *
+     * @return the reduced discrete kernel; always has at least one tap (the centre sample)
+     */
 	public DiscreteSampleKernel getDiscreteSampleKernel() {
 		// Pair up the non-center weights into linear-interpolation samples.
 		// If there's an odd number of non-center weights, the last one becomes its own sample.
@@ -137,6 +168,14 @@ public class BlurKernel {
 		return Optional.empty();
 	}
 
+    /**
+     * CLI utility that prints ready-to-paste GLSL uniform initialisers for a range of kernel sizes.
+     * Run with no arguments for a default size of 13; with two arguments for a range; or with
+     * multiple individual sizes as space-separated integers. Output goes to stdout.
+     *
+     * @param args optional size arguments: none (default 13), {@code "min max"} for a range, or
+     *             individual integers
+     */
 	public static void main(String[] args) {
 		final IntStream stream = IntStream.rangeClosed(25,33).filter(i -> i % 2 != 0);
 		stream.forEach(size -> {

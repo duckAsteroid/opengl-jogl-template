@@ -23,12 +23,19 @@ import java.util.stream.Stream;
  */
 public class ResourceListManager<R extends Resource> implements Resource {
 	// Thread-safe list wrapper for simple concurrent access
+	/** The backing thread-safe list of tracked resources; subclasses may access this directly. */
 	protected final List<R> resources;
 
+    /** Create an empty manager. */
     public ResourceListManager() {
         resources = Collections.synchronizedList(new ArrayList<>());
     }
 
+    /**
+     * Create a manager pre-populated with the given resources.
+     *
+     * @param resources initial set of resources to track; copied into a thread-safe list
+     */
     public ResourceListManager(Collection<R> resources) {
         this.resources = Collections.synchronizedList(new ArrayList<>(resources));
     }

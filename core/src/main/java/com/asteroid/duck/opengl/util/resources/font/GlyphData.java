@@ -26,6 +26,16 @@ public record GlyphData(Point datumOffset, Rectangle bounds, Vector4f normalBoun
 		return advance;
 	}
 
+	/**
+	 * Convert AWT pixel bounds to normalised OpenGL texture coordinates (UV space).
+	 *
+	 * <p>AWT uses a top-left origin; OpenGL uses a bottom-left origin. This method inverts
+	 * the Y axis so that the returned vector works correctly with standard GL texture sampling.</p>
+	 *
+	 * @param bounds          the pixel rectangle of the glyph in the combined image strip
+	 * @param imageDimensions the full pixel dimensions of the strip texture (width, height)
+	 * @return a {@code vec4(s_min, t_min, s_max, t_max)} ready for upload as a shader uniform
+	 */
 	public static Vector4f normalBounds(Rectangle bounds, Vector2f imageDimensions) {
 		// 1. Calculate the pixel coordinates for the sub-rectangle's corners.
 		//    AWT coordinates:
@@ -55,6 +65,16 @@ public record GlyphData(Point datumOffset, Rectangle bounds, Vector4f normalBoun
 		return new Vector4f(s_min, t_min, s_max, t_max);
 	}
 
+	/**
+	 * Compute the screen-space pixel rectangle where this glyph should be drawn,
+	 * given a cursor position in string-layout space.
+	 *
+	 * <p>The datum offset is subtracted so the glyph aligns its baseline/origin at {@code pos}
+	 * rather than its top-left corner.</p>
+	 *
+	 * @param pos the string cursor position (typically the baseline origin); {@code null} treated as (0, 0)
+	 * @return the pixel rectangle for this glyph relative to {@code pos}
+	 */
 	public Rectangle rawBounds(Point pos) {
 		if (pos == null) {
 			pos = new Point(0, 0);
@@ -63,6 +83,13 @@ public record GlyphData(Point datumOffset, Rectangle bounds, Vector4f normalBoun
 		return new  Rectangle(pos.x - datumOffset().x, pos.y - datumOffset().y, bounds.width, bounds.height);
 	}
 
+	/**
+	 * Compute the absolute screen-space position of this glyph's datum (baseline origin)
+	 * given a cursor position.
+	 *
+	 * @param pos the string cursor position; {@code null} treated as (0, 0)
+	 * @return the datum position as a float vector for use in shader uniforms
+	 */
 	public Vector2f datum(Point pos) {
 		if (pos == null) {
 			pos = new Point(0, 0);

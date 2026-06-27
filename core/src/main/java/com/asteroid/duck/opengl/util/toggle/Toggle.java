@@ -7,8 +7,10 @@ import com.asteroid.duck.opengl.util.RenderContext;
  */
 public interface Toggle {
 	/**
-	 * A chance to init the toggle
-	 * @param ctx
+	 * Initialise any state the toggle needs from the render context.
+	 * Called once before the first {@link #isRenderEnabled} call; the default is a no-op.
+	 *
+	 * @param ctx the render context for the current display loop
 	 */
 	default void init(RenderContext ctx) {}
 

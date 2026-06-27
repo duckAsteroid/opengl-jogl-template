@@ -46,6 +46,16 @@ public class ResourceManagerImpl implements Resource, ResourceManager {
 	// exclusivity groups by resource type
 	private final Map<Class<?>, ExclusivityGroup<?>> exclusivityGroups = new HashMap<>();
 
+	/**
+	 * Create a resource manager rooted at the given loader.
+	 *
+	 * <p>Sub-loaders for textures ({@code textures/}) and shaders ({@code glsl/}) are derived
+	 * automatically. All available {@link com.asteroid.duck.opengl.util.resources.bound.Binder}
+	 * implementations are discovered via {@link java.util.ServiceLoader} and registered as
+	 * exclusivity groups.</p>
+	 *
+	 * @param loader the root resource loader used to resolve all asset paths
+	 */
 	public ResourceManagerImpl(Loader loader) {
 		this.textureFactory = new TextureFactory(loader.atPath("textures"));
 		this.shaderLoader = new ShaderLoader(loader.atPath("glsl"));
