@@ -6,6 +6,7 @@ import com.asteroid.duck.opengl.util.audio.LineAcquirer;
 import com.asteroid.duck.opengl.util.audio.PboAudioSink;
 import com.asteroid.duck.opengl.util.color.StandardColors;
 import com.asteroid.duck.opengl.util.keys.KeyCombination;
+import com.asteroid.duck.opengl.util.wave.AmplitudeFunction;
 import com.asteroid.duck.opengl.util.wave.RadialWave;
 
 import java.io.IOException;
@@ -35,7 +36,7 @@ public class RadialSoundWave implements Experiment {
 	private float lineWidth = 3.0f;
 	private int channelMode = RadialWave.CHANNEL_BLEND;
 	private float radius = 0.5f;
-	private float amplitude = 0.3f;
+	private float amplitude = 1.0f;
 
 	@Override
 	public String getDescription() {
@@ -89,12 +90,12 @@ public class RadialSoundWave implements Experiment {
 		}, "Decrease circle radius");
 		ctx.getKeyRegistry().registerKeyAction(KeyCombination.simple('X'), () -> {
 			amplitude = Math.min(amplitude * AMPLITUDE_STEP, AMPLITUDE_MAX);
-			radialWave.setAmplitude(amplitude);
-		}, "Increase amplitude multiplier");
+			radialWave.setAmplitudeFunction(AmplitudeFunction.constant(amplitude));
+		}, "Increase amplitude");
 		ctx.getKeyRegistry().registerKeyAction(KeyCombination.simple('Z'), () -> {
 			amplitude = Math.max(amplitude / AMPLITUDE_STEP, AMPLITUDE_MIN);
-			radialWave.setAmplitude(amplitude);
-		}, "Decrease amplitude multiplier");
+			radialWave.setAmplitudeFunction(AmplitudeFunction.constant(amplitude));
+		}, "Decrease amplitude");
 	}
 
 	@Override

@@ -1,5 +1,5 @@
 ---
-description: "Reference for the com.asteroid.duck.opengl:render-core library, including lifecycle, shaders, geometry, audio visualisation, and key input."
+description: "Reference for the com.asteroid.duck.opengl:render-core library, including lifecycle, shaders, geometry, audio visualisation (waveform, spectrum analyser, beat detection), and key input."
 ---
 
 # render-core — Agent Reference

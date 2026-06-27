@@ -37,6 +37,18 @@
  *       log-frequency bin mapping → dB normalisation. All heavy objects are pre-allocated
  *       at construction; {@code process()} allocates nothing.</dd>
  *
+ *   <dt>{@link com.asteroid.duck.opengl.util.wave.BeatDetector}</dt>
+ *   <dd>Per-frame onset detector that consumes the {@code float[] magnitudes} already produced
+ *       by {@link com.asteroid.duck.opengl.util.wave.FFTProcessor} — zero extra FFT cost.
+ *       Tracks energy across configurable {@link com.asteroid.duck.opengl.util.wave.FrequencyBand}s
+ *       (default: bass / snare / hi-hat) and publishes a {@code [0, 1]} beat strength per band
+ *       that rises instantly on onset and decays at a tunable rate.</dd>
+ *
+ *   <dt>{@link com.asteroid.duck.opengl.util.wave.FrequencyBand}</dt>
+ *   <dd>Immutable record describing a named Hz range. Provides {@code BASS}, {@code SNARE}, and
+ *       {@code HI_HAT} presets and a {@code defaults()} factory. Pass any {@code List} of these
+ *       to {@link com.asteroid.duck.opengl.util.wave.BeatDetector} to configure custom bands.</dd>
+ *
  *   <dt>{@link com.asteroid.duck.opengl.util.wave.AmplitudeFunction}</dt>
  *   <dd>Functional interface for per-vertex amplitude envelopes used by {@code AudioWave}.</dd>
  *

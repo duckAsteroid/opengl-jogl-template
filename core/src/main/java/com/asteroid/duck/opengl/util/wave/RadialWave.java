@@ -69,7 +69,6 @@ public class RadialWave implements RenderedItem {
     private Uniform<Integer> uHead;
     private Uniform<Integer> uChannel;
     private Uniform<Float>   uRadius;
-    private Uniform<Float>   uAmplitude;
     private Uniform<Float>   uAspect;
     private Uniform<Vector2f> uCenter;
     private Uniform<Vector4f> uColour;
@@ -81,11 +80,10 @@ public class RadialWave implements RenderedItem {
     private static final String ACTION_LINE_COLOUR  = "lineColour";
     private static final String ACTION_CHANNEL_MODE = "channelMode";
     private static final String ACTION_RADIUS       = "radius";
-    private static final String ACTION_AMPLITUDE    = "amplitude";
     private static final String ACTION_CENTER       = "center";
     private final RenderActionQueue renderActions = new RenderActionQueue(
             ACTION_LINE_WIDTH, ACTION_LINE_COLOUR, ACTION_CHANNEL_MODE,
-            ACTION_RADIUS, ACTION_AMPLITUDE, ACTION_CENTER);
+            ACTION_RADIUS, ACTION_CENTER);
 
     // language=GLSL
     private static final String VERTEX_SHADER = """
@@ -97,7 +95,6 @@ public class RadialWave implements RenderedItem {
             uniform int uChannel;
             uniform vec2 uCenter;
             uniform float uRadius;
-            uniform float uAmplitude;
             uniform float uAspect;
 
             void main() {
@@ -105,7 +102,7 @@ public class RadialWave implements RenderedItem {
                 vec2 stereo = texelFetch(uAudioTex, sampleIndex, 0).rg;
                 float sample = (uChannel == 0) ? (stereo.r + stereo.g) * 0.5
                              : (uChannel == 1) ? stereo.r : stereo.g;
-                float r = uRadius + sample * uAmplitude * amplitude;
+                float r = uRadius + sample * amplitude;
                 vec2 pos = uCenter + vec2(direction.x * r / uAspect, direction.y * r);
                 gl_Position = vec4(pos, 0.0, 1.0);
             }
@@ -182,16 +179,14 @@ public class RadialWave implements RenderedItem {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_1D, audioSink.getTextureId());
         shader.uniforms().get("uAudioTex", Integer.class).set(0);
-        this.uHead      = shader.uniforms().get("uHead",      Integer.class);
-        this.uChannel   = shader.uniforms().get("uChannel",   Integer.class);
-        this.uRadius    = shader.uniforms().get("uRadius",    Float.class);
-        this.uAmplitude = shader.uniforms().get("uAmplitude", Float.class);
-        this.uAspect    = shader.uniforms().get("uAspect",    Float.class);
-        this.uCenter    = shader.uniforms().get("uCenter",    Vector2f.class);
-        this.uColour    = shader.uniforms().get("uColour",    Vector4f.class);
+        this.uHead    = shader.uniforms().get("uHead",    Integer.class);
+        this.uChannel = shader.uniforms().get("uChannel", Integer.class);
+        this.uRadius  = shader.uniforms().get("uRadius",  Float.class);
+        this.uAspect  = shader.uniforms().get("uAspect",  Float.class);
+        this.uCenter  = shader.uniforms().get("uCenter",  Vector2f.class);
+        this.uColour  = shader.uniforms().get("uColour",  Vector4f.class);
         uChannel.set(CHANNEL_BLEND);
         uRadius.set(0.5f);
-        uAmplitude.set(0.3f);
         uAspect.set(1.0f);
         uCenter.set(new Vector2f(0.0f, 0.0f));
         uColour.set(new Vector4f(1.0f));
@@ -262,18 +257,10 @@ public class RadialWave implements RenderedItem {
     }
 
     /**
-     * Set the radial displacement scale for audio samples. Enqueued as a render action.
-     * Acts as a global multiplier on top of the per-vertex {@link AmplitudeFunction}.
-     *
-     * @param a scale factor applied to the normalised audio sample before adding to the radius;
-     *          larger values produce more pronounced radial excursion
-     */
-    public void setAmplitude(float a) {
-        renderActions.enqueue(ACTION_AMPLITUDE, ctx -> uAmplitude.set(a));
-    }
-
-    /**
      * Set how amplitude varies around the circle.
+     * The per-vertex value returned by {@code fn} is multiplied directly by the normalised audio
+     * sample, so {@link AmplitudeFunction#constant(float) constant(1f)} gives full-scale radial
+     * excursion — the same scale as {@link AudioWave} with the same function.
      * The new function takes effect on the next rendered frame.
      *
      * @param fn the new amplitude envelope; use {@link AmplitudeFunction#constant} for uniform
