@@ -2,6 +2,7 @@ package com.asteroid.duck.opengl.util.wave;
 
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.RenderedItem;
+import com.asteroid.duck.opengl.util.Transformable;
 import com.asteroid.duck.opengl.util.audio.PboAudioSink;
 import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
 import com.asteroid.duck.opengl.util.resources.buffer.BufferDrawMode;
@@ -14,6 +15,7 @@ import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexElementType;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderSource;
 import com.asteroid.duck.opengl.util.resources.shader.Uniform;
+import org.joml.Matrix4f;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
 
@@ -49,7 +51,7 @@ import static org.lwjgl.opengl.GL13.glActiveTexture;
  * Pass {@link #AUDIO_BUFFER_SIZE} to {@link PboAudioSink#create} so the ring buffer is large
  * enough for the write head to lap the read head without a visible glitch.
  */
-public class AudioWave implements RenderedItem {
+public class AudioWave implements RenderedItem, Transformable {
 
     /** Number of vertices drawn per frame — one per horizontal pixel at the target resolution. */
     public static final int SCREEN_WIDTH = 1024;
@@ -81,15 +83,17 @@ public class AudioWave implements RenderedItem {
     /** Visualise both channels simultaneously — left above centre, right below. */
     public static final int CHANNEL_STEREO = 3;
 
-    private Uniform<Integer> uHead;
-    private Uniform<Integer> uChannel;
-    private Uniform<Float>   uYOffset;
+    private Uniform<Integer>  uHead;
+    private Uniform<Integer>  uChannel;
+    private Uniform<Float>    uYOffset;
     private Uniform<Vector4f> uColour;
+    private Uniform<Matrix4f> uTransform;
 
     private static final String ACTION_LINE_WIDTH   = "lineWidth";
     private static final String ACTION_LINE_COLOUR  = "lineColour";
     private static final String ACTION_CHANNEL_MODE = "channelMode";
-    private final RenderActionQueue renderActions = new RenderActionQueue(ACTION_LINE_WIDTH, ACTION_LINE_COLOUR, ACTION_CHANNEL_MODE);
+    private static final String ACTION_TRANSFORM    = "transform";
+    private final RenderActionQueue renderActions = new RenderActionQueue(ACTION_LINE_WIDTH, ACTION_LINE_COLOUR, ACTION_CHANNEL_MODE, ACTION_TRANSFORM);
 
     private int channelMode = CHANNEL_BLEND;
 
@@ -167,6 +171,7 @@ public class AudioWave implements RenderedItem {
             uniform int uHead;
             uniform int uChannel;
             uniform float uYOffset;
+            uniform mat4 uTransform;
 
             void main() {
                 int sampleIndex = (2048 + uHead + gl_VertexID) % 2048;
@@ -174,7 +179,7 @@ public class AudioWave implements RenderedItem {
                 float amplitude = position.y *
                     ((uChannel == 0) ? (stereo.r + stereo.g) * 0.5 :
                         (uChannel == 1) ? stereo.r : stereo.g);
-                gl_Position = vec4(position.x, amplitude + uYOffset, 0.0, 1.0);
+                gl_Position = uTransform * vec4(position.x, amplitude + uYOffset, 0.0, 1.0);
             }
         """;
 
@@ -201,10 +206,12 @@ public class AudioWave implements RenderedItem {
         this.uHead    = shader.uniforms().get("uHead",    Integer.class);
         this.uChannel = shader.uniforms().get("uChannel", Integer.class);
         this.uYOffset = shader.uniforms().get("uYOffset", Float.class);
-        this.uColour  = shader.uniforms().get("uColour",  Vector4f.class);
+        this.uColour    = shader.uniforms().get("uColour",    Vector4f.class);
+        this.uTransform = shader.uniforms().get("uTransform", Matrix4f.class);
         uChannel.set(CHANNEL_BLEND);
         uYOffset.set(0.0f);
         uColour.set(new Vector4f(1.0f));
+        uTransform.set(new Matrix4f());
         vao.getVbo().setup(shader);
     }
 
@@ -272,6 +279,23 @@ public class AudioWave implements RenderedItem {
     public void setLineColour(Vector4f colour) {
         Vector4f copy = new Vector4f(colour);
         renderActions.enqueue(ACTION_LINE_COLOUR, ctx -> uColour.set(copy));
+    }
+
+    /**
+     * Set a transform matrix applied to the final NDC position of every vertex.
+     * Enqueued as a render action; the matrix is copied so the caller may reuse it after this call.
+     *
+     * <p>The identity matrix (default) leaves the waveform unchanged. Use JOML to compose
+     * rotations, scales, and translations — for example, to tilt the wave and shift it upward:</p>
+     * <pre>{@code
+     * audioWave.setTransform(new Matrix4f().rotateZ(0.1f).translate(0, 0.3f, 0));
+     * }</pre>
+     *
+     * @param matrix the transform to apply; pass {@code new Matrix4f()} to reset to identity
+     */
+    public void setTransform(Matrix4f matrix) {
+        Matrix4f copy = new Matrix4f(matrix);
+        renderActions.enqueue(ACTION_TRANSFORM, ctx -> uTransform.set(copy));
     }
 
     /**

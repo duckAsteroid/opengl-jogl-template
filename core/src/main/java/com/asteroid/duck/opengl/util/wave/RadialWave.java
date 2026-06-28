@@ -2,6 +2,7 @@ package com.asteroid.duck.opengl.util.wave;
 
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.RenderedItem;
+import com.asteroid.duck.opengl.util.Transformable;
 import com.asteroid.duck.opengl.util.audio.PboAudioSink;
 import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
 import com.asteroid.duck.opengl.util.resources.buffer.BufferDrawMode;
@@ -14,6 +15,7 @@ import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexElementType;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderSource;
 import com.asteroid.duck.opengl.util.resources.shader.Uniform;
+import org.joml.Matrix4f;
 import org.joml.Vector2f;
 import org.joml.Vector4f;
 
@@ -36,7 +38,7 @@ import static org.lwjgl.opengl.GL13.*;
  * <h2>Buffer sizing</h2>
  * Pass {@link #AUDIO_BUFFER_SIZE} to {@link PboAudioSink#create}.
  */
-public class RadialWave implements RenderedItem {
+public class RadialWave implements RenderedItem, Transformable {
 
     /** Number of vertices (and audio samples) around the circle. */
     public static final int SAMPLE_COUNT = 1024;
@@ -66,12 +68,13 @@ public class RadialWave implements RenderedItem {
     private ShaderProgram shader;
     private VertexArrayObject vao;
 
-    private Uniform<Integer> uHead;
-    private Uniform<Integer> uChannel;
-    private Uniform<Float>   uRadius;
-    private Uniform<Float>   uAspect;
+    private Uniform<Integer>  uHead;
+    private Uniform<Integer>  uChannel;
+    private Uniform<Float>    uRadius;
+    private Uniform<Float>    uAspect;
     private Uniform<Vector2f> uCenter;
     private Uniform<Vector4f> uColour;
+    private Uniform<Matrix4f> uTransform;
 
     private volatile float currentAspect = 1.0f;
     private volatile boolean clearBeforeRender = true;
@@ -81,9 +84,10 @@ public class RadialWave implements RenderedItem {
     private static final String ACTION_CHANNEL_MODE = "channelMode";
     private static final String ACTION_RADIUS       = "radius";
     private static final String ACTION_CENTER       = "center";
+    private static final String ACTION_TRANSFORM    = "transform";
     private final RenderActionQueue renderActions = new RenderActionQueue(
             ACTION_LINE_WIDTH, ACTION_LINE_COLOUR, ACTION_CHANNEL_MODE,
-            ACTION_RADIUS, ACTION_CENTER);
+            ACTION_RADIUS, ACTION_CENTER, ACTION_TRANSFORM);
 
     // language=GLSL
     private static final String VERTEX_SHADER = """
@@ -96,6 +100,7 @@ public class RadialWave implements RenderedItem {
             uniform vec2 uCenter;
             uniform float uRadius;
             uniform float uAspect;
+            uniform mat4 uTransform;
 
             void main() {
                 int sampleIndex = (2048 + uHead + gl_VertexID) % 2048;
@@ -104,7 +109,7 @@ public class RadialWave implements RenderedItem {
                              : (uChannel == 1) ? stereo.r : stereo.g;
                 float r = uRadius + sample * amplitude;
                 vec2 pos = uCenter + vec2(direction.x * r / uAspect, direction.y * r);
-                gl_Position = vec4(pos, 0.0, 1.0);
+                gl_Position = uTransform * vec4(pos, 0.0, 1.0);
             }
         """;
 
@@ -183,13 +188,15 @@ public class RadialWave implements RenderedItem {
         this.uChannel = shader.uniforms().get("uChannel", Integer.class);
         this.uRadius  = shader.uniforms().get("uRadius",  Float.class);
         this.uAspect  = shader.uniforms().get("uAspect",  Float.class);
-        this.uCenter  = shader.uniforms().get("uCenter",  Vector2f.class);
-        this.uColour  = shader.uniforms().get("uColour",  Vector4f.class);
+        this.uCenter    = shader.uniforms().get("uCenter",    Vector2f.class);
+        this.uColour    = shader.uniforms().get("uColour",    Vector4f.class);
+        this.uTransform = shader.uniforms().get("uTransform", Matrix4f.class);
         uChannel.set(CHANNEL_BLEND);
         uRadius.set(0.5f);
         uAspect.set(1.0f);
         uCenter.set(new Vector2f(0.0f, 0.0f));
         uColour.set(new Vector4f(1.0f));
+        uTransform.set(new Matrix4f());
         vao.getVbo().setup(shader);
     }
 
@@ -289,6 +296,30 @@ public class RadialWave implements RenderedItem {
     public void setCenter(Vector2f center) {
         Vector2f copy = new Vector2f(center);
         renderActions.enqueue(ACTION_CENTER, ctx -> uCenter.set(copy));
+    }
+
+    /**
+     * Set a transform matrix applied to the final NDC position of every vertex.
+     * Enqueued as a render action; the matrix is copied so the caller may reuse it after this call.
+     *
+     * <p>The identity matrix (default) leaves the waveform unchanged. Use JOML to compose
+     * rotations, scales, and translations — for example, to spin the circle and pulse its size
+     * on a beat:</p>
+     * <pre>{@code
+     * // each frame:
+     * angle += 0.01f;
+     * float pulse = 1.0f + 0.1f * beats.getBeatStrength(0);
+     * radialWave.setTransform(new Matrix4f().rotateZ(angle).scale(pulse));
+     * }</pre>
+     *
+     * <p>The transform is applied after the aspect-ratio correction, so a rotation matrix
+     * produces a clean visual rotation of the already-round circle.</p>
+     *
+     * @param matrix the transform to apply; pass {@code new Matrix4f()} to reset to identity
+     */
+    public void setTransform(Matrix4f matrix) {
+        Matrix4f copy = new Matrix4f(matrix);
+        renderActions.enqueue(ACTION_TRANSFORM, ctx -> uTransform.set(copy));
     }
 
     /**

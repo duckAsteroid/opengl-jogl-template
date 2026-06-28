@@ -30,6 +30,22 @@ public record KeyCombination(Set<Key> keys, Set<Key> modifiers) implements Compa
 	}
 
 	/**
+	 * Create a combination for a single unmodified key looked up by its GLFW-derived name.
+	 *
+	 * <p>Use this for non-alphabetic keys whose names come from GLFW constants (strip the
+	 * {@code GLFW_KEY_} prefix), e.g. {@code "LEFT_BRACKET"}, {@code "RIGHT_BRACKET"},
+	 * {@code "PERIOD"}, {@code "SLASH"}.</p>
+	 *
+	 * @param name the GLFW-derived key name as recognised by {@link Keys#keyForName(String)}
+	 * @return a {@link KeyCombination} with no modifiers
+	 * @throws NullPointerException if no key with that name exists
+	 */
+	public static KeyCombination named(String name) {
+		Key keyed = Keys.instance().keyForName(name);
+		return new KeyCombination(Set.of(keyed), Collections.emptySet());
+	}
+
+	/**
 	 * Create a combination for a single alphabetic key held with one or more named modifier keys.
 	 *
 	 * @param key  an upper-case ASCII letter

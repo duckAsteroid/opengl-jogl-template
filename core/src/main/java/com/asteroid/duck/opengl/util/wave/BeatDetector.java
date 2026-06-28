@@ -42,7 +42,7 @@ import java.util.List;
  * float snare = beats.getBeatStrength(1);
  * }</pre>
  */
-public class BeatDetector {
+public class BeatDetector implements FrequencySink {
 
     private static final float EPSILON = 1e-10f;
 
@@ -94,8 +94,47 @@ public class BeatDetector {
     }
 
     /**
+     * Convenience constructor that derives geometry directly from a {@link FrequencyProcessor},
+     * using {@link FrequencyBand#defaults()} and sensible defaults for all tuning parameters.
+     *
+     * <p>The caller is still responsible for registering this detector as a sink:
+     * {@code processor.addSink(detector)}.</p>
+     *
+     * @param processor the {@link FrequencyProcessor} this detector will consume from
+     */
+    public BeatDetector(FrequencyProcessor processor) {
+        this(FrequencyBand.defaults(),
+             processor.getNumBins(), processor.getFMin(), processor.getFMax(),
+             43, 1.3f, 2.0f, 1.0f / 60f);
+    }
+
+    /**
+     * Convenience constructor with custom bands, deriving geometry from a {@link FrequencyProcessor}.
+     *
+     * @param bands     frequency bands to track
+     * @param processor the {@link FrequencyProcessor} this detector will consume from
+     */
+    public BeatDetector(List<FrequencyBand> bands, FrequencyProcessor processor) {
+        this(bands,
+             processor.getNumBins(), processor.getFMin(), processor.getFMax(),
+             43, 1.3f, 2.0f, 1.0f / 60f);
+    }
+
+    /**
+     * {@link FrequencySink} implementation — delegates to {@link #update}.
+     * Called automatically by {@link FrequencyProcessor#process} when this detector is registered
+     * as a sink; do not call directly.
+     */
+    @Override
+    public void onSpectrum(float[] magnitudes) {
+        update(magnitudes);
+    }
+
+    /**
      * Update all bands from the latest FFT output.
      * Call once per frame, immediately after {@link FFTProcessor#process}.
+     * When using a {@link FrequencyProcessor}, prefer registering via {@link FrequencyProcessor#addSink}
+     * and let {@link FrequencyProcessor#process} drive this automatically.
      *
      * @param magnitudes normalised magnitude array from {@link FFTProcessor#process};
      *                   must have length {@code >= numBins} passed at construction

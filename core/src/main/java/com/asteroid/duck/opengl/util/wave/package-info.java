@@ -37,9 +37,22 @@
  *       log-frequency bin mapping → dB normalisation. All heavy objects are pre-allocated
  *       at construction; {@code process()} allocates nothing.</dd>
  *
+ *   <dt>{@link com.asteroid.duck.opengl.util.wave.FrequencyProcessor}</dt>
+ *   <dd>Bridges the raw-audio pipeline to the frequency domain. Implements {@code AudioSink}
+ *       so an {@code AudioReader} can write PCM bytes into it; call {@code process()} once per
+ *       frame on the render thread to run the FFT and fan the normalised magnitudes out to all
+ *       registered {@link com.asteroid.duck.opengl.util.wave.FrequencySink}s — one FFT for any
+ *       number of consumers.</dd>
+ *
+ *   <dt>{@link com.asteroid.duck.opengl.util.wave.FrequencySink}</dt>
+ *   <dd>Callback interface for objects that consume per-frame FFT magnitudes distributed by
+ *       {@link com.asteroid.duck.opengl.util.wave.FrequencyProcessor}. Both
+ *       {@link com.asteroid.duck.opengl.util.wave.BeatDetector} and
+ *       {@link com.asteroid.duck.opengl.util.wave.SpectrumAnalyser} implement this interface.</dd>
+ *
  *   <dt>{@link com.asteroid.duck.opengl.util.wave.BeatDetector}</dt>
- *   <dd>Per-frame onset detector that consumes the {@code float[] magnitudes} already produced
- *       by {@link com.asteroid.duck.opengl.util.wave.FFTProcessor} — zero extra FFT cost.
+ *   <dd>Per-frame onset detector — implements {@link com.asteroid.duck.opengl.util.wave.FrequencySink}
+ *       for use with {@link com.asteroid.duck.opengl.util.wave.FrequencyProcessor}.
  *       Tracks energy across configurable {@link com.asteroid.duck.opengl.util.wave.FrequencyBand}s
  *       (default: bass / snare / hi-hat) and publishes a {@code [0, 1]} beat strength per band
  *       that rises instantly on onset and decays at a tunable rate.</dd>

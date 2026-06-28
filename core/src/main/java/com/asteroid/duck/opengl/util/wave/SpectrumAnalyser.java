@@ -1,11 +1,6 @@
 package com.asteroid.duck.opengl.util.wave;
 
 import com.asteroid.duck.opengl.util.RenderContext;
-import com.asteroid.duck.opengl.util.RenderedItem;
-import com.asteroid.duck.opengl.util.audio.AudioDataSource;
-import com.asteroid.duck.opengl.util.audio.AudioReader;
-import com.asteroid.duck.opengl.util.audio.ChannelMode;
-import com.asteroid.duck.opengl.util.audio.RollingAudioBuffer;
 import com.asteroid.duck.opengl.util.resources.buffer.BufferDrawMode;
 import com.asteroid.duck.opengl.util.resources.buffer.UpdateHint;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
@@ -14,396 +9,698 @@ import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexElement;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexElementType;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderSource;
+import com.asteroid.duck.opengl.util.resources.shader.Uniform;
 import org.joml.Vector2f;
+import org.joml.Vector3f;
 
 import java.io.IOException;
-import java.nio.FloatBuffer;
-import java.util.List;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL13.*;
 import static org.lwjgl.opengl.GL30.*;
-import static org.lwjgl.system.MemoryUtil.*;
 
 /**
- * Real-time audio spectrum analyser — classic bar-chart style.
+ * Real-time audio spectrum analyser — Cartesian bar-chart or smooth filled-area renderer.
  *
- * <h2>Signal path</h2>
- * <ol>
- *   <li>A background thread ({@link AudioReader}) reads PCM from a {@link AudioDataSource} and
- *       writes it into a {@link RollingAudioBuffer}.</li>
- *   <li>Each frame, {@link #doRender} pulls the latest {@code fftSize} samples, applies a Hann
- *       window, and runs a real FFT via {@link FFTProcessor}.</li>
- *   <li>The {@code numBins} log-frequency magnitude values (in dB, normalised to [0, 1]) are
- *       uploaded to a 1-D {@code GL_RG32F} texture — R = current magnitude, G = peak-hold level.
- *       </li>
- *   <li>Two draw calls read from that texture:
- *       <ul>
- *         <li><b>Bar shader</b> ({@code GL_TRIANGLES}, {@code numBins × 6} vertices) — draws
- *             filled bars with a green → yellow → red gradient based on screen height.</li>
- *         <li><b>Peak shader</b> ({@code GL_LINES}, {@code numBins × 2} vertices) — draws a
- *             white horizontal tick at the peak-hold level for each bar.</li>
- *       </ul>
- *   </li>
- * </ol>
+ * <p>This class is a pure renderer: it receives pre-computed normalised magnitude values via
+ * {@link FrequencySink#onSpectrum} and draws them as either discrete filled bars
+ * ({@link RenderMode#BARS}) or a continuous smooth filled region ({@link RenderMode#FILLED}).
+ * Both modes support configurable frequency layout, bar direction, peak-hold ballistics,
+ * and colour gradients. All audio capture and FFT computation is the caller's
+ * responsibility — wire this up as a sink on a {@link FrequencyProcessor}.</p>
  *
- * <h2>Key parameters (set at construction time)</h2>
+ * <h2>Render modes</h2>
  * <ul>
- *   <li>{@code numBins} — number of visual bars (independent of FFT size)</li>
- *   <li>{@code fftSize} — FFT window size in samples; determines frequency resolution</li>
- *   <li>{@code fMin} / {@code fMax} — visible frequency range in Hz</li>
- *   <li>{@code dBFloor} / {@code dBCeiling} — dB range mapped to bar height [0, 1]</li>
- *   <li>{@code gapFraction} — fraction of each bar's slot width used as a gap</li>
+ *   <li>{@link RenderMode#BARS} (default) — discrete filled bars with inter-bar gaps and
+ *       per-bin floating peak-tick markers. Uses {@code texelFetch} for exact bin lookup.</li>
+ *   <li>{@link RenderMode#FILLED} — a continuous filled area drawn as a
+ *       {@code GL_TRIANGLE_STRIP} with {@code GL_LINEAR} texture sampling, giving a smooth
+ *       curve between adjacent FFT bins.</li>
  * </ul>
+ *
+ * <h2>Frequency layout</h2>
+ * <ul>
+ *   <li>{@link BarLayout#NORMAL} (default) — low frequency (bass) on the left.</li>
+ *   <li>{@link BarLayout#REVERSED} — bass on the right.</li>
+ *   <li>{@link BarLayout#MIRRORED} — bass at the centre, treble at both edges. In BARS
+ *       mode this doubles the number of display bars (each bin appears once per side).</li>
+ * </ul>
+ *
+ * <h2>Bar direction</h2>
+ * <ul>
+ *   <li>{@link BarDirection#UP} (default) — bars grow upward from the screen bottom.</li>
+ *   <li>{@link BarDirection#DOWN} — bars hang downward from the screen top.</li>
+ *   <li>{@link BarDirection#BOTH} — bars extend symmetrically from the screen centre,
+ *       inward and outward simultaneously.</li>
+ * </ul>
+ *
+ * <h2>Typical wiring</h2>
+ * <pre>{@code
+ * FrequencyProcessor freqProc = new FrequencyProcessor(...);
+ * SpectrumAnalyser analyser = new SpectrumAnalyser(freqProc)
+ *         .withBarColors(new Vector3f(0, 0.8f, 0), new Vector3f(0.8f, 0, 0))
+ *         .withLayout(BarLayout.MIRRORED)
+ *         .withDirection(BarDirection.BOTH)
+ *         .withRenderMode(RenderMode.FILLED);
+ * freqProc.addSink(analyser);
+ *
+ * // each frame, on the render thread:
+ * freqProc.process();
+ * analyser.doRender(ctx);
+ * }</pre>
  */
-public class SpectrumAnalyser implements RenderedItem {
-
-    // ── Defaults ────────────────────────────────────────────────────────────────
-
-    /** Default number of visual bars ({@value}). */
-    public static final int   DEFAULT_NUM_BINS    = 128;
-
-    /** Default FFT window size in samples ({@value}). Must be a power of two. */
-    public static final int   DEFAULT_FFT_SIZE    = 1024;
-
-    /** Default capture sample rate in Hz ({@value}). Matches {@link com.asteroid.duck.opengl.util.audio.LineAcquirer#IDEAL}. */
-    public static final float DEFAULT_SAMPLE_RATE = 48_000f;
-
-    /** Default lower frequency bound in Hz ({@value}) — bottom of the audible range. */
-    public static final float DEFAULT_F_MIN       = 20f;
-
-    /** Default upper frequency bound in Hz ({@value}) — top of the audible range. */
-    public static final float DEFAULT_F_MAX       = 20_000f;
-
-    /** Default dB floor: signals at or below this level map to bar height 0 ({@value} dB). */
-    public static final float DEFAULT_DB_FLOOR    = -80f;
-
-    /** Default dB ceiling: signals at or above this level map to bar height 1 ({@value} dB). */
-    public static final float DEFAULT_DB_CEILING  = 0f;
+public class SpectrumAnalyser extends FrequencyRenderer {
 
     /** Default gap fraction between adjacent bars ({@value}): 15% of each slot is empty. */
-    public static final float DEFAULT_GAP         = 0.15f;
+    public static final float DEFAULT_GAP            = 0.15f;
 
-    /** Peak level falls by this amount per frame (at 60 fps → ~1 second from full to zero). */
-    private static final float PEAK_DECAY_PER_FRAME = 1.0f / 60f;
+    /** Default peak-tick line width in pixels ({@value}). */
+    public static final float DEFAULT_PEAK_LINE_WIDTH = 3.0f;
 
-    // ── Vertex attribute shared by both bar and peak VAOs ───────────────────────
+    // ── Enums ────────────────────────────────────────────────────────────────────
+
+    /**
+     * Direction in which bars (and the filled region) extend from their baseline.
+     * The ordinal value is passed directly to the GLSL {@code uBarDir} uniform.
+     */
+    public enum BarDirection {
+        /** Bars grow upward from the screen bottom (y = −1). */
+        UP,
+        /** Bars hang downward from the screen top (y = +1). */
+        DOWN,
+        /** Bars extend symmetrically from the screen centre in both directions. */
+        BOTH
+    }
+
+    /**
+     * Horizontal mapping of FFT bins to display positions.
+     * {@link #MIRRORED} doubles the number of display bars in {@link RenderMode#BARS} mode.
+     * The ordinal value is passed directly to the GLSL {@code uLayout} uniform.
+     */
+    public enum BarLayout {
+        /** Low frequency (bass) on the left, high frequency (treble) on the right. */
+        NORMAL,
+        /** Treble on the left, bass on the right. */
+        REVERSED,
+        /** Bass at the centre, treble at both edges; the spectrum is shown mirrored. */
+        MIRRORED
+    }
+
+    /**
+     * Visual rendering style.
+     */
+    public enum RenderMode {
+        /** Discrete filled bars with inter-bar gaps and per-bin peak ticks. */
+        BARS,
+        /** Smooth continuous filled area with a smooth peak-hold line. */
+        FILLED
+    }
+
+    // ── Vertex attribute ─────────────────────────────────────────────────────────
+
     private static final VertexElement VERTEX =
             new VertexElement(VertexElementType.VEC_2F, "vertex");
-
-    // ── Construction-time parameters ────────────────────────────────────────────
-    private final int   numBins;
-    private final int   fftSize;
-    private final float gapFraction;
-
-    // ── Audio pipeline ──────────────────────────────────────────────────────────
-    private final FFTProcessor     fftProcessor;
-    private final RollingAudioBuffer audioBuffer;
-    private AudioReader audioReader;
-    private Thread      audioReaderThread;
-
-    // ── GL resources ────────────────────────────────────────────────────────────
-    /** 1-D GL_RG32F texture: R = magnitude, G = peak level (both in [0, 1]). */
-    private int         fftTextureId;
-    /** Direct float buffer used for texture upload each frame; length = numBins * 2. */
-    private FloatBuffer fftUploadBuffer;
-    private ShaderProgram barShader;
-    private ShaderProgram peakShader;
-    private VertexArrayObject barVao;
-    private VertexArrayObject peakVao;
-
-    // ── Per-frame working arrays (pre-allocated) ────────────────────────────────
-    private final float[] sampleBuffer;
-    private final float[] magnitudes;
-    private final float[] peaks;
 
     // ── Shaders ─────────────────────────────────────────────────────────────────
 
     // language=GLSL
-    private static final String VERTEX_BAR = """
+    private static final String VERTEX_BARS = """
             #version 330 core
-            // x = NDC x position; y = role (0 = bar bottom, 1 = bar top)
+            // x = NDC x position; y = role flag (0.0 = base vertex, 1.0 = tip vertex)
             in vec2 vertex;
             uniform sampler1D uFFTTex;   // GL_RG32F: R = magnitude, G = peak
-
-            out float vNdcY;
+            uniform int uBarDir;          // 0=UP, 1=DOWN, 2=BOTH
+            uniform int uLayout;          // 0=NORMAL, 1=REVERSED, 2=MIRRORED
+            uniform int uNumBins;
+            out float vT;                 // 0 = base colour, magnitude = tip colour
 
             void main() {
                 int barIndex = gl_VertexID / 6;
-                float magnitude = texelFetch(uFFTTex, barIndex, 0).r;
-                // Bottom vertex stays at -1; top vertex is displaced by magnitude.
-                float y = (vertex.y > 0.5) ? magnitude * 2.0 - 1.0 : -1.0;
-                vNdcY = y;
+                bool isTop = vertex.y > 0.5;
+
+                // Map display bar index to FFT bin index
+                int texIdx;
+                if (uLayout == 2) {  // MIRRORED: bass in centre
+                    texIdx = (barIndex < uNumBins) ? uNumBins - 1 - barIndex : barIndex - uNumBins;
+                } else if (uLayout == 1) {  // REVERSED
+                    texIdx = uNumBins - 1 - barIndex;
+                } else {
+                    texIdx = barIndex;
+                }
+                float magnitude = texelFetch(uFFTTex, texIdx, 0).r;
+
+                float y;
+                if (uBarDir == 1) {  // DOWN: hangs from screen top
+                    y = isTop ? 1.0 : 1.0 - magnitude * 2.0;
+                    vT = isTop ? 0.0 : magnitude;
+                } else if (uBarDir == 2) {  // BOTH: symmetric from centre
+                    y = isTop ? magnitude : -magnitude;
+                    vT = magnitude;
+                } else {  // UP (default): rises from screen bottom
+                    y = isTop ? magnitude * 2.0 - 1.0 : -1.0;
+                    vT = isTop ? magnitude : 0.0;
+                }
                 gl_Position = vec4(vertex.x, y, 0.0, 1.0);
             }
         """;
 
     // language=GLSL
-    private static final String FRAGMENT_BAR = """
+    private static final String VERTEX_FILLED = """
             #version 330 core
-            in float vNdcY;
-            out vec4 fragColor;
+            uniform sampler1D uFFTTex;
+            uniform int uNumFillSamples;
+            uniform int uBarDir;
+            uniform int uLayout;
+            out float vT;
 
             void main() {
-                // Classic spectrum analyser gradient: green → yellow → red with screen height.
-                float t = (vNdcY + 1.0) * 0.5;   // NDC [-1,1] → [0,1]
-                vec3 color = (t < 0.5)
-                    ? mix(vec3(0.0, 0.8, 0.0), vec3(0.8, 0.8, 0.0), t * 2.0)
-                    : mix(vec3(0.8, 0.8, 0.0), vec3(0.8, 0.0, 0.0), (t - 0.5) * 2.0);
-                fragColor = vec4(color, 1.0);
+                int sampleIdx = gl_VertexID / 2;
+                bool isTop = (gl_VertexID % 2) == 1;
+                // Normalised position [0, 1] across the display width
+                float t = float(sampleIdx) / float(uNumFillSamples - 1);
+
+                // Texture coordinate: apply layout mapping
+                float texCoord;
+                if (uLayout == 2) {        // MIRRORED: bass centre, treble edges
+                    texCoord = abs(2.0 * t - 1.0);
+                } else if (uLayout == 1) { // REVERSED
+                    texCoord = 1.0 - t;
+                } else {                   // NORMAL
+                    texCoord = t;
+                }
+
+                float magnitude = texture(uFFTTex, texCoord).r;
+                float x = t * 2.0 - 1.0;  // NDC x: −1 (left) to +1 (right)
+
+                float y;
+                if (uBarDir == 1) {  // DOWN
+                    y = isTop ? 1.0 : 1.0 - magnitude * 2.0;
+                    vT = isTop ? 0.0 : magnitude;
+                } else if (uBarDir == 2) {  // BOTH
+                    y = isTop ? magnitude : -magnitude;
+                    vT = magnitude;
+                } else {  // UP
+                    y = isTop ? magnitude * 2.0 - 1.0 : -1.0;
+                    vT = isTop ? magnitude : 0.0;
+                }
+                gl_Position = vec4(x, y, 0.0, 1.0);
+            }
+        """;
+
+    // language=GLSL — shared by both BARS and FILLED
+    private static final String FRAGMENT_GRADIENT = """
+            #version 330 core
+            in float vT;
+            out vec4 fragColor;
+            uniform vec3 uColorLow;
+            uniform vec3 uColorHigh;
+
+            void main() {
+                fragColor = vec4(mix(uColorLow, uColorHigh, vT), 1.0);
             }
         """;
 
     // language=GLSL
-    private static final String VERTEX_PEAK = """
+    private static final String VERTEX_PEAK_BARS = """
             #version 330 core
-            // x = NDC x position; y is unused (peak y is read from texture)
+            // x = NDC x position of this tick edge; y unused (computed from texture)
             in vec2 vertex;
             uniform sampler1D uFFTTex;
+            uniform int uBarDir;
+            uniform int uLayout;
+            uniform int uNumBins;
 
             void main() {
-                int barIndex = gl_VertexID / 2;
-                float peakLevel = texelFetch(uFFTTex, barIndex, 0).g;
-                float y = peakLevel * 2.0 - 1.0;
+                int barIndex = gl_VertexID / 4;
+                // 0 = positive-side tick, 1 = negative-side tick (used in BOTH)
+                int pairIdx = (gl_VertexID / 2) % 2;
+
+                int texIdx;
+                if (uLayout == 2) {
+                    texIdx = (barIndex < uNumBins) ? uNumBins - 1 - barIndex : barIndex - uNumBins;
+                } else if (uLayout == 1) {
+                    texIdx = uNumBins - 1 - barIndex;
+                } else {
+                    texIdx = barIndex;
+                }
+                float peak = texelFetch(uFFTTex, texIdx, 0).g;
+
+                float y;
+                if (uBarDir == 1) {  // DOWN: first pair = bottom tick, second off-screen
+                    y = (pairIdx == 0) ? 1.0 - peak * 2.0 : 3.0;
+                } else if (uBarDir == 2) {  // BOTH: top and bottom ticks
+                    y = (pairIdx == 0) ? peak : -peak;
+                } else {  // UP: first pair = top tick, second off-screen
+                    y = (pairIdx == 0) ? peak * 2.0 - 1.0 : -3.0;
+                }
                 gl_Position = vec4(vertex.x, y, 0.0, 1.0);
             }
         """;
 
     // language=GLSL
+    private static final String VERTEX_PEAK_LINE = """
+            #version 330 core
+            uniform sampler1D uFFTTex;
+            uniform int uNumFillSamples;
+            uniform int uBarDir;
+            uniform int uLayout;
+            uniform float uPeakSign;  // +1.0 positive side, −1.0 negative side (BOTH)
+
+            void main() {
+                float t = float(gl_VertexID) / float(uNumFillSamples - 1);
+
+                float texCoord;
+                if (uLayout == 2) {
+                    texCoord = abs(2.0 * t - 1.0);
+                } else if (uLayout == 1) {
+                    texCoord = 1.0 - t;
+                } else {
+                    texCoord = t;
+                }
+
+                float peak = texture(uFFTTex, texCoord).g;
+                float x = t * 2.0 - 1.0;
+
+                float y;
+                if (uBarDir == 1) {  // DOWN
+                    y = 1.0 - peak * 2.0;
+                } else if (uBarDir == 2) {  // BOTH
+                    y = uPeakSign * peak;
+                } else {  // UP
+                    y = peak * 2.0 - 1.0;
+                }
+                gl_Position = vec4(x, y, 0.0, 1.0);
+            }
+        """;
+
+    // language=GLSL — shared by both peak styles
     private static final String FRAGMENT_PEAK = """
             #version 330 core
             out vec4 fragColor;
-            void main() {
-                fragColor = vec4(1.0);   // white peak ticks
-            }
+            uniform vec3 uPeakColor;
+            void main() { fragColor = vec4(uPeakColor, 1.0); }
         """;
+
+    // ── Construction-time parameters ────────────────────────────────────────────
+
+    private final float gapFraction;
+
+    /** Bar gradient: colour at the base of each bar (magnitude = 0). */
+    private Vector3f barColorLow  = new Vector3f(1.0f, 1.0f, 1.0f);
+
+    /** Bar gradient: colour at the tip of each bar (magnitude = 1). */
+    private Vector3f barColorHigh = new Vector3f(1.0f, 1.0f, 1.0f);
+
+    // ── Visual configuration (set before init unless noted) ──────────────────────
+
+    /** Direction bars extend from their baseline. Runtime-changeable via {@link #withDirection}. */
+    private volatile BarDirection direction    = BarDirection.UP;
+
+    /** Horizontal frequency layout. Must be set before {@link #init}. */
+    private BarLayout             layout       = BarLayout.NORMAL;
+
+    /** Rendering style. Must be set before {@link #init}. */
+    private RenderMode            renderMode   = RenderMode.BARS;
+
+    /**
+     * Number of sample positions for smooth-fill rendering; higher values give a finer curve.
+     * Must be set before {@link #init}. Default: 512.
+     */
+    private int numFillSamples = 512;
+
+    /** Computed in {@link #init}: numBins (NORMAL/REVERSED) or numBins×2 (MIRRORED). */
+    private int numDisplayBars;
+
+    // ── GL resources ─────────────────────────────────────────────────────────────
+
+    // BARS mode
+    private ShaderProgram    barShader;
+    private ShaderProgram    peakBarsShader;
+    private VertexArrayObject barVao;
+    private VertexArrayObject peakBarsVao;
+
+    // FILLED mode
+    private ShaderProgram fillShader;
+    private ShaderProgram peakLineShader;
+    private int emptyFillVaoId;
+
+    // ── Runtime uniforms (direction is updated each frame) ───────────────────────
+
+    private Uniform<Integer> uBarsDir;
+    private Uniform<Integer> uPeakBarsDir;
+    private Uniform<Integer> uFillDir;
+    private Uniform<Integer> uPeakLineDir;
+    private Uniform<Float>   uPeakLineSign;
 
     // ── Constructors ─────────────────────────────────────────────────────────────
 
-    /** Default constructor — 128 bars, 2048-point FFT, 20 Hz–20 kHz, −80 to 0 dB, 48 kHz. */
-    public SpectrumAnalyser() {
-        this(DEFAULT_NUM_BINS, DEFAULT_FFT_SIZE, DEFAULT_SAMPLE_RATE,
-             DEFAULT_F_MIN, DEFAULT_F_MAX, DEFAULT_DB_FLOOR, DEFAULT_DB_CEILING, DEFAULT_GAP);
+    /**
+     * Constructs a renderer sized to match {@code processor}'s output.
+     * Register this instance as a sink: {@code processor.addSink(analyser)}.
+     *
+     * @param processor   the shared FFT processor that pushes spectrum data to this analyser
+     * @param gapFraction fraction [0, 1) of each bar slot used as a gap between bars
+     *                    (only relevant in {@link RenderMode#BARS} mode)
+     */
+    public SpectrumAnalyser(FrequencyProcessor processor, float gapFraction) {
+        super(processor.getNumBins());
+        this.gapFraction = gapFraction;
+        this.peakLineWidth = DEFAULT_PEAK_LINE_WIDTH;
     }
 
     /**
-     * Full constructor.
+     * Constructs a renderer with {@link #DEFAULT_GAP} gap between bars.
      *
-     * @param numBins     number of visual bars
-     * @param fftSize     FFT window size (power of two; determines frequency resolution)
-     * @param sampleRate  capture sample rate in Hz
-     * @param fMin        lowest displayed frequency in Hz
-     * @param fMax        highest displayed frequency in Hz
-     * @param dBFloor     dB level that maps to bar height 0
-     * @param dBCeiling   dB level that maps to bar height 1
-     * @param gapFraction fraction [0, 1) of each bar slot used as a gap between bars
+     * @param processor the shared FFT processor that pushes spectrum data to this analyser
      */
-    public SpectrumAnalyser(int numBins, int fftSize, float sampleRate,
-                            float fMin, float fMax, float dBFloor, float dBCeiling,
-                            float gapFraction) {
-        this.numBins     = numBins;
-        this.fftSize     = fftSize;
-        this.gapFraction = gapFraction;
-        this.fftProcessor = new FFTProcessor(fftSize, numBins, sampleRate,
-                                             fMin, fMax, dBFloor, dBCeiling);
-        // Ring buffer holds 4× the FFT window so the write head never laps the read head.
-        this.audioBuffer  = new RollingAudioBuffer(fftSize * 4);
-        this.sampleBuffer = new float[fftSize];
-        this.magnitudes   = new float[numBins];
-        this.peaks        = new float[numBins];
+    public SpectrumAnalyser(FrequencyProcessor processor) {
+        this(processor, DEFAULT_GAP);
+    }
+
+    // ── Configuration ────────────────────────────────────────────────────────────
+
+    /**
+     * Sets the bar gradient colours (base → tip). Call before {@link #init}.
+     *
+     * <p>The gradient colour at any point in the bar is {@code mix(low, high, vT)}, where
+     * {@code vT} is 0 at the base and the current normalised magnitude at the tip. This
+     * means quiet bars show mostly {@code low} and loud bars blend toward {@code high}.</p>
+     *
+     * @param low  colour at the base (zero energy end)
+     * @param high colour at the tip (full energy end)
+     * @return {@code this} for fluent chaining
+     */
+    public SpectrumAnalyser withBarColors(Vector3f low, Vector3f high) {
+        this.barColorLow  = new Vector3f(low);
+        this.barColorHigh = new Vector3f(high);
+        return this;
+    }
+
+    /**
+     * Sets the colour of the peak-hold indicator (tick marks in BARS mode, continuous line
+     * in FILLED mode). Call before {@link #init}.
+     *
+     * @param color peak indicator colour (default white)
+     * @return {@code this} for fluent chaining
+     */
+    public SpectrumAnalyser withPeakColor(Vector3f color) {
+        this.colorPeak = new Vector3f(color);
+        return this;
+    }
+
+    /**
+     * Tunes the peak-hold ballistics. May be called before or after {@link #init}.
+     *
+     * @param dwellFrames     frames to hold at the maximum before sagging (e.g. 30 ≈ 0.5 s at 60 fps)
+     * @param peakSagPerFrame fraction subtracted per frame during sag (e.g. {@code 1f/180f} ≈ 3 s)
+     * @return {@code this} for fluent chaining
+     */
+    public SpectrumAnalyser withPeakDynamics(int dwellFrames, float peakSagPerFrame) {
+        this.dwellFrames     = dwellFrames;
+        this.peakSagPerFrame = peakSagPerFrame;
+        return this;
+    }
+
+    /**
+     * Sets the peak indicator line width in pixels. May be called before or after {@link #init}.
+     *
+     * @param width line width in pixels
+     * @return {@code this} for fluent chaining
+     */
+    public SpectrumAnalyser withPeakLineWidth(float width) {
+        this.peakLineWidth = width;
+        return this;
+    }
+
+    /**
+     * Sets the horizontal frequency layout. Must be called before {@link #init}.
+     *
+     * @param layout {@link BarLayout#NORMAL}, {@link BarLayout#REVERSED}, or
+     *               {@link BarLayout#MIRRORED}
+     * @return {@code this} for fluent chaining
+     */
+    public SpectrumAnalyser withLayout(BarLayout layout) {
+        this.layout = layout;
+        return this;
+    }
+
+    /**
+     * Sets the direction bars extend from their baseline. May be called before or after
+     * {@link #init} — the new direction takes effect on the next rendered frame.
+     *
+     * @param direction {@link BarDirection#UP}, {@link BarDirection#DOWN}, or
+     *                  {@link BarDirection#BOTH}
+     * @return {@code this} for fluent chaining
+     */
+    public SpectrumAnalyser withDirection(BarDirection direction) {
+        this.direction = direction;
+        return this;
+    }
+
+    /**
+     * Sets the rendering style. Must be called before {@link #init}.
+     *
+     * @param mode {@link RenderMode#BARS} (discrete bars) or {@link RenderMode#FILLED}
+     *             (smooth continuous area)
+     * @return {@code this} for fluent chaining
+     */
+    public SpectrumAnalyser withRenderMode(RenderMode mode) {
+        this.renderMode = mode;
+        return this;
+    }
+
+    /**
+     * Sets the number of horizontal sample positions used in {@link RenderMode#FILLED} mode.
+     * Higher values give a finer, smoother curve but increase vertex-shader work. Must be
+     * called before {@link #init}.
+     *
+     * @param samples number of sample positions (default 512)
+     * @return {@code this} for fluent chaining
+     */
+    public SpectrumAnalyser withNumFillSamples(int samples) {
+        this.numFillSamples = samples;
+        return this;
+    }
+
+    /**
+     * Controls whether the framebuffer is cleared before each frame.
+     *
+     * @param clear {@code true} to clear on each frame (default);
+     *              {@code false} to composite over previously rendered content
+     */
+    @Override
+    public void setClearBeforeRender(boolean clear) {
+        super.setClearBeforeRender(clear);
     }
 
     // ── RenderedItem lifecycle ───────────────────────────────────────────────────
 
     @Override
     public void init(RenderContext ctx) throws IOException {
-        initFftTexture(ctx);
-        initVbos(ctx);
-        initShaders(ctx);
-
-        this.audioReader = new AudioReader(List.of(audioBuffer));
-        this.audioReaderThread = new Thread(audioReader, "spectrum-audio-reader");
-        audioReaderThread.setDaemon(true);
-        audioReaderThread.start();
-
-        glLineWidth(2.0f);
+        numDisplayBars = (layout == BarLayout.MIRRORED) ? numBins * 2 : numBins;
+        initFftTexture(ctx, GL_LINEAR);  // GL_LINEAR: FILLED uses texture(); BARS uses texelFetch (filter ignored)
+        if (renderMode == RenderMode.BARS) {
+            initBarsVbos(ctx);
+            initBarsShaders(ctx);
+        } else {
+            initFillVao(ctx);
+            initFillShaders(ctx);
+        }
         ctx.setDesiredUpdateFrequency(60.0);
     }
 
-    /**
-     * Sets the audio input source.  Safe to call from any thread.
-     *
-     * @param line audio data source to capture from
-     */
-    public void setLine(AudioDataSource line) {
-        audioReader.setLine(line);
-    }
-
-    /**
-     * Render one frame of the spectrum analyser.
-     *
-     * <p>Each call: reads the latest {@code fftSize} samples from the CPU ring buffer, runs the
-     * FFT pipeline, updates peak-hold values, uploads the result to the 1-D texture, then issues
-     * two draw calls — bars ({@code GL_TRIANGLES}) followed by peak ticks ({@code GL_LINES}).</p>
-     *
-     * <p>Must be called on the GL/render thread.</p>
-     */
     @Override
     public void doRender(RenderContext ctx) {
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        // 1. Compute FFT from the latest audio samples.
-        audioBuffer.readSamples(sampleBuffer, fftSize, ChannelMode.MONO_BLEND);
-        fftProcessor.process(sampleBuffer, magnitudes);
-
-        // 2. Update peak-hold: rise instantly, fall at PEAK_DECAY_PER_FRAME per frame.
-        for (int i = 0; i < numBins; i++) {
-            peaks[i] = Math.max(magnitudes[i], peaks[i] - PEAK_DECAY_PER_FRAME);
+        if (clearBeforeRender) {
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         }
-
-        // 3. Upload combined magnitude + peak data to the 1-D texture (R=mag, G=peak).
-        fftUploadBuffer.clear();
-        for (int i = 0; i < numBins; i++) {
-            fftUploadBuffer.put(magnitudes[i]);
-            fftUploadBuffer.put(peaks[i]);
+        updatePeakBallistics();
+        uploadFftTexture();
+        if (renderMode == RenderMode.BARS) {
+            renderBars(ctx);
+        } else {
+            renderFilled(ctx);
         }
-        fftUploadBuffer.flip();
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_1D, fftTextureId);
-        glTexSubImage1D(GL_TEXTURE_1D, 0, 0, numBins, GL_RG, GL_FLOAT, fftUploadBuffer);
-
-        // 4. Draw filled bars.
-        barShader.use(ctx);
-        barVao.doRender(ctx);
-
-        // 5. Draw peak-hold ticks (texture still bound to unit 0).
-        peakShader.use(ctx);
-        peakVao.doRender(ctx);
     }
 
-    /**
-     * Stop the audio reader thread and release all GL and native resources.
-     *
-     * <p>Joins the audio thread with a 2-second timeout, then disposes both VAOs, both shader
-     * programs, the native {@code fftUploadBuffer} ({@link org.lwjgl.system.MemoryUtil#memFree}),
-     * and the 1-D FFT texture. Safe to call from the GL thread at any time after {@link #init}.</p>
-     */
     @Override
     public void dispose() {
-        audioReader.setRunning(false);
-        audioReader.setLine(null);
-        try {
-            if (audioReaderThread != null) {
-                audioReaderThread.join(2000);
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+        if (renderMode == RenderMode.BARS) {
+            disposeBars();
+        } else {
+            disposeFilled();
         }
-        barVao.dispose();
-        peakVao.dispose();
-        barShader.dispose();
-        peakShader.dispose();
-        if (fftUploadBuffer != null) {
-            memFree(fftUploadBuffer);
-            fftUploadBuffer = null;
-        }
-        glDeleteTextures(fftTextureId);
-        fftTextureId = 0;
+        disposeFftTexture();
     }
 
-    // ── Initialisation helpers ───────────────────────────────────────────────────
+    // ── BARS mode ────────────────────────────────────────────────────────────────
 
-    private void initFftTexture(RenderContext ctx) {
-        fftTextureId = glGenTextures();
-        glBindTexture(GL_TEXTURE_1D, fftTextureId);
-        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        // NEAREST: no interpolation between bars — each texel is exactly one bar.
-        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        // GL_RG32F: R = magnitude, G = peak (both written as GL_FLOAT)
-        glTexImage1D(GL_TEXTURE_1D, 0, GL_RG32F, numBins, 0, GL_RG, GL_FLOAT, (FloatBuffer) null);
-        glBindTexture(GL_TEXTURE_1D, 0);
-
-        // Pre-allocate the upload buffer once; freed in dispose().
-        fftUploadBuffer = memAllocFloat(numBins * 2);
-
-        ctx.getResourceManager().register(() -> {
-            glDeleteTextures(fftTextureId);
-            if (fftUploadBuffer != null) memFree(fftUploadBuffer);
-        });
-    }
-
-    /**
-     * Builds the bar VBO ({@code numBins × 6} vertices, {@code GL_TRIANGLES}) and the peak VBO
-     * ({@code numBins × 2} vertices, {@code GL_LINES}).
-     *
-     * <p>Both use the same {@code vec2 vertex} layout: {@code vertex.x} is the NDC x coordinate
-     * of the left or right edge of the bar; {@code vertex.y} is a role flag (0 = bottom, 1 = top)
-     * used by the bar shader to choose between y = −1 (bottom) and y from the FFT texture (top).
-     * The peak shader ignores {@code vertex.y} entirely.</p>
-     */
-    private void initVbos(RenderContext ctx) {
-        float slotWidth = 2.0f / numBins;          // NDC width per bar slot
+    private void initBarsVbos(RenderContext ctx) {
+        float slotWidth = 2.0f / numDisplayBars;
         float barWidth  = slotWidth * (1.0f - gapFraction);
         float halfGap   = slotWidth * gapFraction / 2.0f;
 
-        // ── Bar VAO (GL_TRIANGLES, 6 vertices per bar) ──────────────────────────
+        // ── Bar VAO: GL_TRIANGLES, 6 vertices per bar ────────────────────────────
         barVao = new VertexArrayObject();
         barVao.setDrawMode(BufferDrawMode.TRIANGLES);
         barVao.init(ctx);
-        var barVbo = barVao.createVbo(new VertexDataStructure(VERTEX), numBins * 6);
+        var barVbo = barVao.createVbo(new VertexDataStructure(VERTEX), numDisplayBars * 6);
         barVbo.init(ctx);
-        for (int i = 0; i < numBins; i++) {
+        for (int i = 0; i < numDisplayBars; i++) {
             float xL = -1.0f + i * slotWidth + halfGap;
             float xR = xL + barWidth;
             int base = i * 6;
-            barVbo.setElement(base + 0, VERTEX, new Vector2f(xL, 0.0f)); // BL
-            barVbo.setElement(base + 1, VERTEX, new Vector2f(xR, 0.0f)); // BR
-            barVbo.setElement(base + 2, VERTEX, new Vector2f(xL, 1.0f)); // TL
-            barVbo.setElement(base + 3, VERTEX, new Vector2f(xR, 0.0f)); // BR
-            barVbo.setElement(base + 4, VERTEX, new Vector2f(xR, 1.0f)); // TR
-            barVbo.setElement(base + 5, VERTEX, new Vector2f(xL, 1.0f)); // TL
+            barVbo.setElement(base + 0, VERTEX, new Vector2f(xL, 0.0f)); // BL (base)
+            barVbo.setElement(base + 1, VERTEX, new Vector2f(xR, 0.0f)); // BR (base)
+            barVbo.setElement(base + 2, VERTEX, new Vector2f(xL, 1.0f)); // TL (tip)
+            barVbo.setElement(base + 3, VERTEX, new Vector2f(xR, 0.0f)); // BR (base)
+            barVbo.setElement(base + 4, VERTEX, new Vector2f(xR, 1.0f)); // TR (tip)
+            barVbo.setElement(base + 5, VERTEX, new Vector2f(xL, 1.0f)); // TL (tip)
         }
         barVbo.update(UpdateHint.STATIC);
 
-        // ── Peak VAO (GL_LINES, 2 vertices per bar) ─────────────────────────────
-        peakVao = new VertexArrayObject();
-        peakVao.setDrawMode(BufferDrawMode.LINES);
-        peakVao.init(ctx);
-        var peakVbo = peakVao.createVbo(new VertexDataStructure(VERTEX), numBins * 2);
+        // ── Peak VAO: GL_LINES, 4 vertices per bar (2 pairs: positive + negative) ─
+        // Odd pair (index 1) is placed off-screen for UP/DOWN; both pairs drawn for BOTH.
+        peakBarsVao = new VertexArrayObject();
+        peakBarsVao.setDrawMode(BufferDrawMode.LINES);
+        peakBarsVao.init(ctx);
+        var peakVbo = peakBarsVao.createVbo(new VertexDataStructure(VERTEX), numDisplayBars * 4);
         peakVbo.init(ctx);
-        for (int i = 0; i < numBins; i++) {
+        for (int i = 0; i < numDisplayBars; i++) {
             float xL = -1.0f + i * slotWidth + halfGap;
             float xR = xL + barWidth;
-            peakVbo.setElement(i * 2,     VERTEX, new Vector2f(xL, 0.0f));
-            peakVbo.setElement(i * 2 + 1, VERTEX, new Vector2f(xR, 0.0f));
+            peakVbo.setElement(i * 4 + 0, VERTEX, new Vector2f(xL, 0.0f)); // positive tick left
+            peakVbo.setElement(i * 4 + 1, VERTEX, new Vector2f(xR, 0.0f)); // positive tick right
+            peakVbo.setElement(i * 4 + 2, VERTEX, new Vector2f(xL, 0.0f)); // negative tick left
+            peakVbo.setElement(i * 4 + 3, VERTEX, new Vector2f(xR, 0.0f)); // negative tick right
         }
         peakVbo.update(UpdateHint.STATIC);
     }
 
-    private void initShaders(RenderContext ctx) {
-        // ── Bar shader ───────────────────────────────────────────────────────────
-        barShader = ShaderProgram.compile(
-                ShaderSource.fromClass(VERTEX_BAR,   SpectrumAnalyser.class),
-                ShaderSource.fromClass(FRAGMENT_BAR, SpectrumAnalyser.class),
-                null);
-        barShader.use(ctx);
+    private void initBarsShaders(RenderContext ctx) {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_1D, fftTextureId);
-        barShader.uniforms().get("uFFTTex", Integer.class).set(0);
+
+        barShader = ShaderProgram.compile(
+                ShaderSource.fromClass(VERTEX_BARS,      SpectrumAnalyser.class),
+                ShaderSource.fromClass(FRAGMENT_GRADIENT, SpectrumAnalyser.class),
+                null);
+        barShader.use(ctx);
+        barShader.uniforms().get("uFFTTex",   Integer.class).set(0);
+        barShader.uniforms().get("uColorLow",  Vector3f.class).set(barColorLow);
+        barShader.uniforms().get("uColorHigh", Vector3f.class).set(barColorHigh);
+        barShader.uniforms().get("uLayout",   Integer.class).set(layout.ordinal());
+        barShader.uniforms().get("uNumBins",  Integer.class).set(numBins);
+        uBarsDir = barShader.uniforms().get("uBarDir", Integer.class);
+        uBarsDir.set(direction.ordinal());
         barVao.bind(ctx);
-        barVao.getVbo().update(UpdateHint.STATIC); // re-bind barVbo to GL_ARRAY_BUFFER before setup
+        barVao.getVbo().update(UpdateHint.STATIC);
         barVao.getVbo().setup(barShader);
 
-        // ── Peak shader ──────────────────────────────────────────────────────────
-        peakShader = ShaderProgram.compile(
-                ShaderSource.fromClass(VERTEX_PEAK,   SpectrumAnalyser.class),
-                ShaderSource.fromClass(FRAGMENT_PEAK, SpectrumAnalyser.class),
+        peakBarsShader = ShaderProgram.compile(
+                ShaderSource.fromClass(VERTEX_PEAK_BARS, SpectrumAnalyser.class),
+                ShaderSource.fromClass(FRAGMENT_PEAK,    SpectrumAnalyser.class),
                 null);
-        peakShader.use(ctx);
-        peakShader.uniforms().get("uFFTTex", Integer.class).set(0);
-        peakVao.bind(ctx);
-        peakVao.getVbo().update(UpdateHint.STATIC); // re-bind peakVbo to GL_ARRAY_BUFFER before setup
-        peakVao.getVbo().setup(peakShader);
+        peakBarsShader.use(ctx);
+        peakBarsShader.uniforms().get("uFFTTex",    Integer.class).set(0);
+        peakBarsShader.uniforms().get("uPeakColor", Vector3f.class).set(colorPeak);
+        peakBarsShader.uniforms().get("uLayout",    Integer.class).set(layout.ordinal());
+        peakBarsShader.uniforms().get("uNumBins",   Integer.class).set(numBins);
+        uPeakBarsDir = peakBarsShader.uniforms().get("uBarDir", Integer.class);
+        uPeakBarsDir.set(direction.ordinal());
+        peakBarsVao.bind(ctx);
+        peakBarsVao.getVbo().update(UpdateHint.STATIC);
+        peakBarsVao.getVbo().setup(peakBarsShader);
+    }
+
+    private void renderBars(RenderContext ctx) {
+        int dir = direction.ordinal();
+
+        barShader.use(ctx);
+        uBarsDir.set(dir);
+        barVao.doRender(ctx);
+
+        glLineWidth(peakLineWidth);
+        peakBarsShader.use(ctx);
+        uPeakBarsDir.set(dir);
+        peakBarsVao.doRender(ctx);
+    }
+
+    private void disposeBars() {
+        if (barShader     != null) { barShader.dispose();     barShader     = null; }
+        if (peakBarsShader != null) { peakBarsShader.dispose(); peakBarsShader = null; }
+        if (barVao        != null) { barVao.dispose();        barVao        = null; }
+        if (peakBarsVao   != null) { peakBarsVao.dispose();   peakBarsVao   = null; }
+    }
+
+    // ── FILLED mode ──────────────────────────────────────────────────────────────
+
+    private void initFillVao(RenderContext ctx) {
+        // Procedural geometry — no vertex data, just a VAO required by Core Profile.
+        emptyFillVaoId = glGenVertexArrays();
+        ctx.getResourceManager().register(() -> {
+            if (emptyFillVaoId != 0) glDeleteVertexArrays(emptyFillVaoId);
+        });
+    }
+
+    private void initFillShaders(RenderContext ctx) {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_1D, fftTextureId);
+
+        fillShader = ShaderProgram.compile(
+                ShaderSource.fromClass(VERTEX_FILLED,    SpectrumAnalyser.class),
+                ShaderSource.fromClass(FRAGMENT_GRADIENT, SpectrumAnalyser.class),
+                null);
+        fillShader.use(ctx);
+        fillShader.uniforms().get("uFFTTex",        Integer.class).set(0);
+        fillShader.uniforms().get("uColorLow",       Vector3f.class).set(barColorLow);
+        fillShader.uniforms().get("uColorHigh",      Vector3f.class).set(barColorHigh);
+        fillShader.uniforms().get("uLayout",         Integer.class).set(layout.ordinal());
+        fillShader.uniforms().get("uNumFillSamples", Integer.class).set(numFillSamples);
+        uFillDir = fillShader.uniforms().get("uBarDir", Integer.class);
+        uFillDir.set(direction.ordinal());
+
+        peakLineShader = ShaderProgram.compile(
+                ShaderSource.fromClass(VERTEX_PEAK_LINE, SpectrumAnalyser.class),
+                ShaderSource.fromClass(FRAGMENT_PEAK,    SpectrumAnalyser.class),
+                null);
+        peakLineShader.use(ctx);
+        peakLineShader.uniforms().get("uFFTTex",        Integer.class).set(0);
+        peakLineShader.uniforms().get("uPeakColor",     Vector3f.class).set(colorPeak);
+        peakLineShader.uniforms().get("uLayout",        Integer.class).set(layout.ordinal());
+        peakLineShader.uniforms().get("uNumFillSamples",Integer.class).set(numFillSamples);
+        uPeakLineDir  = peakLineShader.uniforms().get("uBarDir",    Integer.class);
+        uPeakLineSign = peakLineShader.uniforms().get("uPeakSign",  Float.class);
+        uPeakLineDir.set(direction.ordinal());
+        uPeakLineSign.set(1.0f);
+    }
+
+    private void renderFilled(RenderContext ctx) {
+        int dir = direction.ordinal();
+        glBindVertexArray(emptyFillVaoId);
+
+        // Smooth filled area: numFillSamples pairs of (base, tip) vertices
+        fillShader.use(ctx);
+        uFillDir.set(dir);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, numFillSamples * 2);
+
+        // Continuous peak-hold line(s)
+        glLineWidth(peakLineWidth);
+        peakLineShader.use(ctx);
+        uPeakLineDir.set(dir);
+        uPeakLineSign.set(1.0f);
+        glDrawArrays(GL_LINE_STRIP, 0, numFillSamples);
+
+        if (direction == BarDirection.BOTH) {
+            // Second peak line on the negative side (symmetric with the positive one)
+            uPeakLineSign.set(-1.0f);
+            glDrawArrays(GL_LINE_STRIP, 0, numFillSamples);
+        }
+    }
+
+    private void disposeFilled() {
+        if (fillShader     != null) { fillShader.dispose();     fillShader     = null; }
+        if (peakLineShader != null) { peakLineShader.dispose(); peakLineShader = null; }
+        if (emptyFillVaoId != 0)   { glDeleteVertexArrays(emptyFillVaoId); emptyFillVaoId = 0; }
     }
 }

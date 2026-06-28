@@ -20,6 +20,40 @@ def resolveX11Env = { ->
     return ['DISPLAY': display, 'XAUTHORITY': xauth]
 }
 
+// Runs `pactl <subcommand>` and returns trimmed stdout, or null if pactl is absent.
+def pactlExec = { String subcommand ->
+    try {
+        def proc = ['pactl', subcommand].execute()
+        proc.waitFor()
+        return proc.inputStream.text.trim()
+    } catch (IOException ignored) {
+        return null
+    }
+}
+
+// Temp file used to carry the original PulseAudio source name across tasks.
+// Using a file rather than project.ext keeps this configuration-cache compatible.
+def audioSourceFile = layout.buildDirectory.file('audio-source.tmp')
+
+tasks.register('restorePulseAudioSource') {
+    group = ApplicationPlugin.APPLICATION_GROUP
+    description = 'Restores the PulseAudio default capture source to the value it had before the experiment started'
+    def tmpFile = audioSourceFile
+    onlyIf { tmpFile.get().asFile.exists() }
+    doLast {
+        def f = tmpFile.get().asFile
+        if (!f.exists()) return
+        def original = f.text.trim()
+        f.delete()
+        try {
+            ['pactl', 'set-default-source', original].execute().waitFor()
+            logger.lifecycle('Audio loopback: restored default source → {}', original)
+        } catch (IOException e) {
+            logger.warn('Could not restore PulseAudio source: {}', e.message)
+        }
+    }
+}
+
 dependencies {
     implementation project(':core')
 
@@ -44,6 +78,32 @@ application {
 }
 
 tasks.named('run', JavaExec) {
+    finalizedBy 'restorePulseAudioSource'
+    def tmpFile = audioSourceFile
+    doFirst {
+        def sink = pactlExec('get-default-sink')
+        if (sink == null) {
+            logger.warn('pactl not available — skipping audio loopback setup')
+        } else {
+            def currentSource = pactlExec('get-default-source')
+            def monitorSource = "${sink}.monitor"
+            logger.lifecycle('Audio loopback: setting default source → {}', monitorSource)
+            try {
+                def proc = ['pactl', 'set-default-source', monitorSource].execute()
+                proc.waitFor()
+                if (proc.exitValue() != 0) {
+                    logger.warn('pactl set-default-source failed (exit {}): {}',
+                            proc.exitValue(), proc.errorStream.text.trim())
+                } else {
+                    def f = tmpFile.get().asFile
+                    f.parentFile.mkdirs()
+                    f.text = currentSource
+                }
+            } catch (IOException e) {
+                logger.warn('Could not set PulseAudio source: {}', e.message)
+            }
+        }
+    }
     systemProperty "slf4j.internal.verbosity", "WARN"
     environment += resolveX11Env()
     environment += [

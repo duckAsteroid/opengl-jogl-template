@@ -22,8 +22,10 @@ import org.jtransforms.fft.FloatFFT_1D;
  */
 public class FFTProcessor {
 
-    private final int fftSize;
-    private final int numBins;
+    private final int   fftSize;
+    private final int   numBins;
+    private final float fMin;
+    private final float fMax;
 
     /** Pre-computed Hann window coefficients, length == fftSize. */
     private final float[] window;
@@ -63,6 +65,8 @@ public class FFTProcessor {
                         float fMin, float fMax, float dBFloor, float dBCeiling) {
         this.fftSize = fftSize;
         this.numBins = numBins;
+        this.fMin    = fMin;
+        this.fMax    = fMax;
         this.dBFloor = dBFloor;
         this.dBRange = dBCeiling - dBFloor;
 
@@ -146,4 +150,18 @@ public class FFTProcessor {
      * @return the bar count passed at construction
      */
     public int getNumBins() { return numBins; }
+
+    /**
+     * Lower bound of the displayed frequency range in Hz, as passed at construction.
+     *
+     * @return the frequency mapped to the first output bar
+     */
+    public float getFMin() { return fMin; }
+
+    /**
+     * Upper bound of the displayed frequency range in Hz, as passed at construction.
+     *
+     * @return the frequency mapped to the last output bar
+     */
+    public float getFMax() { return fMax; }
 }
