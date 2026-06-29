@@ -128,7 +128,7 @@ public class Triangles implements RenderedItem {
         if (shaderProgram.uniforms().has("color")) {
             Vector4f tempColor = color;
             if (freq != null) {
-                double elapsed = ctx.getTimer().elapsed();
+                double elapsed = ctx.getClock().elapsed();
                 tempColor = new Vector4f();
                 tempColor.x = (float) WaveFunction.value(freq.x, color.x, elapsed);
                 tempColor.y = (float) WaveFunction.value(freq.y, color.y, elapsed);

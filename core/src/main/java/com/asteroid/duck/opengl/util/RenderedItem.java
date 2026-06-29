@@ -28,7 +28,7 @@ public interface RenderedItem extends Resource {
      * All per-frame GL state changes (uniform updates, draw calls) belong here. Do not
      * allocate new GL handles inside this method; use {@link #init} for that.
      *
-     * @param ctx the render context; provides the current {@link com.asteroid.duck.opengl.util.timer.Timer},
+     * @param ctx the render context; provides the current {@link com.asteroid.duck.opengl.util.timer.Clock},
      *            window dimensions, and other per-frame state
      */
 	void doRender(RenderContext ctx);

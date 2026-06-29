@@ -28,7 +28,7 @@ public class Test implements Experiment {
 
     @Override
     public void doRender(RenderContext ctx) {
-        long wholeSeconds = (long) ctx.getTimer().elapsed();
+        long wholeSeconds = (long) ctx.getClock().elapsed();
         if (wholeSeconds % 2 == 0) {
             textureRenderer2.doRender(ctx);
         }

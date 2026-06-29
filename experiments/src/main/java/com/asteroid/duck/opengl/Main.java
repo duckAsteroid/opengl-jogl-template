@@ -10,8 +10,8 @@ import com.asteroid.duck.opengl.util.keys.KeyRegistry;
 import com.asteroid.duck.opengl.util.resources.manager.ResourceManagerImpl;
 import com.asteroid.duck.opengl.util.resources.io.ClasspathLoader;
 import com.asteroid.duck.opengl.util.timer.TimeSource;
-import com.asteroid.duck.opengl.util.timer.Timer;
-import com.asteroid.duck.opengl.util.timer.TimerImpl;
+import com.asteroid.duck.opengl.util.timer.Clock;
+import com.asteroid.duck.opengl.util.timer.ClockImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,7 +28,7 @@ public class Main extends GLWindow implements RenderContext {
     public static final int STEP = 10;
     public static final int LARGE_STEP = 100;
 
-    private final TimerImpl timer = new TimerImpl(TimeSource.glfwGetTimeInstance());
+    private final ClockImpl timer = new ClockImpl(TimeSource.glfwGetTimeInstance());
 
     private RenderedItem renderedItem;
 
@@ -49,7 +49,7 @@ public class Main extends GLWindow implements RenderContext {
     }
 
     @Override
-    public Timer getTimer() {
+    public Clock getClock() {
         return timer;
     }
 

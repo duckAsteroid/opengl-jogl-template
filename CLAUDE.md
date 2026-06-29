@@ -80,6 +80,32 @@ To add a new experiment: implement `Experiment`, add the fully-qualified class n
 
 `AudioReader` runs a producer thread that writes into a GPU-mapped `ByteBuffer` via a circular buffer (`RollingFloatBuffer`). The render thread reads only the write-head position. This is the only intentionally concurrent code; everything else is single-threaded on the GL thread.
 
+### Screenshot and video capture
+
+`GLWindow` registers two default key bindings for every window:
+
+| Key | Action |
+|---|---|
+| `Print Screen` | Save a timestamped PNG screenshot in the working directory |
+| `Shift + Print Screen` | Record a 5-second MP4 video in the working directory |
+
+Both are registered before `registerKeys()` so experiments see them in the printed instructions. Experiments must not re-register these keys.
+
+**Screenshot flow:** `captureNextFrame(Path)` stores the path in `volatile pendingCapture`. After `render()` on the GL thread, `readFramebuffer()` runs `glReadPixels` → row-flip → `BufferedImage`, then a virtual thread writes the PNG via `ImageIO`.
+
+**Video recording flow:** `startRecording(Path, Duration)` (capped at 60 s) stores a `RecordingRequest` in `volatile pendingRecording`. On the next frame the GL thread calls `beginRecordingSession()`, which opens a JCodec `AWTSequenceEncoder` (H.264/MP4, 30 fps) and spawns an encode virtual thread. Each subsequent frame calls `readFramebuffer()` and offers the image to a bounded `ArrayBlockingQueue<BufferedImage>` (capacity 30). The encode thread drains the queue and feeds frames to JCodec. When `Timer.elapsed()` passes the requested duration, the GL thread signals `stopping = true`; the encode thread drains remaining frames and calls `encoder.finish()` to write the MP4 trailer. If the window closes mid-recording, `dispose()` signals the session and joins the encode thread (up to 30 s).
+
+**API on `RenderContext`:**
+```java
+ctx.startRecording(Duration.ofSeconds(30));               // timestamped file
+ctx.startRecording(Path.of("out.mp4"), Duration.ofSeconds(30));
+ctx.stopRecording();  // stop before duration expires
+```
+
+Timing uses `RenderContext.getTimer()` (not wall-clock time) so paused or slowed renders are handled correctly.
+
+**JCodec dependency** (`org.jcodec:jcodec:0.2.5` + `jcodec-javase:0.2.5`) is in `core/build.gradle`. No native binaries required.
+
 ### GLSL shaders
 
 Shaders live in `experiments/src/main/resources/glsl/<name>/vertex.glsl` and `frag.glsl`. They are loaded at runtime from the classpath via `ResourceManager`.

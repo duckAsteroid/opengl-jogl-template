@@ -39,7 +39,7 @@ direct references to the window.
 
 ```java
 // Time
-double t = ctx.getTimer().elapsed();          // seconds since start (double)
+double t = ctx.getClock().elapsed();          // seconds since start (double)
 
 // Viewport
 Rectangle win = ctx.getWindow();              // pixel dimensions, origin top-left
@@ -92,14 +92,8 @@ ctx.captureNextFrame();
 ctx.captureNextFrame(Path.of("captures/frame.png"));   // parent dirs are created automatically
 ```
 
-The typical wiring is a key binding registered in `init()`:
-
-```java
-ctx.getKeyRegistry().registerKeyAction(
-    KeyCombination.simple('P'),
-    ctx::captureNextFrame,
-    "Save screenshot");
-```
+`GLWindow` registers `PRINT_SCREEN` → screenshot globally, so **experiments must not** add their
+own screenshot bindings. The default binding is already available to every experiment.
 
 **How it works:**
 - Safe to call from any thread (key callbacks, audio thread, etc.) — the path is stored in a
@@ -111,6 +105,39 @@ ctx.getKeyRegistry().registerKeyAction(
 
 ---
 
+## Video recording
+
+`GLWindow` can record a short MP4 clip to disk using the pure-Java JCodec encoder (no external
+binaries required). Duration is capped at 60 seconds.
+
+```java
+// Record 5 seconds to a timestamped file (e.g. recording-1718884800000.mp4):
+ctx.startRecording(Duration.ofSeconds(5));
+
+// Record to a specific path:
+ctx.startRecording(Path.of("clips/demo.mp4"), Duration.ofSeconds(10));
+
+// Stop early (the encoder finishes and flushes the MP4 file):
+ctx.stopRecording();
+```
+
+`GLWindow` registers `SHIFT+PRINT_SCREEN` → 5-second recording globally — experiments must not
+add their own recording bindings.
+
+**How it works:**
+- `startRecording()` stores a request in a `volatile` field; the GL thread picks it up at the top
+  of the next frame.
+- Each frame calls `glReadPixels` + row-flip + `BufferedImage` on the GL thread, then offers the
+  frame to a bounded `ArrayBlockingQueue` (capacity 30).
+- A virtual thread drains the queue through `AWTSequenceEncoder` (JCodec) and calls `finish()`
+  when recording ends.
+- Duration is tracked via `RenderContext.getClock()` (the render clock), not wall-clock time, so
+  paused or slowed renders are handled correctly.
+- If the encode thread falls behind the render rate, frames are dropped with one WARN log.
+- `dispose()` joins the encode thread (up to 30 s) to ensure the MP4 trailer is flushed.
+
+---
+
 ## Further reference
 
 | Topic | File |
@@ -118,7 +145,7 @@ ctx.getKeyRegistry().registerKeyAction(
 | Shaders, uniforms | [shaders.md](shaders.md) |
 | Geometry (VAO / VBO) | [geometry.md](geometry.md) |
 | Resource manager, textures, texture units | [resources.md](resources.md) |
-| Utility renderers (blur, palette, text, warp) | [utilities.md](utilities.md) |
+| Utility renderers, timer/clock library | [utilities.md](utilities.md) |
 | Key input, cross-thread actions, colours | [input.md](input.md) |
 | Audio visualisation (waveform, spectrum) | [audio.md](audio.md) |
 

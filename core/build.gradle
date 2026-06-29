@@ -25,6 +25,10 @@ dependencies {
   // FFT for spectrum analysis
   implementation 'com.github.wendykierp:JTransforms:3.1'
 
+  // Pure-Java H.264/MP4 encoder for video recording
+  implementation 'org.jcodec:jcodec:0.2.5'
+  implementation 'org.jcodec:jcodec-javase:0.2.5'
+
   // LWJGL platform BOM and core libs; runtime natives set for linux by default
   implementation platform("org.lwjgl:lwjgl-bom:${lwjglVersion}")
   implementation "org.lwjgl:lwjgl"

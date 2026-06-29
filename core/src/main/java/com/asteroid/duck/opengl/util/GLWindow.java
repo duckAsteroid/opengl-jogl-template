@@ -16,6 +16,9 @@ import org.lwjgl.system.Platform;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.asteroid.duck.opengl.util.timer.Timer;
+import org.jcodec.api.awt.AWTSequenceEncoder;
+
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -23,11 +26,14 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 
 import javax.imageio.ImageIO;
 
@@ -70,6 +76,12 @@ public abstract class GLWindow implements RenderContext {
 
 	/** Non-null when a screenshot has been requested; cleared after the capture executes. */
 	private volatile Path pendingCapture = null;
+
+	private record RecordingRequest(Path path, Duration duration) {}
+	/** Non-null when a recording has been requested from another thread; consumed on the GL thread. */
+	private volatile RecordingRequest pendingRecording = null;
+	/** The currently active recording session; only accessed on the GL thread. */
+	private RecordingSession activeRecording = null;
 
 	/**
 	 * Create and display a GLFW window with an OpenGL 3.3 Core Profile context.
@@ -256,6 +268,15 @@ public abstract class GLWindow implements RenderContext {
 		// initialize
 		// ---------------
 		init();
+		// Built-in capture shortcuts (registered before subclass keys so they appear first)
+		keyRegistry.registerKeyAction(
+				KeyCombination.named("PRINT_SCREEN"),
+				this::captureNextFrame,
+				"Save screenshot");
+		keyRegistry.registerKeyAction(
+				KeyCombination.namedWithMods("PRINT_SCREEN", "SHIFT"),
+				() -> startRecording(Duration.ofSeconds(5)),
+				"Record 5s video");
 		registerKeys();
 		printInstructions();
 
@@ -277,6 +298,23 @@ public abstract class GLWindow implements RenderContext {
 			if (capture != null) {
 				pendingCapture = null;
 				captureFramebuffer(capture);
+			}
+
+			// start a pending recording session if one was requested
+			RecordingRequest req = pendingRecording;
+			if (req != null && activeRecording == null) {
+				pendingRecording = null;
+				beginRecordingSession(req);
+			}
+
+			// feed the current frame into the active recording, or finalise if time is up
+			if (activeRecording != null) {
+				if (activeRecording.isExpired() || activeRecording.stopping) {
+					endRecordingSession(activeRecording);
+					activeRecording = null;
+				} else {
+					captureFrameForRecording(activeRecording);
+				}
 			}
 
 			glfwSwapBuffers(windowHandle);
@@ -342,14 +380,23 @@ public abstract class GLWindow implements RenderContext {
 		this.pendingCapture = destination;
 	}
 
+	@Override
+	public void startRecording(Path destination, Duration duration) {
+		this.pendingRecording = new RecordingRequest(destination,
+				duration.compareTo(Duration.ofMinutes(1)) > 0 ? Duration.ofMinutes(1) : duration);
+	}
+
+	@Override
+	public void stopRecording() {
+		RecordingSession session = activeRecording;
+		if (session != null) session.stopping = true;
+	}
+
 	/**
-	 * Reads the current framebuffer pixels via {@code glReadPixels}, flips the image vertically
-	 * (GL origin is bottom-left), then writes a PNG on a virtual thread.
-	 *
-	 * <p>Must be called on the GL thread after {@link #render()} and before
-	 * {@code glfwSwapBuffers} so that the framebuffer contents are complete and correct.</p>
+	 * Reads the current framebuffer into a {@link BufferedImage} via {@code glReadPixels}.
+	 * Flips rows vertically (GL origin is bottom-left). Must be called on the GL thread.
 	 */
-	private void captureFramebuffer(Path path) {
+	private BufferedImage readFramebuffer() {
 		try (MemoryStack stack = stackPush()) {
 			IntBuffer pw = stack.mallocInt(1), ph = stack.mallocInt(1);
 			glfwGetFramebufferSize(windowHandle, pw, ph);
@@ -358,8 +405,6 @@ public abstract class GLWindow implements RenderContext {
 			ByteBuffer pixels = memAlloc(stride * h);
 			try {
 				glReadPixels(0, 0, w, h, GL_RGB, GL_UNSIGNED_BYTE, pixels);
-				// Copy into an int[] on the GL thread (fast, no GL calls), then hand off to a
-				// virtual thread for the slow file I/O so the render loop is not stalled.
 				int[] rgb = new int[w * h];
 				for (int y = 0; y < h; y++) {
 					// GL stores rows bottom-to-top; invert so row 0 is the top of the image.
@@ -371,19 +416,9 @@ public abstract class GLWindow implements RenderContext {
 								|  (pixels.get(i + 2) & 0xFF);
 					}
 				}
-				Thread.ofVirtual().start(() -> {
-					try {
-						if (path.getParent() != null) {
-							Files.createDirectories(path.getParent());
-						}
-						BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
-						img.setRGB(0, 0, w, h, rgb, 0, w);
-						ImageIO.write(img, "PNG", path.toFile());
-						LOG.info("Screenshot saved: {}", path.toAbsolutePath());
-					} catch (IOException e) {
-						LOG.error("Failed to write screenshot to {}", path, e);
-					}
-				});
+				BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+				img.setRGB(0, 0, w, h, rgb, 0, w);
+				return img;
 			} finally {
 				memFree(pixels);
 			}
@@ -391,7 +426,72 @@ public abstract class GLWindow implements RenderContext {
 	}
 
 	/**
+	 * Captures the current framebuffer as a PNG. Pixel data is read on the GL thread;
+	 * file I/O is handed off to a virtual thread to avoid stalling the render loop.
+	 */
+	private void captureFramebuffer(Path path) {
+		BufferedImage img = readFramebuffer();
+		Thread.ofVirtual().start(() -> {
+			try {
+				if (path.getParent() != null) Files.createDirectories(path.getParent());
+				ImageIO.write(img, "PNG", path.toFile());
+				LOG.info("Screenshot saved: {}", path.toAbsolutePath());
+			} catch (IOException e) {
+				LOG.error("Failed to write screenshot to {}", path, e);
+			}
+		});
+	}
+
+	/** Starts a new {@link RecordingSession}: opens the encoder and launches the encode thread. */
+	private void beginRecordingSession(RecordingRequest req) {
+		try {
+			if (req.path().getParent() != null) Files.createDirectories(req.path().getParent());
+			AWTSequenceEncoder encoder = AWTSequenceEncoder.createSequenceEncoder(req.path().toFile(), 30);
+			RecordingSession session = new RecordingSession(req.path(), encoder, getClock().track(req.duration()));
+			session.encodeThread = Thread.ofVirtual().start(() -> runEncodeLoop(session));
+			activeRecording = session;
+			LOG.info("Recording started: {} (duration {}s)", req.path(), req.duration().toSeconds());
+		} catch (IOException e) {
+			LOG.error("Failed to start recording to {}", req.path(), e);
+		}
+	}
+
+	/** Signals the session's encode thread to drain the queue and finalise the MP4. */
+	private void endRecordingSession(RecordingSession session) {
+		session.stopping = true;
+		LOG.debug("Recording stopping: {}", session.path);
+	}
+
+	/** Reads the current frame and offers it to the session's encode queue (drops if full). */
+	private void captureFrameForRecording(RecordingSession session) {
+		BufferedImage frame = readFramebuffer();
+		if (!session.queue.offer(frame) && !session.frameDropWarned) {
+			LOG.warn("Recording frame dropped — JCodec encode slower than render rate");
+			session.frameDropWarned = true;
+		}
+	}
+
+	/** Encode-thread body: drains the queue through JCodec until stopped, then finalises. */
+	private void runEncodeLoop(RecordingSession session) {
+		try {
+			while (!session.stopping || !session.queue.isEmpty()) {
+				BufferedImage frame = session.queue.poll(50, TimeUnit.MILLISECONDS);
+				if (frame != null) session.encoder.encodeImage(frame);
+			}
+			session.encoder.finish();
+			LOG.info("Recording saved: {}", session.path.toAbsolutePath());
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			LOG.error("Recording encode thread interrupted for {}", session.path, e);
+		} catch (IOException e) {
+			LOG.error("Failed to encode recording to {}", session.path, e);
+		}
+	}
+
+	/**
 	 * Free all GLFW callbacks, dispose the {@link ResourceManager}, and release the error callback.
+	 * If a recording is in progress it is finalised before resources are destroyed; this blocks
+	 * until the encode thread completes (up to 30 s).
 	 * Called automatically at the end of {@link #displayLoop()}; subclasses that override this
 	 * must call {@code super.dispose()}.
 	 */
@@ -399,6 +499,18 @@ public abstract class GLWindow implements RenderContext {
 		if (glfwKeyCallback != null) glfwKeyCallback.close();
 		if (glfwFramebufferSizeCallback != null) glfwFramebufferSizeCallback.close();
         if (glfwWindowCloseCallback != null) glfwWindowCloseCallback.close();
+		RecordingSession recording = activeRecording;
+		if (recording != null) {
+			activeRecording = null;
+			endRecordingSession(recording);
+			if (recording.encodeThread != null) {
+				try {
+					recording.encodeThread.join(30_000);
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+				}
+			}
+		}
 		resourceManager.dispose();
 		if (errorCallback != null) errorCallback.free();
 	}
@@ -567,6 +679,26 @@ public abstract class GLWindow implements RenderContext {
 			}
 
 			return new Rectangle(pX.get(0), pY.get(0), pWidth.get(0), pHeight.get(0));
+		}
+	}
+
+	private static final class RecordingSession {
+		final Path path;
+		final AWTSequenceEncoder encoder;
+		final ArrayBlockingQueue<BufferedImage> queue = new ArrayBlockingQueue<>(30);
+		Thread encodeThread;
+		final Timer durationTracker;
+		volatile boolean stopping;
+		boolean frameDropWarned;
+
+		RecordingSession(Path path, AWTSequenceEncoder encoder, Timer durationTracker) {
+			this.path = path;
+			this.encoder = encoder;
+			this.durationTracker = durationTracker;
+		}
+
+		boolean isExpired() {
+			return durationTracker.hasElapsed();
 		}
 	}
 }

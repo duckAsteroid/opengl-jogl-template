@@ -24,12 +24,12 @@ public class Waveform {
 	}
 
 	public double sinewave(RenderContext ctx) {
-		return (amplitude * Math.sin(2 * Math.PI * frequency * ctx.getTimer().elapsed() + phase)) + offset;
+		return (amplitude * Math.sin(2 * Math.PI * frequency * ctx.getClock().elapsed() + phase)) + offset;
 	}
 
 	public double sawtooth(RenderContext ctx) {
 		double period = 1.0 / frequency; // Calculate the period
-		double x = ctx.getTimer().elapsed() % period; // Get the time within the current period
+		double x = ctx.getClock().elapsed() % period; // Get the time within the current period
 		return 2 * amplitude * (x / period - 0.5);
 	}
 

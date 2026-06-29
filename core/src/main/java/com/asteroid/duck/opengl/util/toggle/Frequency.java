@@ -25,7 +25,7 @@ public class Frequency implements Toggle {
 
 	@Override
 	public boolean isRenderEnabled(RenderContext ctx) {
-		double elapsedTime = ctx.getTimer().elapsed();
+		double elapsedTime = ctx.getClock().elapsed();
 		double cycleTime = elapsedTime % period;
 		return cycleTime <= dwell;
 	}

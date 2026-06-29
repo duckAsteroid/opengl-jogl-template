@@ -3,18 +3,34 @@
 ## Key input
 
 ```java
-// init():
+// Alphabetic keys (char-based factory):
 ctx.getKeyRegistry().registerKeyAction(
     KeyCombination.simple('A'),
     () -> { /* runs on GL thread when A is pressed */ },
     "Human-readable description for help display");
 
-// With modifiers:
+// Alphabetic key with modifiers:
 ctx.getKeyRegistry().registerKeyAction(
     KeyCombination.simpleWithMods('A', "SHIFT"),
     () -> { /* Shift+A */ },
     "Description");
+
+// Non-alphabetic keys (name-based factory — uses the GLFW constant with GLFW_KEY_ stripped):
+ctx.getKeyRegistry().registerKeyAction(
+    KeyCombination.named("PRINT_SCREEN"),
+    this::captureNextFrame,
+    "Save screenshot");
+
+// Non-alphabetic key with modifiers:
+ctx.getKeyRegistry().registerKeyAction(
+    KeyCombination.namedWithMods("PRINT_SCREEN", "SHIFT"),
+    () -> startRecording(Duration.ofSeconds(5)),
+    "Record 5s video");
 ```
+
+`KeyCombination.named(String)` looks up the GLFW key by the name after stripping `GLFW_KEY_`
+(e.g. `"PRINT_SCREEN"` → `GLFW_KEY_PRINT_SCREEN`, `"ESCAPE"` → `GLFW_KEY_ESCAPE`).
+Use `named`/`namedWithMods` for any key that doesn't have a printable character equivalent.
 
 ---
 

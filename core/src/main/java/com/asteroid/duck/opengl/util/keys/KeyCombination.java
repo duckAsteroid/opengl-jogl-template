@@ -60,6 +60,19 @@ public record KeyCombination(Set<Key> keys, Set<Key> modifiers) implements Compa
 	}
 
 	/**
+	 * Create a combination for a named key held with one or more named modifier keys.
+	 *
+	 * @param name the GLFW-derived key name (e.g. {@code "PRINT_SCREEN"})
+	 * @param mods GLFW modifier names (e.g. {@code "SHIFT"}, {@code "CONTROL"})
+	 * @return a {@link KeyCombination} matching the key pressed with all listed modifiers
+	 */
+	public static KeyCombination namedWithMods(String name, String... mods) {
+		Key keyed = Keys.instance().keyForName(name);
+		Set<Key> modSet = Arrays.stream(mods).map(m -> Keys.instance().keyForName(m)).collect(Collectors.toSet());
+		return new KeyCombination(Set.of(keyed), modSet);
+	}
+
+	/**
 	 * Format this combination as a compact human-readable string suitable for console output.
 	 *
 	 * <p>Example: {@code "A[SHIFT|CONTROL]"} for Ctrl+Shift+A, or just {@code "F"} for an

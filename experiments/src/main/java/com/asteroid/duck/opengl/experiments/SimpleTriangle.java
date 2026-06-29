@@ -71,7 +71,7 @@ public class SimpleTriangle implements Experiment {
 
     @Override
     public void init(RenderContext ctx) throws IOException {
-        accumulator = new AccumulatorFunction(ctx.getTimer());
+        accumulator = new AccumulatorFunction(ctx.getClock());
         accumulator.setMaxSpeed(100.0);
         ctx.getKeyRegistry().registerKeyAction(KeyCombination.simple('Q'), () -> changeSpeed(2.0), "Much Faster");
         ctx.getKeyRegistry().registerKeyAction(KeyCombination.simpleWithMods('Q',"SHIFT"), () -> changeSpeed(1.1), "Bit Faster");

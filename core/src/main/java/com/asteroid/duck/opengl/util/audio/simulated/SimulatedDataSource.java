@@ -5,8 +5,8 @@ import com.asteroid.duck.opengl.util.stats.StatsFactory;
 import com.asteroid.duck.opengl.util.audio.AudioDataSource;
 import com.asteroid.duck.opengl.util.audio.LineAcquirer;
 import com.asteroid.duck.opengl.util.timer.TimeSource;
-import com.asteroid.duck.opengl.util.timer.Timer;
-import com.asteroid.duck.opengl.util.timer.TimerImpl;
+import com.asteroid.duck.opengl.util.timer.Clock;
+import com.asteroid.duck.opengl.util.timer.ClockImpl;
 
 import javax.sound.sampled.*;
 import java.io.IOException;
@@ -18,14 +18,14 @@ import static com.asteroid.duck.opengl.util.audio.LineAcquirer.IDEAL;
 
 public class SimulatedDataSource implements AudioDataSource {
 
-	private final Timer timer;
+	private final Clock timer;
 	private final StereoDataSource source;
 	private AudioFormat format = null;
 	private int limit;
 	private boolean running;
 	private double lastRead;
 
-	public SimulatedDataSource(Timer timer, StereoDataSource source) {
+	public SimulatedDataSource(Clock timer, StereoDataSource source) {
 		this.timer = timer;
 		this.source = source;
 	}
@@ -123,7 +123,7 @@ public class SimulatedDataSource implements AudioDataSource {
 	public static void main(String[] args) throws LineUnavailableException {
 		DataLine.Info info = new DataLine.Info(SourceDataLine.class, IDEAL);
 		// TODO Lets try to play our simulated audio via output to hear it...
-		TimerImpl t = new TimerImpl(TimeSource.systemNanoTimeInstance());
+		ClockImpl t = new ClockImpl(TimeSource.systemNanoTimeInstance());
 		t.reset();
 		t.setPaused(false);
 		LineAcquirer laq = new LineAcquirer();

@@ -1,34 +1,35 @@
 package com.asteroid.duck.opengl.util.timer.function;
 
-import com.asteroid.duck.opengl.util.timer.Timer;
+import com.asteroid.duck.opengl.util.timer.Clock;
 
 /**
- * Represents a linear function that calculates a value based on a timer source.
- * The function uses a maximum Y value and a frequency to determine the output.
- * The output rises from 0 to max Y linearly every period.
- * In other words a saw tooth function.
+ * Calculates a sawtooth (linear ramp) value driven by a {@link Clock}.
+ *
+ * <p>Within each period the output rises linearly from {@code 0} to {@link #getMaxY()},
+ * then resets. The period is {@code 1 / frequency} seconds.</p>
  */
 public class LinearFunction {
-    private final Timer source;
+    private final Clock source;
     private double maxY;
     private double frequency;
 
     /**
-     * Create a linear function driven by the given timer, with default maxY=0 and frequency=0.
-     * Call {@link #setMaxY} and {@link #setFrequency} before using {@link #value()}.
+     * Create a linear function driven by the given clock, with default {@code maxY=0} and
+     * {@code frequency=0}. Call {@link #setMaxY} and {@link #setFrequency} before using
+     * {@link #value()}.
      *
-     * @param source the timer whose {@link Timer#elapsed()} drives the function
+     * @param source the clock whose {@link Clock#elapsed()} drives the function; must not be {@code null}
      */
-    public LinearFunction(Timer source) {
+    public LinearFunction(Clock source) {
         this.source = source;
     }
 
     /**
-     * Returns the timer that drives this function's elapsed time.
+     * Returns the clock that drives this function.
      *
-     * @return the source timer; never {@code null}
+     * @return the source clock; never {@code null}
      */
-    public Timer getSource() {
+    public Clock getSource() {
         return source;
     }
 
@@ -68,11 +69,9 @@ public class LinearFunction {
         this.frequency = frequency;
     }
     /**
-     * Calculates the value of the linear function based on the timer source.
-     * The value is determined by the progress within the current period,
-     * scaled by the maximum Y value.
+     * Evaluate the sawtooth function at the clock's current elapsed time.
      *
-     * @return The calculated value of the function.
+     * @return the current ramp value in [0, {@link #getMaxY()}]
      */
     public double value() {
         double period = 1.0 / frequency;

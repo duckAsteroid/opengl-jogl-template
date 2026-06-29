@@ -3,13 +3,14 @@ package com.asteroid.duck.opengl.util;
 import com.asteroid.duck.opengl.util.events.ResizeListener;
 import com.asteroid.duck.opengl.util.keys.KeyRegistry;
 import com.asteroid.duck.opengl.util.resources.manager.ResourceManager;
-import com.asteroid.duck.opengl.util.timer.Timer;
+import com.asteroid.duck.opengl.util.timer.Clock;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
 
 import java.awt.*;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Random;
 
 /**
@@ -49,7 +50,7 @@ public interface RenderContext {
 	 * The timer in operation - used for elapsed time etc.
 	 * @return the timer instance
 	 */
-	Timer getTimer();
+	Clock getClock();
 
 	/**
      * A resource manager for handling resources like
@@ -157,4 +158,35 @@ public interface RenderContext {
 	default void captureNextFrame() {
 		captureNextFrame(Path.of("screenshot-" + System.currentTimeMillis() + ".png"));
 	}
+
+	/**
+	 * Start recording the render output as an H.264/MP4 video for the specified duration.
+	 *
+	 * <p>Encoding is performed on a background thread so the render loop is not stalled.
+	 * If a recording is already in progress the new request is ignored. The MP4 file is
+	 * finalised automatically when the duration expires; call {@link #stopRecording()} to
+	 * end it early.</p>
+	 *
+	 * <p>Safe to call from any thread (including key callbacks).</p>
+	 *
+	 * @param destination path for the MP4 output file
+	 * @param duration    how long to record; capped at 60 seconds
+	 */
+	default void startRecording(Path destination, Duration duration) { }
+
+	/**
+	 * Convenience overload: records to a timestamped MP4 in the working directory.
+	 *
+	 * @param duration how long to record; capped at 60 seconds
+	 * @see #startRecording(Path, Duration)
+	 */
+	default void startRecording(Duration duration) {
+		startRecording(Path.of("recording-" + System.currentTimeMillis() + ".mp4"), duration);
+	}
+
+	/**
+	 * Stop an in-progress recording before its duration expires.
+	 * No-op if no recording is active.
+	 */
+	default void stopRecording() { }
 }

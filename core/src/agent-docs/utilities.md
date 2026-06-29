@@ -19,6 +19,87 @@ The core module includes reusable utility renderers that compose well with `Rend
 | `AudioWave` | `com.asteroid.duck.opengl.util.wave` | Real-time stereo audio waveform rendered as a horizontal line strip. | Scrolling waveform HUD overlay. | `setClearBeforeRender(false)` to skip `glClear` when compositing over another renderer; `setChannelMode(int)` (`CHANNEL_BLEND/LEFT/RIGHT/STEREO`); `setAmplitudeFunction(fn)`; `setLineWidth(float)`; `setLineColour(Vector4f)`. Requires `PboAudioSink`; pass `AUDIO_BUFFER_SIZE` to `PboAudioSink.create`. `PboAudioSink.getHead()` returns a stereo-frame (texel) index — the vertex shader passes it directly to `texelFetch`. |
 | `RadialWave` | `com.asteroid.duck.opengl.util.wave` | Real-time stereo audio waveform rendered as a polar (radial) line loop. | Circular visualiser, clock-face waveform. | `setClearBeforeRender(false)` to skip `glClear` when compositing; `setChannelMode(int)` (`CHANNEL_BLEND/LEFT/RIGHT`); `setRadius(float)`; `setAmplitudeFunction(AmplitudeFunction)` (same scale as `AudioWave` — `constant(1f)` = full-scale radial excursion); `setCenter(Vector2f)`; `setLineWidth(float)`; `setLineColour(Vector4f)`. Requires `PboAudioSink`; pass `AUDIO_BUFFER_SIZE` to `PboAudioSink.create`. `PboAudioSink.getHead()` returns a stereo-frame (texel) index — the vertex shader passes it directly to `texelFetch`. |
 
+---
+
+## Timer / Clock library (`com.asteroid.duck.opengl.util.timer`)
+
+### Core types
+
+| Class / Interface | Role |
+|---|---|
+| `Clock` | Interface: `double elapsed()` — seconds since the clock started. |
+| `ClockImpl` | Full mutable clock: pause, step, reset, configurable time source. Backed by a `TimeSource`. |
+| `StaticClock` | Immutable frozen snapshot record `(double elapsed, double now)`. Returned by `ClockImpl.snapshot()`. |
+| `Timer` | Immutable record `(Clock clock, double startTime, double durationSeconds)` — tracks a duration against a clock. |
+| `TimeSource` | Named `Callable<Double>` factory for standard time sources. |
+
+### Getting a clock
+
+Inside any `RenderedItem`, always obtain the clock from `RenderContext`:
+
+```java
+Clock clock = ctx.getClock();
+double t = clock.elapsed();   // seconds since the application started
+```
+
+`ClockImpl` and `TimeSource` are used by the window implementation (`Main`) to create and drive
+the clock — experiments and utility renderers should never construct their own `ClockImpl`.
+
+### Tracking a duration with `Timer`
+
+```java
+// Create a timer that fires after 5 seconds:
+Timer countdown = ctx.getClock().track(Duration.ofSeconds(5));
+
+// In doRender():
+if (countdown.hasElapsed()) { /* time is up */ }
+double pct      = countdown.progress();   // 0.0 → 1.0
+double elapsed  = countdown.elapsed();    // seconds since the timer was created
+double remaining = countdown.remaining(); // seconds until the timer fires
+```
+
+`Timer` is a record — it captures `startTime` at construction and never mutates. Create a new
+`Timer` each time you need to restart the countdown.
+
+### Clock control (ClockImpl)
+
+```java
+clock.setPaused(true);    // freeze elapsed time
+clock.togglePaused();     // flip pause state
+clock.reset();            // restart from zero
+clock.step(0.016);        // advance by a fixed delta (useful in tests)
+```
+
+### Snapshots
+
+```java
+StaticClock snap = clock.snapshot();
+// snap.elapsed() and snap.now() are frozen at the capture instant
+```
+
+### Time-driven function helpers (`timer.function` subpackage)
+
+| Class | Output | Key setters |
+|---|---|---|
+| `WaveFunction` | `sin(2π × freq × (t + phase))` in [–1, 1] | `setFrequency(double)`, `setPhase(double)` |
+| `LinearFunction` | Sawtooth ramp [0, maxY] at given frequency | `setFrequency(double)`, `setMaxY(double)` |
+| `AccumulatorFunction` | Monotonically growing value (delta × speed) | `setSpeed(double)`, `setMinSpeed`, `setMaxSpeed` |
+
+```java
+WaveFunction wave = new WaveFunction(ctx.getClock(), 0.5);   // 0.5 Hz sine
+double v = wave.value();                                      // −1 … 1
+
+LinearFunction ramp = new LinearFunction(ctx.getClock());
+ramp.setFrequency(1.0);
+ramp.setMaxY(360.0);      // 0→360° sawtooth once per second
+
+AccumulatorFunction spin = new AccumulatorFunction(ctx.getClock());
+spin.setSpeed(90.0);      // degrees per second
+double angle = spin.value();
+```
+
+---
+
 ## Text overlay with `StringRenderer`
 
 Text vertices sit at the origin in string space. Position, rotation, and scale are all applied via

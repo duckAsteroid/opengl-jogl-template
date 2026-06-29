@@ -43,7 +43,7 @@ public class LineAcquirer {
   public void init(RenderContext ctx, AudioFormat ideal)  {
     if (System.getProperty("simulate.audio", "false").equalsIgnoreCase("true")) {
       StereoDataSource audio = getSampledWaveformData();
-      sources.add(new SimulatedDataSource(ctx.getTimer(), audio));
+      sources.add(new SimulatedDataSource(ctx.getClock(), audio));
     }
     List<MixerLine> mixerLines = allLinesMatching(ideal).toList();
     mixerLines.stream().map(MixerLine::getTargetDataLine)

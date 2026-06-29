@@ -4,10 +4,10 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class TimerImplTest {
+public class ClockImplTest {
 	private Double timestamp = 0.0;
 
-	TimerImpl subject = new TimerImpl(this::getTime);
+	ClockImpl subject = new ClockImpl(this::getTime);
 
 	private Double getTime() {
 		return timestamp;

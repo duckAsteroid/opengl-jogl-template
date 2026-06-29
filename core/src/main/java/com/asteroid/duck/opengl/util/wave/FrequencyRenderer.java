@@ -125,7 +125,7 @@ public abstract class FrequencyRenderer implements RenderedItem, FrequencySink {
      * texels. Must be called on the GL thread inside the subclass {@code init()}.
      *
      * <p>Also registers the texture for automatic disposal with the
-     * {@link com.asteroid.duck.opengl.util.resources.ResourceManager} so the window can
+     * {@link com.asteroid.duck.opengl.util.resources.manager.ResourceManager} so the window can
      * clean up even if {@link #disposeFftTexture()} is never called explicitly.</p>
      *
      * @param ctx    render context (used to register auto-disposal)

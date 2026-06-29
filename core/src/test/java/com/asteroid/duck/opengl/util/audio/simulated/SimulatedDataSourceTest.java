@@ -1,6 +1,6 @@
 package com.asteroid.duck.opengl.util.audio.simulated;
 
-import com.asteroid.duck.opengl.util.timer.Timer;
+import com.asteroid.duck.opengl.util.timer.Clock;
 import org.junit.jupiter.api.Test;
 
 import javax.sound.sampled.LineUnavailableException;
@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class SimulatedDataSourceTest {
 	private double elapsedTime = 0;
 
-	private Timer simulatedTimer = new Timer() {
+	private Clock simulatedTimer = new Clock() {
 
 		@Override
 		public double elapsed() {

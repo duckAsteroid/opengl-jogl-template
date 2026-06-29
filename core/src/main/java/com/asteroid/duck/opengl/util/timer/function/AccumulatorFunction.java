@@ -1,12 +1,12 @@
 package com.asteroid.duck.opengl.util.timer.function;
 
-import com.asteroid.duck.opengl.util.timer.Timer;
+import com.asteroid.duck.opengl.util.timer.Clock;
 
 import java.util.Objects;
 
 /**
  * Produces a monotonically increasing value by accumulating scaled time deltas from a
- * {@link Timer} source.
+ * {@link Clock} source.
  *
  * <p>Each call to {@link #value()} computes how much time has elapsed since the previous call,
  * multiplies it by the current {@link #getSpeed() speed}, and adds the result to an internal
@@ -19,7 +19,7 @@ import java.util.Objects;
  * against runaway values.</p>
  */
 public class AccumulatorFunction {
-    private final Timer source;
+    private final Clock source;
     private double speed = 1.0;
     private double accumulated;
     private double lastElapsed;
@@ -27,23 +27,23 @@ public class AccumulatorFunction {
     private double maxSpeed = 100.0;
 
     /**
-     * Create an accumulator backed by the given timer. The accumulator starts at zero and begins
+     * Create an accumulator backed by the given clock. The accumulator starts at zero and begins
      * advancing on the first call to {@link #value()}.
      *
-     * @param source the timer that supplies elapsed-time deltas; must not be {@code null}
+     * @param source the clock that supplies elapsed-time deltas; must not be {@code null}
      */
-    public AccumulatorFunction(Timer source) {
+    public AccumulatorFunction(Clock source) {
         Objects.requireNonNull(source);
         this.source = source;
         lastElapsed = accumulated = source.elapsed();
     }
 
     /**
-     * Returns the upstream timer that drives this accumulator.
+     * Returns the clock that drives this accumulator.
      *
-     * @return the source timer; never {@code null}
+     * @return the source clock; never {@code null}
      */
-    public Timer getSource() {
+    public Clock getSource() {
         return source;
     }
 

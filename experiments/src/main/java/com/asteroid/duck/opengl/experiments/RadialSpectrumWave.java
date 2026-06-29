@@ -104,9 +104,6 @@ public class RadialSpectrumWave implements Experiment {
             lineAcquirer.previous();
             audioReader.setLine(lineAcquirer.getSelectedSource());
         }, "Switch to the previous audio input");
-        ctx.getKeyRegistry().registerKeyAction(KeyCombination.simple('P'),
-                ctx::captureNextFrame,
-                "Save screenshot");
         ctx.getKeyRegistry().registerKeyAction(KeyCombination.named("RIGHT_BRACKET"), () ->
                 radial.withRepeats(Math.min(16, radial.getRepeats() + 1)),
                 "Increase spectrum repeats");
