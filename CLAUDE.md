@@ -80,6 +80,34 @@ To add a new experiment: implement `Experiment`, add the fully-qualified class n
 
 `AudioReader` runs a producer thread that writes into a GPU-mapped `ByteBuffer` via a circular buffer (`RollingFloatBuffer`). The render thread reads only the write-head position. This is the only intentionally concurrent code; everything else is single-threaded on the GL thread.
 
+### Transformable renderers
+
+`Transformable` (`util/Transformable.java`) is a mix-in interface for renderers that accept a per-frame `Matrix4f` applied to all output vertex positions before rasterisation. The transform is in NDC space (origin = screen centre); the matrix is copied internally so callers may reuse it freely.
+
+Renderers that implement `Transformable`:
+
+| Class | Notes |
+|---|---|
+| `AudioWave` | Waveform strip — rotate, scale, shear |
+| `RadialWave` | Radial waveform circle |
+| `FrequencyRenderer` (and subclasses) | Covers `SpectrumAnalyser` and `RadialSpectrumAnalyser` |
+
+All implementations are thread-safe for `setTransform` — the new matrix is applied on the GL thread at the start of the next frame.
+
+```java
+// Slow rotation with beat-driven scale pulse:
+float angle = 0f;
+// each frame:
+angle += 0.005f;
+float pulse = 1.0f + 0.15f * beats.getBeatStrength(0);
+renderer.setTransform(new Matrix4f().rotateZ(angle).scale(pulse));
+
+// Reset to identity:
+renderer.setTransform(new Matrix4f());
+```
+
+`AudioWave` and `RadialWave` route `setTransform` through a `RenderActionQueue` (strict ordering, last-write-wins). `FrequencyRenderer` subclasses use a `volatile` reference (same visibility guarantee, but no queuing — concurrent callers race; the last store wins).
+
 ### Screenshot and video capture
 
 `GLWindow` registers **no** key bindings. All bindings — including screenshot and recording — are wired in `Main.registerKeys()`:

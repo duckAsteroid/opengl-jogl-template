@@ -170,7 +170,11 @@ audioWave.setLineWidth(4.0f);
 audioWave.setLineColour(StandardColors.CYAN.color);
 audioWave.setAmplitudeFunction(AmplitudeFunction.constant(10f));   // flat envelope
 audioWave.setAmplitudeFunction(AmplitudeFunction.ellipse(10f));    // tapers to 0 at edges
+audioWave.setTransform(new Matrix4f().rotateZ(0.1f).translate(0, 0.3f, 0));  // tilt + shift up
+audioWave.setTransform(new Matrix4f());   // reset to identity
 ```
+
+`setTransform` is safe to call from any thread. The matrix is applied in NDC space (origin = screen centre) to every vertex position on the next frame.
 
 ---
 
@@ -212,7 +216,12 @@ radialWave.setRadius(0.5f);                               // base circle radius 
 radialWave.setAmplitudeFunction(AmplitudeFunction.constant(1f));  // flat envelope (default)
 radialWave.setAmplitudeFunction(AmplitudeFunction.ellipse(1f));   // tapers to 0 at the seam
 radialWave.setCenter(new Vector2f(0f, 0f));               // NDC centre (default = screen centre)
+radialWave.setTransform(new Matrix4f().rotateZ(angle).scale(pulse));  // spin + scale
+radialWave.setTransform(new Matrix4f());   // reset to identity
 ```
+
+`setTransform` is safe to call from any thread. The matrix is applied after the aspect-ratio
+correction, so a rotation matrix produces a clean visual rotation of the already-round circle.
 
 `RadialWave` automatically corrects for non-square viewports via an internal aspect-ratio
 uniform — the circle stays visually round as the window is resized.
@@ -375,6 +384,27 @@ analyser.setClearBeforeRender(false);   // draw on top of previously rendered co
 Default is `true`. Set to `false` to layer the spectrum under other renderers (e.g. when
 `SpectrumWave` renders beat-detection letters on top of the bars without clearing in between).
 
+### Transform (`Transformable`)
+
+`SpectrumAnalyser` implements `Transformable` — call `setTransform(Matrix4f)` at any time from
+any thread to apply a matrix to all output vertex positions (bars, fill area, and peak indicators).
+The matrix is read once per frame on the GL thread. Default: identity (no transform).
+
+```java
+// Slow rotation with beat-driven scale pulse:
+float angle = 0f;
+// each frame:
+angle += 0.005f;
+float pulse = 1.0f + 0.15f * beats.getBeatStrength(0);
+analyser.setTransform(new Matrix4f().rotateZ(angle).scale(pulse));
+
+// Reset to identity:
+analyser.setTransform(new Matrix4f());
+```
+
+The matrix operates in NDC space (origin = screen centre). Applies equally to both `BARS` and
+`FILLED` render modes, and to the peak-hold indicators.
+
 ### Signal path
 
 ```
@@ -496,6 +526,28 @@ radial.setClearBeforeRender(false);   // composite over previously rendered cont
 ```
 
 Default is `true`.
+
+### Transform (`Transformable`)
+
+`RadialSpectrumAnalyser` implements `Transformable` — call `setTransform(Matrix4f)` at any time
+from any thread to apply a matrix to all output vertex positions (fill shape and peak line).
+The matrix is read once per frame on the GL thread. Default: identity (no transform).
+
+```java
+// Slow rotation with beat-driven scale pulse:
+float angle = 0f;
+// each frame:
+angle += 0.005f;
+float pulse = 1.0f + 0.15f * beats.getBeatStrength(0);
+radial.setTransform(new Matrix4f().rotateZ(angle).scale(pulse));
+
+// Reset to identity:
+radial.setTransform(new Matrix4f());
+```
+
+The matrix is applied in NDC space (origin = screen centre), after the aspect-ratio correction
+already embedded in the vertex positions — a rotation matrix therefore produces a clean visual
+rotation of the already-round shape.
 
 ### Signal path
 

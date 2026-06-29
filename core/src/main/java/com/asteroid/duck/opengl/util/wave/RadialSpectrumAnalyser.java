@@ -2,6 +2,7 @@ package com.asteroid.duck.opengl.util.wave;
 
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.audio.analysis.FrequencyProcessor;
+import org.joml.Matrix4f;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderSource;
 import com.asteroid.duck.opengl.util.resources.shader.Uniform;
@@ -106,6 +107,7 @@ public class RadialSpectrumAnalyser extends FrequencyRenderer {
             uniform float uOuterHeight;
             uniform float uInnerDepth;
             uniform float uAspect;
+            uniform mat4  uTransform;
 
             out float vFillT;   // 0 = inner tip, 1 = outer tip
 
@@ -136,7 +138,7 @@ public class RadialSpectrumAnalyser extends FrequencyRenderer {
                 vFillT = isOuter ? 1.0 : 0.0;
 
                 vec2 dir = vec2(cos(angle), sin(angle));
-                gl_Position = vec4(dir.x * radius / uAspect, dir.y * radius, 0.0, 1.0);
+                gl_Position = uTransform * vec4(dir.x * radius / uAspect, dir.y * radius, 0.0, 1.0);
             }
         """;
 
@@ -167,6 +169,7 @@ public class RadialSpectrumAnalyser extends FrequencyRenderer {
             uniform float uBaseRadius;
             uniform float uOuterHeight;
             uniform float uAspect;
+            uniform mat4  uTransform;
 
             const float PI = 3.14159265358979;
 
@@ -182,7 +185,7 @@ public class RadialSpectrumAnalyser extends FrequencyRenderer {
                 float radius = uBaseRadius + peak * uOuterHeight;
 
                 vec2 dir = vec2(cos(angle), sin(angle));
-                gl_Position = vec4(dir.x * radius / uAspect, dir.y * radius, 0.0, 1.0);
+                gl_Position = uTransform * vec4(dir.x * radius / uAspect, dir.y * radius, 0.0, 1.0);
             }
         """;
 
@@ -216,10 +219,12 @@ public class RadialSpectrumAnalyser extends FrequencyRenderer {
 
     private ShaderProgram fillShader;
     private ShaderProgram peakShader;
-    private Uniform<Float>   uFillAspect;
-    private Uniform<Float>   uPeakAspect;
-    private Uniform<Integer> uFillRepeats;
-    private Uniform<Integer> uPeakRepeats;
+    private Uniform<Float>    uFillAspect;
+    private Uniform<Float>    uPeakAspect;
+    private Uniform<Integer>  uFillRepeats;
+    private Uniform<Integer>  uPeakRepeats;
+    private Uniform<Matrix4f> uFillTransform;
+    private Uniform<Matrix4f> uPeakTransform;
 
     // ── Per-frame state ──────────────────────────────────────────────────────────
     // magnitudes[], peaks[], dwellCounters[] inherited from FrequencyRenderer
@@ -372,6 +377,7 @@ public class RadialSpectrumAnalyser extends FrequencyRenderer {
         uploadFftTexture();
 
         float aspect = currentAspect;
+        Matrix4f t = transform;
         glBindVertexArray(emptyVaoId);
 
         int currentRepeats = repeats;
@@ -380,6 +386,7 @@ public class RadialSpectrumAnalyser extends FrequencyRenderer {
         fillShader.use(ctx);
         uFillAspect.set(aspect);
         uFillRepeats.set(currentRepeats);
+        uFillTransform.set(t);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, numRingVerts * 2 + 2);
 
         // 4. Draw the smooth peak-hold line (GL_LINE_LOOP closes it back to vertex 0 automatically).
@@ -387,6 +394,7 @@ public class RadialSpectrumAnalyser extends FrequencyRenderer {
         peakShader.use(ctx);
         uPeakAspect.set(aspect);
         uPeakRepeats.set(currentRepeats);
+        uPeakTransform.set(t);
         glDrawArrays(GL_LINE_LOOP, 0, numRingVerts);
     }
 
@@ -429,6 +437,8 @@ public class RadialSpectrumAnalyser extends FrequencyRenderer {
         uFillAspect.set(1.0f);
         uFillRepeats  = fillShader.uniforms().get("uRepeats", Integer.class);
         uFillRepeats.set(repeats);
+        uFillTransform = fillShader.uniforms().get("uTransform", Matrix4f.class);
+        uFillTransform.set(new Matrix4f());
 
         // ── Peak shader ──────────────────────────────────────────────────────────
         peakShader = ShaderProgram.compile(
@@ -445,5 +455,7 @@ public class RadialSpectrumAnalyser extends FrequencyRenderer {
         uPeakAspect.set(1.0f);
         uPeakRepeats  = peakShader.uniforms().get("uRepeats", Integer.class);
         uPeakRepeats.set(repeats);
+        uPeakTransform = peakShader.uniforms().get("uTransform", Matrix4f.class);
+        uPeakTransform.set(new Matrix4f());
     }
 }

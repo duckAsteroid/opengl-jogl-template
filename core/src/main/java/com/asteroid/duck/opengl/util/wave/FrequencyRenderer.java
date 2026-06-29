@@ -2,8 +2,10 @@ package com.asteroid.duck.opengl.util.wave;
 
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.RenderedItem;
+import com.asteroid.duck.opengl.util.Transformable;
 import com.asteroid.duck.opengl.util.audio.analysis.FrequencyProcessor;
 import com.asteroid.duck.opengl.util.audio.analysis.FrequencySink;
+import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
 import java.nio.FloatBuffer;
@@ -22,6 +24,18 @@ import static org.lwjgl.system.MemoryUtil.*;
  * {@link RadialSpectrumAnalyser}) handle the coordinate-system-specific rendering —
  * Cartesian bars/fill or polar radial shape — without duplicating shared state.</p>
  *
+ * <p>Implements {@link Transformable}: call {@link #setTransform} at any time (from any
+ * thread) to apply a {@link org.joml.Matrix4f} to all output vertex positions. The matrix
+ * is read once per frame on the GL thread. The default is the identity matrix (no transform).
+ * Example — slow rotation with a beat-driven scale pulse:</p>
+ * <pre>{@code
+ * float angle = 0f;
+ * // each frame:
+ * angle += 0.005f;
+ * float pulse = 1.0f + 0.15f * beats.getBeatStrength(0);
+ * spectrumAnalyser.setTransform(new Matrix4f().rotateZ(angle).scale(pulse));
+ * }</pre>
+ *
  * <h2>Subclass contract</h2>
  * <ol>
  *   <li>Call {@link #initFftTexture(RenderContext, int)} in {@code init()} with the
@@ -31,9 +45,11 @@ import static org.lwjgl.system.MemoryUtil.*;
  *       start of each {@code doRender()} before issuing draw calls.</li>
  *   <li>Call {@link #disposeFftTexture()} inside {@code dispose()} to free the texture
  *       and native upload buffer.</li>
+ *   <li>Read {@link #transform} once per frame and push it to all {@code uTransform}
+ *       shader uniforms before issuing draw calls.</li>
  * </ol>
  */
-public abstract class FrequencyRenderer implements RenderedItem, FrequencySink {
+public abstract class FrequencyRenderer implements RenderedItem, FrequencySink, Transformable {
 
     /** Default peak-hold dwell ({@value} frames ≈ 0.5 s at 60 fps). */
     public static final int   DEFAULT_DWELL_FRAMES      = 30;
@@ -72,6 +88,11 @@ public abstract class FrequencyRenderer implements RenderedItem, FrequencySink {
     /** Colour of the peak-hold indicator; defaults to white. Set before {@code init()}. */
     protected Vector3f colorPeak = new Vector3f(1.0f, 1.0f, 1.0f);
 
+    // ── Transform ────────────────────────────────────────────────────────────────
+
+    /** Transform matrix applied to all output vertex positions; identity by default. */
+    protected volatile Matrix4f transform = new Matrix4f();
+
     // ── GL resources owned by this class ─────────────────────────────────────────
 
     /**
@@ -93,6 +114,21 @@ public abstract class FrequencyRenderer implements RenderedItem, FrequencySink {
         this.magnitudes    = new float[numBins];
         this.peaks         = new float[numBins];
         this.dwellCounters = new int[numBins];
+    }
+
+    // ── Transformable ────────────────────────────────────────────────────────────
+
+    /**
+     * Sets the transform matrix applied to all output vertex positions.
+     * The matrix is copied; the caller may reuse the supplied instance after this call returns.
+     * Safe to call from any thread — the new matrix is read by the render thread at the start
+     * of the next frame.
+     *
+     * @param matrix the transform to apply; pass {@code new Matrix4f()} to reset to identity
+     */
+    @Override
+    public void setTransform(Matrix4f matrix) {
+        this.transform = new Matrix4f(matrix);
     }
 
     // ── FrequencySink ─────────────────────────────────────────────────────────────

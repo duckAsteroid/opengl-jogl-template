@@ -2,6 +2,7 @@ package com.asteroid.duck.opengl.util.wave;
 
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.audio.analysis.FrequencyProcessor;
+import org.joml.Matrix4f;
 import com.asteroid.duck.opengl.util.resources.buffer.BufferDrawMode;
 import com.asteroid.duck.opengl.util.resources.buffer.UpdateHint;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
@@ -133,6 +134,7 @@ public class SpectrumAnalyser extends FrequencyRenderer {
             uniform int uBarDir;          // 0=UP, 1=DOWN, 2=BOTH
             uniform int uLayout;          // 0=NORMAL, 1=REVERSED, 2=MIRRORED
             uniform int uNumBins;
+            uniform mat4 uTransform;
             out float vT;                 // 0 = base colour, magnitude = tip colour
 
             void main() {
@@ -161,7 +163,7 @@ public class SpectrumAnalyser extends FrequencyRenderer {
                     y = isTop ? magnitude * 2.0 - 1.0 : -1.0;
                     vT = isTop ? magnitude : 0.0;
                 }
-                gl_Position = vec4(vertex.x, y, 0.0, 1.0);
+                gl_Position = uTransform * vec4(vertex.x, y, 0.0, 1.0);
             }
         """;
 
@@ -172,6 +174,7 @@ public class SpectrumAnalyser extends FrequencyRenderer {
             uniform int uNumFillSamples;
             uniform int uBarDir;
             uniform int uLayout;
+            uniform mat4 uTransform;
             out float vT;
 
             void main() {
@@ -204,7 +207,7 @@ public class SpectrumAnalyser extends FrequencyRenderer {
                     y = isTop ? magnitude * 2.0 - 1.0 : -1.0;
                     vT = isTop ? magnitude : 0.0;
                 }
-                gl_Position = vec4(x, y, 0.0, 1.0);
+                gl_Position = uTransform * vec4(x, y, 0.0, 1.0);
             }
         """;
 
@@ -230,6 +233,7 @@ public class SpectrumAnalyser extends FrequencyRenderer {
             uniform int uBarDir;
             uniform int uLayout;
             uniform int uNumBins;
+            uniform mat4 uTransform;
 
             void main() {
                 int barIndex = gl_VertexID / 4;
@@ -254,7 +258,7 @@ public class SpectrumAnalyser extends FrequencyRenderer {
                 } else {  // UP: first pair = top tick, second off-screen
                     y = (pairIdx == 0) ? peak * 2.0 - 1.0 : -3.0;
                 }
-                gl_Position = vec4(vertex.x, y, 0.0, 1.0);
+                gl_Position = uTransform * vec4(vertex.x, y, 0.0, 1.0);
             }
         """;
 
@@ -266,6 +270,7 @@ public class SpectrumAnalyser extends FrequencyRenderer {
             uniform int uBarDir;
             uniform int uLayout;
             uniform float uPeakSign;  // +1.0 positive side, −1.0 negative side (BOTH)
+            uniform mat4 uTransform;
 
             void main() {
                 float t = float(gl_VertexID) / float(uNumFillSamples - 1);
@@ -290,7 +295,7 @@ public class SpectrumAnalyser extends FrequencyRenderer {
                 } else {  // UP
                     y = peak * 2.0 - 1.0;
                 }
-                gl_Position = vec4(x, y, 0.0, 1.0);
+                gl_Position = uTransform * vec4(x, y, 0.0, 1.0);
             }
         """;
 
@@ -345,13 +350,17 @@ public class SpectrumAnalyser extends FrequencyRenderer {
     private ShaderProgram peakLineShader;
     private int emptyFillVaoId;
 
-    // ── Runtime uniforms (direction is updated each frame) ───────────────────────
+    // ── Runtime uniforms (direction and transform are updated each frame) ────────
 
-    private Uniform<Integer> uBarsDir;
-    private Uniform<Integer> uPeakBarsDir;
-    private Uniform<Integer> uFillDir;
-    private Uniform<Integer> uPeakLineDir;
-    private Uniform<Float>   uPeakLineSign;
+    private Uniform<Integer>  uBarsDir;
+    private Uniform<Integer>  uPeakBarsDir;
+    private Uniform<Integer>  uFillDir;
+    private Uniform<Integer>  uPeakLineDir;
+    private Uniform<Float>    uPeakLineSign;
+    private Uniform<Matrix4f> uBarsTransform;
+    private Uniform<Matrix4f> uPeakBarsTransform;
+    private Uniform<Matrix4f> uFillTransform;
+    private Uniform<Matrix4f> uPeakLineTransform;
 
     // ── Constructors ─────────────────────────────────────────────────────────────
 
@@ -594,6 +603,8 @@ public class SpectrumAnalyser extends FrequencyRenderer {
         barShader.uniforms().get("uNumBins",  Integer.class).set(numBins);
         uBarsDir = barShader.uniforms().get("uBarDir", Integer.class);
         uBarsDir.set(direction.ordinal());
+        uBarsTransform = barShader.uniforms().get("uTransform", Matrix4f.class);
+        uBarsTransform.set(new Matrix4f());
         barVao.bind(ctx);
         barVao.getVbo().update(UpdateHint.STATIC);
         barVao.getVbo().setup(barShader);
@@ -609,6 +620,8 @@ public class SpectrumAnalyser extends FrequencyRenderer {
         peakBarsShader.uniforms().get("uNumBins",   Integer.class).set(numBins);
         uPeakBarsDir = peakBarsShader.uniforms().get("uBarDir", Integer.class);
         uPeakBarsDir.set(direction.ordinal());
+        uPeakBarsTransform = peakBarsShader.uniforms().get("uTransform", Matrix4f.class);
+        uPeakBarsTransform.set(new Matrix4f());
         peakBarsVao.bind(ctx);
         peakBarsVao.getVbo().update(UpdateHint.STATIC);
         peakBarsVao.getVbo().setup(peakBarsShader);
@@ -616,14 +629,17 @@ public class SpectrumAnalyser extends FrequencyRenderer {
 
     private void renderBars(RenderContext ctx) {
         int dir = direction.ordinal();
+        Matrix4f t = transform;
 
         barShader.use(ctx);
         uBarsDir.set(dir);
+        uBarsTransform.set(t);
         barVao.doRender(ctx);
 
         glLineWidth(peakLineWidth);
         peakBarsShader.use(ctx);
         uPeakBarsDir.set(dir);
+        uPeakBarsTransform.set(t);
         peakBarsVao.doRender(ctx);
     }
 
@@ -660,6 +676,8 @@ public class SpectrumAnalyser extends FrequencyRenderer {
         fillShader.uniforms().get("uNumFillSamples", Integer.class).set(numFillSamples);
         uFillDir = fillShader.uniforms().get("uBarDir", Integer.class);
         uFillDir.set(direction.ordinal());
+        uFillTransform = fillShader.uniforms().get("uTransform", Matrix4f.class);
+        uFillTransform.set(new Matrix4f());
 
         peakLineShader = ShaderProgram.compile(
                 ShaderSource.fromClass(VERTEX_PEAK_LINE, SpectrumAnalyser.class),
@@ -674,15 +692,19 @@ public class SpectrumAnalyser extends FrequencyRenderer {
         uPeakLineSign = peakLineShader.uniforms().get("uPeakSign",  Float.class);
         uPeakLineDir.set(direction.ordinal());
         uPeakLineSign.set(1.0f);
+        uPeakLineTransform = peakLineShader.uniforms().get("uTransform", Matrix4f.class);
+        uPeakLineTransform.set(new Matrix4f());
     }
 
     private void renderFilled(RenderContext ctx) {
         int dir = direction.ordinal();
+        Matrix4f t = transform;
         glBindVertexArray(emptyFillVaoId);
 
         // Smooth filled area: numFillSamples pairs of (base, tip) vertices
         fillShader.use(ctx);
         uFillDir.set(dir);
+        uFillTransform.set(t);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, numFillSamples * 2);
 
         // Continuous peak-hold line(s)
@@ -690,6 +712,7 @@ public class SpectrumAnalyser extends FrequencyRenderer {
         peakLineShader.use(ctx);
         uPeakLineDir.set(dir);
         uPeakLineSign.set(1.0f);
+        uPeakLineTransform.set(t);
         glDrawArrays(GL_LINE_STRIP, 0, numFillSamples);
 
         if (direction == BarDirection.BOTH) {
