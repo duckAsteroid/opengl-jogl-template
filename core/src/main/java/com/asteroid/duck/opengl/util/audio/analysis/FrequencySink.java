@@ -1,4 +1,4 @@
-package com.asteroid.duck.opengl.util.wave;
+package com.asteroid.duck.opengl.util.audio.analysis;
 
 /**
  * Receiver of per-frame FFT magnitude data distributed by {@link FrequencyProcessor}.

@@ -16,6 +16,9 @@ import org.lwjgl.system.Platform;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.asteroid.duck.opengl.util.timer.Clock;
+import com.asteroid.duck.opengl.util.timer.ClockImpl;
+import com.asteroid.duck.opengl.util.timer.TimeSource;
 import com.asteroid.duck.opengl.util.timer.Timer;
 import org.jcodec.api.awt.AWTSequenceEncoder;
 
@@ -73,6 +76,9 @@ public abstract class GLWindow implements RenderContext {
 	private boolean clearScreen = true;
     private boolean windowClosing = false;
 	private final Random random = new Random();
+
+	private final ClockImpl clock = new ClockImpl(TimeSource.glfwGetTimeInstance());
+	private Double desiredUpdatePeriod = null;
 
 	/** Non-null when a screenshot has been requested; cleared after the capture executes. */
 	private volatile Path pendingCapture = null;
@@ -203,6 +209,21 @@ public abstract class GLWindow implements RenderContext {
 		this.clearScreen = clearScreen;
 	}
 
+	@Override
+	public Clock getClock() {
+		return clock;
+	}
+
+	@Override
+	public Double getDesiredUpdatePeriod() {
+		return desiredUpdatePeriod;
+	}
+
+	@Override
+	public void setDesiredUpdatePeriod(Double period) {
+		this.desiredUpdatePeriod = period;
+	}
+
 	/**
 	 * GLFW key callback: translates a raw key event into a {@link KeyCombination} and dispatches
 	 * it to the {@link KeyRegistry}. Only {@code GLFW_PRESS} events are forwarded; held and
@@ -267,16 +288,8 @@ public abstract class GLWindow implements RenderContext {
 	public void displayLoop() throws IOException {
 		// initialize
 		// ---------------
+		clock.reset();
 		init();
-		// Built-in capture shortcuts (registered before subclass keys so they appear first)
-		keyRegistry.registerKeyAction(
-				KeyCombination.named("PRINT_SCREEN"),
-				this::captureNextFrame,
-				"Save screenshot");
-		keyRegistry.registerKeyAction(
-				KeyCombination.namedWithMods("PRINT_SCREEN", "SHIFT"),
-				() -> startRecording(Duration.ofSeconds(5)),
-				"Record 5s video");
 		registerKeys();
 		printInstructions();
 
@@ -285,6 +298,8 @@ public abstract class GLWindow implements RenderContext {
 		{
 			glfwPollEvents();
 
+			double lastUpdatePeriod = clock.update();
+
 			if(clearScreen) {
 				clearScreen();
 			}
@@ -292,6 +307,11 @@ public abstract class GLWindow implements RenderContext {
 			// render
 			// ---------------------
 			render();
+
+			// frame rate cap
+			if (desiredUpdatePeriod != null && desiredUpdatePeriod > lastUpdatePeriod) {
+				sleep(desiredUpdatePeriod - lastUpdatePeriod);
+			}
 
 			// capture before swap so the image matches exactly what hits the screen
 			Path capture = pendingCapture;
@@ -488,6 +508,17 @@ public abstract class GLWindow implements RenderContext {
 		}
 	}
 
+	private void sleep(double seconds) {
+		long ms = (long) (seconds * 1000.0);
+		if (ms > 10) {
+			try {
+				Thread.sleep(ms);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+		}
+	}
+
 	/**
 	 * Free all GLFW callbacks, dispose the {@link ResourceManager}, and release the error callback.
 	 * If a recording is in progress it is finalised before resources are destroyed; this blocks
@@ -604,6 +635,24 @@ public abstract class GLWindow implements RenderContext {
 
 		return bestmonitor;
 	}
+	/**
+	 * Toggle the clock between running and paused.
+	 * While paused the render loop continues but {@link #getClock()} stops advancing.
+	 */
+	protected void toggleClock() {
+		clock.togglePaused();
+	}
+
+	/**
+	 * Advance or rewind the clock by a fixed number of seconds.
+	 * Intended for use while paused to scrub through time.
+	 *
+	 * @param seconds seconds to add; negative values rewind
+	 */
+	protected void stepClock(double seconds) {
+		clock.step(seconds);
+	}
+
 	/**
 	 * Request a clean shutdown by signalling GLFW to close the window.
 	 * The loop exits after the current frame finishes; {@link #dispose()} is still called.

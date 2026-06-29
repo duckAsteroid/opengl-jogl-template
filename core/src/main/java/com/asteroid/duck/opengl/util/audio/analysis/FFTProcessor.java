@@ -1,4 +1,4 @@
-package com.asteroid.duck.opengl.util.wave;
+package com.asteroid.duck.opengl.util.audio.analysis;
 
 import org.jtransforms.fft.FloatFFT_1D;
 

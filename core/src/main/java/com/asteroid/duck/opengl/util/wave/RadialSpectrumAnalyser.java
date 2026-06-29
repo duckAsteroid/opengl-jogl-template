@@ -1,6 +1,7 @@
 package com.asteroid.duck.opengl.util.wave;
 
 import com.asteroid.duck.opengl.util.RenderContext;
+import com.asteroid.duck.opengl.util.audio.analysis.FrequencyProcessor;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderSource;
 import com.asteroid.duck.opengl.util.resources.shader.Uniform;
@@ -17,7 +18,7 @@ import static org.lwjgl.opengl.GL30.*;
  * Real-time audio spectrum analyser rendered as a smooth radial (polar) filled shape.
  *
  * <p>This is a pure renderer: it receives pre-computed normalised magnitude values via
- * {@link FrequencySink#onSpectrum} and renders them as a smooth continuous shape that
+ * {@link com.asteroid.duck.opengl.util.audio.analysis.FrequencySink#onSpectrum} and renders them as a smooth continuous shape that
  * radiates both <em>outward</em> and <em>inward</em> from a base circle. The shape has no
  * hard bar edges — GL linear texture filtering interpolates smoothly between adjacent FFT
  * bins as vertices are sampled around the circle. A separate smooth peak-hold line traces

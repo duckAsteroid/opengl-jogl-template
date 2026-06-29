@@ -92,8 +92,8 @@ ctx.captureNextFrame();
 ctx.captureNextFrame(Path.of("captures/frame.png"));   // parent dirs are created automatically
 ```
 
-`GLWindow` registers `PRINT_SCREEN` → screenshot globally, so **experiments must not** add their
-own screenshot bindings. The default binding is already available to every experiment.
+`GLWindow` registers **no** key bindings. The `PRINT_SCREEN` → screenshot binding is wired in
+`Main.registerKeys()` via `this::captureNextFrame`.
 
 **How it works:**
 - Safe to call from any thread (key callbacks, audio thread, etc.) — the path is stored in a
@@ -121,8 +121,7 @@ ctx.startRecording(Path.of("clips/demo.mp4"), Duration.ofSeconds(10));
 ctx.stopRecording();
 ```
 
-`GLWindow` registers `SHIFT+PRINT_SCREEN` → 5-second recording globally — experiments must not
-add their own recording bindings.
+The `SHIFT+PRINT_SCREEN` → recording binding is likewise wired in `Main.registerKeys()`.
 
 **How it works:**
 - `startRecording()` stores a request in a `volatile` field; the GL thread picks it up at the top
@@ -147,7 +146,7 @@ add their own recording bindings.
 | Resource manager, textures, texture units | [resources.md](resources.md) |
 | Utility renderers, timer/clock library | [utilities.md](utilities.md) |
 | Key input, cross-thread actions, colours | [input.md](input.md) |
-| Audio visualisation (waveform, spectrum) | [audio.md](audio.md) |
+| Audio capture, FFT analysis, beat detection, spectrum rendering | [audio.md](audio.md) |
 
 ---
 

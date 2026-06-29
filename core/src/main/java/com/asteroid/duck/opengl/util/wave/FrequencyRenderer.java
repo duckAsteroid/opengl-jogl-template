@@ -2,6 +2,8 @@ package com.asteroid.duck.opengl.util.wave;
 
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.RenderedItem;
+import com.asteroid.duck.opengl.util.audio.analysis.FrequencyProcessor;
+import com.asteroid.duck.opengl.util.audio.analysis.FrequencySink;
 import org.joml.Vector3f;
 
 import java.nio.FloatBuffer;

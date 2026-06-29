@@ -1,6 +1,7 @@
 package com.asteroid.duck.opengl.util.wave;
 
 import com.asteroid.duck.opengl.util.RenderContext;
+import com.asteroid.duck.opengl.util.audio.analysis.FrequencyProcessor;
 import com.asteroid.duck.opengl.util.resources.buffer.BufferDrawMode;
 import com.asteroid.duck.opengl.util.resources.buffer.UpdateHint;
 import com.asteroid.duck.opengl.util.resources.buffer.VertexArrayObject;
@@ -23,7 +24,7 @@ import static org.lwjgl.opengl.GL30.*;
  * Real-time audio spectrum analyser — Cartesian bar-chart or smooth filled-area renderer.
  *
  * <p>This class is a pure renderer: it receives pre-computed normalised magnitude values via
- * {@link FrequencySink#onSpectrum} and draws them as either discrete filled bars
+ * {@link com.asteroid.duck.opengl.util.audio.analysis.FrequencySink#onSpectrum} and draws them as either discrete filled bars
  * ({@link RenderMode#BARS}) or a continuous smooth filled region ({@link RenderMode#FILLED}).
  * Both modes support configurable frequency layout, bar direction, peak-hold ballistics,
  * and colour gradients. All audio capture and FFT computation is the caller's

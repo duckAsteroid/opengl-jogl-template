@@ -48,7 +48,7 @@ doRender(RenderContext) → called every frame
 dispose()             → free all GL and native resources
 ```
 
-`RenderContext` (`util/RenderContext.java`) is the interface passed everywhere — it gives access to `ResourceManager`, `Timer`, `KeyRegistry`, window geometry, and orthographic projection. **Never hold a direct reference to the window; always use `RenderContext`.**
+`RenderContext` (`util/RenderContext.java`) is the interface passed everywhere — it gives access to `ResourceManager`, `Clock`, `KeyRegistry`, window geometry, and orthographic projection. **Never hold a direct reference to the window; always use `RenderContext`.**
 
 `GLWindow` (`util/GLWindow.java`) is the abstract GLFW window that owns the render loop and implements `RenderContext`. Concrete windows extend it and implement `init()`, `render()`, and `registerKeys()`.
 
@@ -82,14 +82,22 @@ To add a new experiment: implement `Experiment`, add the fully-qualified class n
 
 ### Screenshot and video capture
 
-`GLWindow` registers two default key bindings for every window:
+`GLWindow` registers **no** key bindings. All bindings — including screenshot and recording — are wired in `Main.registerKeys()`:
 
 | Key | Action |
 |---|---|
-| `Print Screen` | Save a timestamped PNG screenshot in the working directory |
-| `Shift + Print Screen` | Record a 5-second MP4 video in the working directory |
+| `Print Screen` | `captureNextFrame()` — timestamped PNG |
+| `Shift + Print Screen` | `startRecording(Duration.ofSeconds(5))` — 5-second MP4 |
 
-Both are registered before `registerKeys()` so experiments see them in the printed instructions. Experiments must not re-register these keys.
+`GLWindow` exposes `protected` action methods that subclasses bind to keys in `registerKeys()`:
+
+| Method | What it does |
+|---|---|
+| `toggleClock()` | Pause/unpause the render clock |
+| `stepClock(double seconds)` | Scrub the clock by ±N seconds (for use while paused) |
+| `exit()` | Request a clean shutdown |
+
+This separation keeps all key bindings in one place (`Main.registerKeys()`) while GLWindow owns the action logic.
 
 **Screenshot flow:** `captureNextFrame(Path)` stores the path in `volatile pendingCapture`. After `render()` on the GL thread, `readFramebuffer()` runs `glReadPixels` → row-flip → `BufferedImage`, then a virtual thread writes the PNG via `ImageIO`.
 
@@ -102,7 +110,7 @@ ctx.startRecording(Path.of("out.mp4"), Duration.ofSeconds(30));
 ctx.stopRecording();  // stop before duration expires
 ```
 
-Timing uses `RenderContext.getTimer()` (not wall-clock time) so paused or slowed renders are handled correctly.
+Timing uses `RenderContext.getClock()` (not wall-clock time) so paused or slowed renders are handled correctly.
 
 **JCodec dependency** (`org.jcodec:jcodec:0.2.5` + `jcodec-javase:0.2.5`) is in `core/build.gradle`. No native binaries required.
 

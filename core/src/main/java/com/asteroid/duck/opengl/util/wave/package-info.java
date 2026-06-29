@@ -1,15 +1,13 @@
 /**
- * Real-time audio visualisation renderers and supporting utilities.
+ * Real-time audio visualisation renderers.
  *
  * <p>All classes in this package implement
- * {@link com.asteroid.duck.opengl.util.RenderedItem} or serve as helpers that are consumed by
- * renderers. The shared audio capture infrastructure is
- * {@link com.asteroid.duck.opengl.util.audio.AudioReader}, which runs on a dedicated daemon thread
- * and writes PCM data into either a GPU-mapped PBO (via
- * {@link com.asteroid.duck.opengl.util.audio.PboAudioSink}) or a CPU-side
- * {@link com.asteroid.duck.opengl.util.audio.RollingAudioBuffer}.</p>
+ * {@link com.asteroid.duck.opengl.util.RenderedItem} or serve as helpers consumed by renderers.
+ * Audio capture is handled by {@link com.asteroid.duck.opengl.util.audio.AudioReader};
+ * FFT processing and beat detection live in
+ * {@link com.asteroid.duck.opengl.util.audio.analysis}.</p>
  *
- * <h2>Available renderers</h2>
+ * <h2>Waveform renderers</h2>
  * <dl>
  *   <dt>{@link com.asteroid.duck.opengl.util.wave.AudioWave}</dt>
  *   <dd>Scrolling oscilloscope-style waveform drawn as a horizontal {@code GL_LINE_STRIP}.
@@ -21,55 +19,33 @@
  *       in the VBO; the vertex shader displaces each point radially by the corresponding
  *       audio sample read from the same PBO-backed texture used by {@code AudioWave}.
  *       Aspect-ratio correction is applied automatically via a resize listener.</dd>
- *
- *   <dt>{@link com.asteroid.duck.opengl.util.wave.SpectrumAnalyser}</dt>
- *   <dd>Classic bar-chart spectrum analyser. Each frame, a Hann-windowed FFT is computed
- *       by {@link com.asteroid.duck.opengl.util.wave.FFTProcessor} and the results are
- *       uploaded to a 1-D {@code GL_RG32F} texture (R = magnitude, G = peak-hold).
- *       Two draw calls render the filled bars ({@code GL_TRIANGLES}) and white peak-hold
- *       ticks ({@code GL_LINES}). Frequency scale and amplitude scale are both logarithmic.</dd>
  * </dl>
  *
- * <h2>Supporting classes</h2>
+ * <h2>Spectrum renderers</h2>
  * <dl>
- *   <dt>{@link com.asteroid.duck.opengl.util.wave.FFTProcessor}</dt>
- *   <dd>Stateless (per instance) FFT pipeline: Hann window → JTransforms real FFT →
- *       log-frequency bin mapping → dB normalisation. All heavy objects are pre-allocated
- *       at construction; {@code process()} allocates nothing.</dd>
+ *   <dt>{@link com.asteroid.duck.opengl.util.wave.SpectrumAnalyser}</dt>
+ *   <dd>Classic bar-chart spectrum analyser. Each frame, a Hann-windowed FFT (computed by
+ *       {@link com.asteroid.duck.opengl.util.audio.analysis.FrequencyProcessor}) is uploaded
+ *       to a 1-D {@code GL_RG32F} texture (R = magnitude, G = peak-hold).
+ *       Two draw calls render the filled bars ({@code GL_TRIANGLES}) and white peak-hold
+ *       ticks ({@code GL_LINES}). Both frequency and amplitude scales are logarithmic.</dd>
  *
- *   <dt>{@link com.asteroid.duck.opengl.util.wave.FrequencyProcessor}</dt>
- *   <dd>Bridges the raw-audio pipeline to the frequency domain. Implements {@code AudioSink}
- *       so an {@code AudioReader} can write PCM bytes into it; call {@code process()} once per
- *       frame on the render thread to run the FFT and fan the normalised magnitudes out to all
- *       registered {@link com.asteroid.duck.opengl.util.wave.FrequencySink}s — one FFT for any
- *       number of consumers.</dd>
+ *   <dt>{@link com.asteroid.duck.opengl.util.wave.RadialSpectrumAnalyser}</dt>
+ *   <dd>Spectrum rendered as a smooth radial shape. Magnitude values from
+ *       {@link com.asteroid.duck.opengl.util.audio.analysis.FrequencySink#onSpectrum} displace
+ *       ring vertices outward; the shape is drawn as a smooth {@code GL_LINE_LOOP}.</dd>
  *
- *   <dt>{@link com.asteroid.duck.opengl.util.wave.FrequencySink}</dt>
- *   <dd>Callback interface for objects that consume per-frame FFT magnitudes distributed by
- *       {@link com.asteroid.duck.opengl.util.wave.FrequencyProcessor}. Both
- *       {@link com.asteroid.duck.opengl.util.wave.BeatDetector} and
- *       {@link com.asteroid.duck.opengl.util.wave.SpectrumAnalyser} implement this interface.</dd>
+ *   <dt>{@link com.asteroid.duck.opengl.util.wave.FrequencyRenderer}</dt>
+ *   <dd>Abstract base for both spectrum renderers. Implements
+ *       {@link com.asteroid.duck.opengl.util.audio.analysis.FrequencySink} and manages the
+ *       shared magnitude buffer and peak-hold decay logic.</dd>
+ * </dl>
  *
- *   <dt>{@link com.asteroid.duck.opengl.util.wave.BeatDetector}</dt>
- *   <dd>Per-frame onset detector — implements {@link com.asteroid.duck.opengl.util.wave.FrequencySink}
- *       for use with {@link com.asteroid.duck.opengl.util.wave.FrequencyProcessor}.
- *       Tracks energy across configurable {@link com.asteroid.duck.opengl.util.wave.FrequencyBand}s
- *       (default: bass / snare / hi-hat) and publishes a {@code [0, 1]} beat strength per band
- *       that rises instantly on onset and decays at a tunable rate.</dd>
- *
- *   <dt>{@link com.asteroid.duck.opengl.util.wave.FrequencyBand}</dt>
- *   <dd>Immutable record describing a named Hz range. Provides {@code BASS}, {@code SNARE}, and
- *       {@code HI_HAT} presets and a {@code defaults()} factory. Pass any {@code List} of these
- *       to {@link com.asteroid.duck.opengl.util.wave.BeatDetector} to configure custom bands.</dd>
- *
+ * <h2>Helper</h2>
+ * <dl>
  *   <dt>{@link com.asteroid.duck.opengl.util.wave.AmplitudeFunction}</dt>
- *   <dd>Functional interface for per-vertex amplitude envelopes used by {@code AudioWave}.</dd>
- *
- *   <dt>{@link com.asteroid.duck.opengl.util.audio.AudioReader}</dt>
- *   <dd>Background-thread PCM reader (lives in the {@code audio} package). Create one per
- *       experiment, pass a list of {@link com.asteroid.duck.opengl.util.audio.AudioSink}s, and
- *       call {@code setLine()} with the source obtained from
- *       {@link com.asteroid.duck.opengl.util.audio.LineAcquirer}.</dd>
+ *   <dd>Functional interface for per-vertex amplitude envelopes used by {@code AudioWave} and
+ *       {@code RadialWave}.</dd>
  * </dl>
  */
 package com.asteroid.duck.opengl.util.wave;

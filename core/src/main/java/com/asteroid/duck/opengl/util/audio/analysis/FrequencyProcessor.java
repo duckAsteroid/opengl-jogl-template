@@ -1,4 +1,4 @@
-package com.asteroid.duck.opengl.util.wave;
+package com.asteroid.duck.opengl.util.audio.analysis;
 
 import com.asteroid.duck.opengl.util.audio.AudioSink;
 import com.asteroid.duck.opengl.util.audio.ChannelMode;
@@ -14,7 +14,7 @@ import java.util.List;
  *
  * <p>This mirrors the role of {@code AudioReader} in the raw-audio pipeline — one source,
  * multiple consumers — but operates at the frequency level. Any number of
- * {@link FrequencySink}s (e.g. {@link BeatDetector}, {@link SpectrumAnalyser}) share a single
+ * {@link FrequencySink}s (e.g. {@link BeatDetector}, {@link com.asteroid.duck.opengl.util.wave.SpectrumAnalyser}) share a single
  * FFT computation with no duplication of work.</p>
  *
  * <h2>Threading model</h2>
@@ -111,7 +111,7 @@ public class FrequencyProcessor implements AudioSink {
      * Run the FFT for this frame and dispatch magnitudes to all registered {@link FrequencySink}s.
      *
      * <p>Must be called exactly once per frame on the render thread, before any code in the same
-     * frame that reads frequency data (e.g. before {@link SpectrumAnalyser#doRender} or querying
+     * frame that reads frequency data (e.g. before {@link com.asteroid.duck.opengl.util.wave.SpectrumAnalyser#doRender(com.asteroid.duck.opengl.util.RenderContext)} or querying
      * {@link BeatDetector#getBeatStrength}).</p>
      *
      * <p>The shared {@code magnitudes} array is passed directly to each sink — sinks must not

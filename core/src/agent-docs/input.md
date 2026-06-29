@@ -34,6 +34,36 @@ Use `named`/`namedWithMods` for any key that doesn't have a printable character 
 
 ---
 
+## GLWindow published actions
+
+`GLWindow` exposes protected action methods that `registerKeys()` should bind rather than accessing
+internal state directly. This keeps all key bindings in one place while GLWindow owns the logic.
+
+| Method | What it does |
+|---|---|
+| `exit()` | Request a clean shutdown |
+| `toggleClock()` | Pause/unpause the render clock |
+| `stepClock(double seconds)` | Advance (+) or rewind (−) the clock by N seconds |
+| `toggleFullscreen()` | Toggle between windowed and fullscreen |
+| `resetWindowSize()` | Restore the window to its original size |
+| `scaleWindowUp()` | Double the window size |
+| `scaleWindowDown()` | Halve the window size |
+| `printInstructions()` | Print registered key bindings to stdout |
+
+```java
+// Typical wiring in registerKeys():
+kr.registerKeyAction(GLFW_KEY_ESCAPE, this::exit,         "Exit");
+kr.registerKeyAction(GLFW_KEY_SPACE,  this::toggleClock,  "Pause/unpause the clock");
+kr.registerKeyAction(GLFW_KEY_LEFT,   () -> stepClock(-10.0),  "Rewind 10 s");
+kr.registerKeyAction(KeyCombination.namedWithMods("LEFT", "SHIFT"), () -> stepClock(-100.0), "Rewind 100 s");
+```
+
+`GLWindow` registers **no** key bindings. All bindings — including `PRINT_SCREEN` (screenshot),
+`SHIFT+PRINT_SCREEN` (recording), clock control, and window management — are wired in
+`Main.registerKeys()`. This keeps every key mapping visible in one place.
+
+---
+
 ## Cross-thread render actions (RenderActionQueue)
 
 Use this when a non-GL thread (e.g. key callback, audio thread) needs to mutate GL state.

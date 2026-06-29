@@ -5,12 +5,22 @@
 The audio pipeline is split into three independent layers:
 
 ```
-AudioDataSource (hardware line)
+AudioDataSource (hardware line)                          [audio package]
   └─ AudioReader (background thread)
        └─ AudioSink.write(byte[], offset, length)
-            ├─ PboAudioSink  → GL 1-D texture  → AudioWave / RadialWave (GPU waveform)
-            └─ RollingAudioBuffer → float[]    → SpectrumAnalyser (CPU FFT)
+            ├─ PboAudioSink  → GL 1-D texture → AudioWave / RadialWave  [wave package]
+            └─ FrequencyProcessor → FFTProcessor → FrequencySink         [audio.analysis package]
+                 ├─ BeatDetector   → getBeatStrength(band)
+                 └─ SpectrumAnalyser / RadialSpectrumAnalyser → doRender  [wave package]
 ```
+
+**Package layout:**
+
+| Package | Contents |
+|---|---|
+| `util.audio` | Capture: `AudioReader`, `PboAudioSink`, `RollingAudioBuffer`, `LineAcquirer` |
+| `util.audio.analysis` | Signal processing: `FFTProcessor`, `FrequencyProcessor`, `FrequencySink`, `BeatDetector`, `FrequencyBand` |
+| `util.wave` | Renderers: `AudioWave`, `RadialWave`, `SpectrumAnalyser`, `RadialSpectrumAnalyser` |
 
 **Key principle:** `AudioWave` and `RadialWave` are pure renderers — they do not own threads,
 manage PBOs, or know about audio capture. The experiment creates and wires up the pieces.

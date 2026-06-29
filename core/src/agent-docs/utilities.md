@@ -42,8 +42,8 @@ Clock clock = ctx.getClock();
 double t = clock.elapsed();   // seconds since the application started
 ```
 
-`ClockImpl` and `TimeSource` are used by the window implementation (`Main`) to create and drive
-the clock — experiments and utility renderers should never construct their own `ClockImpl`.
+`ClockImpl` and `TimeSource` are used by `GLWindow` to create and drive the clock — experiments
+and utility renderers should never construct their own `ClockImpl`.
 
 ### Tracking a duration with `Timer`
 

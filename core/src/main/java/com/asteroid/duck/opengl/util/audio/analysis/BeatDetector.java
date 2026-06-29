@@ -1,4 +1,4 @@
-package com.asteroid.duck.opengl.util.wave;
+package com.asteroid.duck.opengl.util.audio.analysis;
 
 import java.util.List;
 
@@ -14,7 +14,7 @@ import java.util.List;
  *   <li>If {@code ratio > threshold}: {@code raw = clamp((ratio − threshold) × sensitivity, 0, 1)}.
  *       </li>
  *   <li>Published beat strength rises instantly to {@code raw} if higher; otherwise decays by
- *       {@code decayPerFrame} — same peak-hold pattern as {@link SpectrumAnalyser}.</li>
+ *       {@code decayPerFrame} — same peak-hold pattern as {@link com.asteroid.duck.opengl.util.wave.SpectrumAnalyser}.</li>
  * </ol>
  *
  * <h2>Constructing with custom bands</h2>

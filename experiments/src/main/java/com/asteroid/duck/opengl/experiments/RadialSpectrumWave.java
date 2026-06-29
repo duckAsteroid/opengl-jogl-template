@@ -4,9 +4,9 @@ import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.audio.AudioReader;
 import com.asteroid.duck.opengl.util.audio.LineAcquirer;
 import com.asteroid.duck.opengl.util.keys.KeyCombination;
-import com.asteroid.duck.opengl.util.wave.FrequencyBand;
-import com.asteroid.duck.opengl.util.wave.FrequencyProcessor;
-import com.asteroid.duck.opengl.util.wave.BeatDetector;
+import com.asteroid.duck.opengl.util.audio.analysis.FrequencyBand;
+import com.asteroid.duck.opengl.util.audio.analysis.FrequencyProcessor;
+import com.asteroid.duck.opengl.util.audio.analysis.BeatDetector;
 import com.asteroid.duck.opengl.util.wave.RadialSpectrumAnalyser;
 import org.joml.Vector3f;
 
