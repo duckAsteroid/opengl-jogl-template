@@ -36,6 +36,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import javax.imageio.ImageIO;
@@ -75,7 +76,7 @@ public abstract class GLWindow implements RenderContext {
 	private Vector4f backgroundColor = new Vector4f(0.0f);
 	private boolean clearScreen = true;
     private boolean windowClosing = false;
-	private final Random random = new Random();
+
 
 	private final ClockImpl clock = new ClockImpl(TimeSource.glfwGetTimeInstance());
 	private Double desiredUpdatePeriod = null;
@@ -180,7 +181,7 @@ public abstract class GLWindow implements RenderContext {
 
 	@Override
 	public Random getRandom() {
-		return random;
+		return ThreadLocalRandom.current();
 	}
 
 	@Override
