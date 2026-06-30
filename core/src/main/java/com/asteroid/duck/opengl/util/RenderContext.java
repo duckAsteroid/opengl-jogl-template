@@ -25,11 +25,20 @@ public interface RenderContext {
 	KeyRegistry getKeyRegistry();
 
 	/**
-	 * The current location and size of the window viewport in pixels.
-	 * This is used for rendering and also resize events.
-	 * @return window
+	 * The current position and size of the GLFW window in screen coordinates.
+	 * On high-DPI displays these values may differ from the GL framebuffer dimensions.
+	 * For pixel-accurate projection use {@link #ortho()} rather than these dimensions.
+	 * @return window position and size in screen coordinates
 	 */
 	Rectangle getWindow();
+
+	/**
+	 * Returns the {@link Monitor} that currently contains the largest area of this window.
+	 * Falls back to the primary monitor if no overlap is found.
+	 */
+	default Monitor getCurrentMonitor() {
+		return Monitor.primary();
+	}
 
 	/**
 	 * Register a listener that is notified whenever the window's framebuffer is resized.
@@ -123,8 +132,9 @@ public interface RenderContext {
 	}
 
 	/**
-	 * The orthographic projection matrix for the current screen size in pixels.
-	 * Using 0,0 as the top left
+	 * The orthographic projection matrix sized to the current GL viewport (framebuffer pixels).
+	 * Origin is at top-left (0,0); axes extend right and down to viewport width/height.
+	 * On high-DPI displays the framebuffer may be larger than the GLFW window's screen dimensions.
 	 * @return a matrix suitable for use as an orthographic projection
 	 */
 	Matrix4f ortho();

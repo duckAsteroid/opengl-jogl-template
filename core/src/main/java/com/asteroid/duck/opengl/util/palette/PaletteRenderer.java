@@ -3,6 +3,7 @@ package com.asteroid.duck.opengl.util.palette;
 import com.asteroid.duck.opengl.util.AbstractPassthruRenderer;
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
+import com.asteroid.duck.opengl.util.resources.shader.ShaderSource;
 import com.asteroid.duck.opengl.util.resources.texture.io.TextureData;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
@@ -23,6 +24,44 @@ import java.nio.IntBuffer;
  */
 public class PaletteRenderer extends AbstractPassthruRenderer {
 	private static final Logger LOG = LoggerFactory.getLogger(PaletteRenderer.class);
+
+	private static final String VERTEX_SHADER = """
+			#version 330
+
+			in vec2 screenPosition;
+			in vec2 texturePosition;
+			out vec2 texCoords;
+
+			void main() {
+			    // report out to open GL the screen position
+			    gl_Position = vec4(screenPosition, 0.0, 1.0);
+			    // pass tecture coords to fragment shader
+			    texCoords = texturePosition;
+			}
+			""";
+
+	private static final String FRAGMENT_SHADER = """
+			#version 460
+
+			precision mediump float;
+
+			uniform sampler2D tex;
+			uniform sampler2D palette;
+
+			in vec2 texCoords;
+			out vec4 fragColor;
+
+			void main() {
+			    // lookup palette index for texel (the red channel, 0-1 with R16 precision)
+			    float pos = texture(tex, texCoords).r;
+			    // decode linear position into 2D palette coords using actual texture dimensions
+			    ivec2 palSize = textureSize(palette, 0);
+			    float pixelIndex = pos * float(palSize.x * palSize.y);
+			    float col = (mod(pixelIndex, float(palSize.x)) + 0.5) / float(palSize.x);
+			    float row = (floor(pixelIndex / float(palSize.x)) + 0.5) / float(palSize.y);
+			    fragColor = clamp(texture(palette, vec2(col, row)), 0., 1.);
+			}
+			""";
 
 	// indexed texture
 	private final String textureName;
@@ -120,8 +159,10 @@ public class PaletteRenderer extends AbstractPassthruRenderer {
 
 
 	protected ShaderProgram initShaderProgram(RenderContext ctx) throws IOException {
-		// load the GLSL Shaders
-		return ctx.getResourceManager().getSimpleShader("palette");
+		return ShaderProgram.compile(
+				ShaderSource.fromClass(VERTEX_SHADER, PaletteRenderer.class),
+				ShaderSource.fromClass(FRAGMENT_SHADER, PaletteRenderer.class),
+				null);
 	}
 
 	protected Texture initTexture(RenderContext ctx) {

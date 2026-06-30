@@ -2,6 +2,7 @@ package com.asteroid.duck.opengl.util;
 
 import com.asteroid.duck.opengl.util.geom.Triangles;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
+import com.asteroid.duck.opengl.util.resources.shader.ShaderSource;
 import com.asteroid.duck.opengl.util.resources.shader.vars.ShaderVariable;
 import com.asteroid.duck.opengl.util.resources.shader.vars.ShaderVariables;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
@@ -20,6 +21,42 @@ import java.io.IOException;
 public class TranslateTextureRenderer extends AbstractPassthruRenderer {
 	private static final Logger LOG = LoggerFactory.getLogger(TranslateTextureRenderer.class);
 
+	private static final String VERTEX_SHADER = """
+			#version 330
+			in vec2 texturePosition;
+			in vec2 screenPosition;
+			out vec2 texCoords;
+
+			void main() {
+			    // report out to open GL the
+			    gl_Position = vec4(screenPosition, 0.0, 1.0);;
+			    // pass coords to vertex shader
+			    texCoords = texturePosition;
+			}
+			""";
+
+	private static final String FRAGMENT_SHADER = """
+			#version 460
+
+			precision mediump float;
+
+			uniform sampler2D tex;
+			uniform usampler2D map;
+			uniform vec2 dimensions;
+
+			in vec2 texCoords;
+			out vec4 fragColor;
+
+			void main() {
+			    // find the source texel coordinates for the current texel from the map
+			    uvec2 mappedCoords = texture(map, texCoords).xy; // point x & y
+			    // convert the texel coordinates to normalised form
+			    vec2 normalizedCoords = vec2(mappedCoords) / dimensions;
+			    // get the color from the source texture at that location
+			    fragColor = texture(tex, normalizedCoords);
+			}
+			""";
+
 	private final String textureName;
 
 	private final String translationTableTextureName;
@@ -33,8 +70,10 @@ public class TranslateTextureRenderer extends AbstractPassthruRenderer {
 	}
 
 	protected ShaderProgram initShaderProgram(RenderContext ctx) throws IOException {
-		// load the GLSL Shaders
-		return ctx.getResourceManager().getShaderLoader().LoadSimpleShaderProgram("translate");
+		return ShaderProgram.compile(
+				ShaderSource.fromClass(VERTEX_SHADER, TranslateTextureRenderer.class),
+				ShaderSource.fromClass(FRAGMENT_SHADER, TranslateTextureRenderer.class),
+				null);
 	}
 
 	protected Texture initTexture(RenderContext ctx) {

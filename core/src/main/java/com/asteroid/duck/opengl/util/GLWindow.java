@@ -69,6 +69,8 @@ public abstract class GLWindow implements RenderContext {
 	private GLFWErrorCallback errorCallback;
 	private Rectangle windowed = null;
 	private Rectangle window;
+	private int viewportWidth;
+	private int viewportHeight;
 	private int initialWidth;
 	private int initialHeight;
 	private int windowScale = 0;
@@ -93,6 +95,24 @@ public abstract class GLWindow implements RenderContext {
 	/**
 	 * Create and display a GLFW window with an OpenGL 3.3 Core Profile context.
 	 *
+	 * <p>Convenience overload that uses the OS default window placement.</p>
+	 *
+	 * @param resourceManager the resource manager that owns all GL handles for this window;
+	 *                        it is disposed when the window closes
+	 * @param title           the window title; displayed in the title bar augmented with the
+	 *                        current pixel resolution
+	 * @param width           the initial window width in screen coordinates (not framebuffer pixels)
+	 * @param height          the initial window height in screen coordinates
+	 * @param icon            classpath path to a PNG icon image, or {@code null} to use the
+	 *                        system default window icon
+	 */
+	public GLWindow(ResourceManager resourceManager, String title, int width, int height, String icon) {
+		this(resourceManager, title, width, height, icon, WindowPlacement.defaultPlacement());
+	}
+
+	/**
+	 * Create and display a GLFW window with an OpenGL 3.3 Core Profile context.
+	 *
 	 * <p>The constructor performs all GLFW and GL initialisation synchronously on the calling
 	 * thread. Key and framebuffer-size callbacks are installed before the window is shown. If
 	 * running on Linux, X11 is forced to avoid libdecor issues on Wayland compositors.</p>
@@ -105,8 +125,12 @@ public abstract class GLWindow implements RenderContext {
 	 * @param height          the initial window height in screen coordinates
 	 * @param icon            classpath path to a PNG icon image, or {@code null} to use the
 	 *                        system default window icon
+	 * @param placement       where to place the window on first display; use
+	 *                        {@link WindowPlacement#centeredOn(Monitor)} to centre on a specific
+	 *                        monitor, {@link WindowPlacement#at(Monitor, int, int)} for an explicit
+	 *                        offset, or {@link WindowPlacement#defaultPlacement()} to let the OS decide
 	 */
-	public GLWindow(ResourceManager resourceManager, String title, int width, int height, String icon) {
+	public GLWindow(ResourceManager resourceManager, String title, int width, int height, String icon, WindowPlacement placement) {
         this.resourceManager = resourceManager;
 		this.windowTitle = title;
 		this.initialWidth = width;
@@ -154,6 +178,9 @@ public abstract class GLWindow implements RenderContext {
             }
         }
 
+        // Apply requested monitor placement before showing the window
+        placement.apply(windowHandle, width, height);
+
         // Enable v-sync
         glfwSwapInterval(1);
 
@@ -172,7 +199,9 @@ public abstract class GLWindow implements RenderContext {
         try (MemoryStack stack = stackPush()) {
             IntBuffer pWidth = stack.mallocInt(1), pHeight = stack.mallocInt(1);
             glfwGetFramebufferSize(windowHandle, pWidth, pHeight);
-            glViewport(0, 0, pWidth.get(0), pHeight.get(0));
+            viewportWidth = pWidth.get(0);
+            viewportHeight = pHeight.get(0);
+            glViewport(0, 0, viewportWidth, viewportHeight);
         }
 
         String gpuName = glGetString(GL_RENDERER);
@@ -257,6 +286,8 @@ public abstract class GLWindow implements RenderContext {
 	 * @param height new framebuffer height in pixels
 	 */
 	public void frameBufferSizeCallback(long window, int width, int height) {
+		viewportWidth = width;
+		viewportHeight = height;
 		glViewport(0, 0, width, height);
 		this.window = readWindow();
 		updateTitle();
@@ -593,6 +624,37 @@ public abstract class GLWindow implements RenderContext {
 	}
 
 	/**
+	 * Returns the {@link Monitor} that currently contains the largest area of this window.
+	 * Falls back to the primary monitor if no overlap is found (e.g. the window is off-screen).
+	 */
+	@Override
+	public Monitor getCurrentMonitor() {
+		return Monitor.fromHandle(glfwGetCurrentMonitor(windowHandle));
+	}
+
+	/**
+	 * Move the window to the centre of the given monitor.
+	 *
+	 * @param monitor the target monitor
+	 */
+	protected void moveToMonitor(Monitor monitor) {
+		WindowPlacement.centeredOn(monitor).apply(windowHandle, window.width, window.height);
+		this.window = readWindow();
+	}
+
+	/**
+	 * Move the window to a pixel offset relative to the given monitor's top-left corner.
+	 *
+	 * @param monitor the target monitor
+	 * @param x       horizontal offset in screen coordinates from the monitor's left edge
+	 * @param y       vertical offset in screen coordinates from the monitor's top edge
+	 */
+	protected void moveToMonitor(Monitor monitor, int x, int y) {
+		WindowPlacement.at(monitor, x, y).apply(windowHandle, window.width, window.height);
+		this.window = readWindow();
+	}
+
+	/**
 	 * Determine which monitor has the greatest overlap with the given window.
 	 *
 	 * <p>Iterates all connected monitors and computes the intersection area with the window
@@ -703,10 +765,10 @@ public abstract class GLWindow implements RenderContext {
 
 	public Matrix4f ortho() {
 		float left = 0;
-		float right = window.width;
+		float right = viewportWidth;
 
 		float top = 0;
-		float bottom = window.height;
+		float bottom = viewportHeight;
 
 		float near = -1.0f;
 		float far = 1.0f;

@@ -42,8 +42,8 @@ direct references to the window.
 double t = ctx.getClock().elapsed();          // seconds since start (double)
 
 // Viewport
-Rectangle win = ctx.getWindow();              // pixel dimensions, origin top-left
-Matrix4f proj = ctx.ortho();                  // orthographic projection for current viewport
+Rectangle win = ctx.getWindow();              // window size in screen coordinates (not framebuffer pixels)
+Matrix4f proj = ctx.ortho();                  // orthographic projection sized to the GL framebuffer (viewport pixels)
 
 // Resources
 ResourceManager rm = ctx.getResourceManager();
