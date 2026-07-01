@@ -3,6 +3,8 @@ package com.asteroid.duck.opengl.util;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWErrorCallback;
 import org.lwjgl.opengl.GL;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.GL_RENDERER;
@@ -18,6 +20,8 @@ import static org.lwjgl.system.MemoryUtil.NULL;
  */
 public class GraphicsCardLogger {
 
+    private static final Logger LOG = LoggerFactory.getLogger(GraphicsCardLogger.class);
+
     /** Default constructor; this class is only ever used via {@link #main}. */
     public GraphicsCardLogger() {}
 
@@ -28,7 +32,8 @@ public class GraphicsCardLogger {
      * @param args command-line arguments (ignored)
      */
     public static void main(String[] args) {
-        GLFWErrorCallback.createPrint(System.err).set();
+        GLFWErrorCallback.create((error, description) ->
+                LOG.error("GLFW error [{}]: {}", error, GLFWErrorCallback.getDescription(description))).set();
 
         if (!glfwInit()) {
             throw new IllegalStateException("Unable to initialize GLFW");
@@ -43,7 +48,7 @@ public class GraphicsCardLogger {
         GL.createCapabilities();
 
         String gpuName = glGetString(GL_RENDERER);
-        System.out.println("GPU Renderer: " + gpuName);
+        LOG.info("GPU Renderer: {}", gpuName);
 
         glfwDestroyWindow(window);
         glfwTerminate();

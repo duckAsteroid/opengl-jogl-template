@@ -135,8 +135,6 @@ public abstract class GLWindow implements RenderContext {
 		this.windowTitle = title;
 		this.initialWidth = width;
 		this.initialHeight = height;
-        //System.out.println("INFO: OpenGL Version: "+glGetString(GL_VERSION));
-        //this.errorCallback = GLFWErrorCallback.createPrint(System.err).set();
 		if (Platform.get() == Platform.LINUX) {
 			// Force X11 to avoid libdecor issues on Wayland
 			GLFW.glfwInitHint(GLFW.GLFW_PLATFORM, GLFW.GLFW_PLATFORM_X11);
@@ -205,7 +203,7 @@ public abstract class GLWindow implements RenderContext {
         }
 
         String gpuName = glGetString(GL_RENDERER);
-        System.out.println("GPU Renderer: " + gpuName);
+        LOG.info("GPU Renderer: {}", gpuName);
     }
 
 	@Override
@@ -420,10 +418,11 @@ public abstract class GLWindow implements RenderContext {
 	 * Called once after {@link #registerKeys()} so the user sees the controls on startup.
 	 */
 	public void printInstructions() {
-		System.out.println("Keys:");
 		int maxKeyStrWidth = getKeyRegistry().stream().mapToInt(ka -> ka.getCombination().asSimpleString().length()).max().orElse(0);
+		String fmt = "\t%-" + maxKeyStrWidth + "s - %s";
+		LOG.info("Keys:");
 		for(KeyAction ka : getKeyRegistry()) {
-			System.out.printf("\t%-"+maxKeyStrWidth+ "s - %s%n", ka.getCombination().asSimpleString(), ka.getDescription());
+			LOG.info(fmt, ka.getCombination().asSimpleString(), ka.getDescription());
 		}
 	}
 
@@ -721,7 +720,7 @@ public abstract class GLWindow implements RenderContext {
 	 * The loop exits after the current frame finishes; {@link #dispose()} is still called.
 	 */
 	protected void exit() {
-		System.out.println("Exit");
+		LOG.info("Exit");
 		glfwSetWindowShouldClose(windowHandle, true);
 	}
 

@@ -2,6 +2,8 @@ package com.asteroid.duck.opengl.util.resources.framebuffer;
 
 import com.asteroid.duck.opengl.util.resources.Resource;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static org.lwjgl.opengl.GL11.GL_TEXTURE_2D;
 import static org.lwjgl.opengl.GL11.glBindTexture;
@@ -23,6 +25,8 @@ import static org.lwjgl.opengl.GL30.*;
  * - Call destroy() (or dispose()) to delete the underlying GL FBO when no longer needed.
  */
 public class FrameBuffer implements Resource {
+	private static final Logger LOG = LoggerFactory.getLogger(FrameBuffer.class);
+
 	private final int fbo;
 	private final Texture target;
 
@@ -47,7 +51,7 @@ public class FrameBuffer implements Resource {
 			throw new IllegalArgumentException("Error creating framebuffer "+error);
 		}
 		glViewport(0,0, target.getWidth(), target.getHeight());
-		System.out.println("Frame buffer ready "+fbo);
+		LOG.debug("Frame buffer ready {}", fbo);
 		unbind();
 	}
 

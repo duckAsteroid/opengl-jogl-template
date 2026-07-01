@@ -1,5 +1,8 @@
 package com.asteroid.duck.opengl.util.blur;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -24,6 +27,8 @@ import java.util.stream.IntStream;
  * do the right amount of texel blending for the given weights and distance required.</p>
  */
 public class BlurKernel {
+    private static final Logger LOG = LoggerFactory.getLogger(BlurKernel.class);
+
     /**
      * Unnormalised half-kernel sample positions, counting from the centre texel outward.
      * {@code offsets[0]} is always {@code 0.0} (the centre tap); subsequent values are
@@ -163,7 +168,7 @@ public class BlurKernel {
 		try {
 			return Optional.of(Integer.parseInt(s));
 		} catch (NumberFormatException e) {
-			System.err.println("Invalid argument. Expected an integer, got: " + s);
+			LOG.warn("Invalid argument. Expected an integer, got: {}", s);
 		}
 		return Optional.empty();
 	}
@@ -182,14 +187,14 @@ public class BlurKernel {
 			try {
 				BlurKernel kernel = new BlurKernel(size);
 				DiscreteSampleKernel dsk = kernel.getDiscreteSampleKernel();
-				System.out.println("// Kernel size " + size);
+				LOG.info("// Kernel size {}", size);
 				double sum = (Arrays.stream(kernel.weights).skip(1).sum() * 2.0) + kernel.weights[0];
-				System.out.println("// sum of weights: "+ sum);
-				System.out.println(renderAsUniform("offsets_" + size, dsk.offsets()));
-				System.out.println(renderAsUniform("weights_" + size, dsk.weights()));
+				LOG.info("// sum of weights: {}", sum);
+				LOG.info(renderAsUniform("offsets_" + size, dsk.offsets()));
+				LOG.info(renderAsUniform("weights_" + size, dsk.weights()));
 			}
 			catch(Throwable t) {
-				System.out.println("// Error at size "+size+": "+t.getMessage());
+				LOG.error("// Error at size {}: {}", size, t.getMessage());
 			}
 		});
 	}

@@ -192,13 +192,13 @@ public class BlurTextureRenderer extends AbstractPassthruRenderer {
 	/** Toggle the blur on/off. Prints the new state to stdout (useful for key-binding debug). */
 	public void toggleBlur() {
 		blur = !blur;
-		System.out.println("Blur="+blur);
+		LOG.debug("Blur={}", blur);
 	}
 
 	/** Toggle between X and Y axis. Prints the new axis to stdout (useful for key-binding debug). */
 	public void toggleAxis() {
 		axis = !axis;
-		System.out.println("Axis="+( axis ? "x" : "y"));
+		LOG.debug("Axis={}", axis ? "x" : "y");
 	}
 
 	/**

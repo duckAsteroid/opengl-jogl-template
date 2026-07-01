@@ -7,6 +7,8 @@ import com.asteroid.duck.opengl.util.audio.LineAcquirer;
 import com.asteroid.duck.opengl.util.timer.TimeSource;
 import com.asteroid.duck.opengl.util.timer.Clock;
 import com.asteroid.duck.opengl.util.timer.ClockImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.sound.sampled.*;
 import java.io.IOException;
@@ -17,6 +19,8 @@ import java.nio.ShortBuffer;
 import static com.asteroid.duck.opengl.util.audio.LineAcquirer.IDEAL;
 
 public class SimulatedDataSource implements AudioDataSource {
+
+	private static final Logger LOG = LoggerFactory.getLogger(SimulatedDataSource.class);
 
 	private final Clock timer;
 	private final StereoDataSource source;
@@ -132,7 +136,7 @@ public class SimulatedDataSource implements AudioDataSource {
 		try(Mixer mixer = mixerLine.mixer()) {
 			byte[] audioBuffer = new byte[32];
 			SourceDataLine output = (SourceDataLine) mixer.getLine(info);
-			System.out.println("Running on "+mixerLine);
+			LOG.info("Running on {}", mixerLine);
 			output.open(IDEAL);
 			simulated.open(IDEAL, audioBuffer.length);
 			output.start();
@@ -148,7 +152,7 @@ public class SimulatedDataSource implements AudioDataSource {
 			simulated.close();
 			output.close();
 
-			System.out.println(readStats);
+			LOG.info("{}", readStats);
 		}
 	}
 
@@ -160,14 +164,14 @@ public class SimulatedDataSource implements AudioDataSource {
 
 				// Check if the input is 'q' (or your desired exit key)
 				if (key == 'q' || key == 'Q') {
-					System.out.println("Exiting...");
+					LOG.info("Exiting...");
 					return true; // Exit the loop
 				}
 			}
 			return false;
 		}
 		catch(IOException ioe) {
-			ioe.printStackTrace();
+			LOG.error("Error reading stdin", ioe);
 			return true;
 		}
 	}

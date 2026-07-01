@@ -154,7 +154,7 @@ public class PaletteRenderer extends AbstractPassthruRenderer {
 		}
 		var file = new java.io.File("test.png");
 		ImageIO.write(image, "png", file);
-		System.out.println(file.getAbsolutePath());
+		LOG.info("Wrote palette test image: {}", file.getAbsolutePath());
 	}
 
 

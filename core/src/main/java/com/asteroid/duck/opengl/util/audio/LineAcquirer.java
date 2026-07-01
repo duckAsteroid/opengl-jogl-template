@@ -189,6 +189,6 @@ public class LineAcquirer {
    */
   public void dump() {
     List<MixerLine> mixerLines = allLinesMatching(IDEAL).toList();
-    mixerLines.forEach(System.out::println);
+    mixerLines.forEach(ml -> LOG.info("{}", ml));
   }
 }

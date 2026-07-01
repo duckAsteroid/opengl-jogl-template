@@ -4,6 +4,9 @@ import com.asteroid.duck.opengl.util.resources.font.GlyphData;
 import com.asteroid.duck.opengl.util.resources.font.Padding;
 import com.asteroid.duck.opengl.util.resources.texture.DataFormat;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -20,6 +23,8 @@ import java.util.stream.Stream;
  * Basically, this uses AWT to render fonts onto images and calculate metrics for each glyph.
  */
 public class FontTextureDataFactory {
+	private static final Logger LOG = LoggerFactory.getLogger(FontTextureDataFactory.class);
+
 	private final java.awt.Font font;
 	private final boolean antialias;
 	private final Padding padding;
@@ -145,7 +150,7 @@ public class FontTextureDataFactory {
 				Files.createDirectories(imageDumpPath);
 				ImageIO.write(image, "png", Files.newOutputStream(imageDumpPath.resolve("font.png")));
 			} catch (IOException e) {
-				System.err.println("Failed to dump image: " + e.getMessage());
+				LOG.error("Failed to dump image", e);
 			}
 		}
 		return new FontTextureData(glyphImages, glyphData, image );
