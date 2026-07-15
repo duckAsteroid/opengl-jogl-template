@@ -179,24 +179,44 @@ public class StringRenderer implements RenderedItem {
             shaderProgram.uniforms().get(TEXT_COLOR, Vector4f.class).set(color));
     }
 
+    private int countRenderable(String s) {
+        int count = 0;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '\n' || c == '\r') continue;
+            if (fontTexture.getGlyph(c) != null) count++;
+        }
+        return count;
+    }
+
     /**
-     * Updates buffers for the current text. Reallocates the VAO/VBO/EBO when the text length has
-     * changed; otherwise updates the existing buffers in place.
+     * Updates buffers for the current text. Reallocates the VAO/VBO/EBO when the renderable
+     * character count changes; otherwise updates the existing buffers in place.
      */
     private void rebuildBuffers(RenderContext ctx) {
         if (text.isEmpty()) {
             allocatedLength = 0;
             return;
         }
-        if (text.length() != allocatedLength) {
-            reallocate(ctx);
+        int renderableCount = countRenderable(text);
+        if (renderableCount == 0) {
+            allocatedLength = 0;
+            return;
+        }
+        if (renderableCount != allocatedLength) {
+            reallocate(ctx, renderableCount);
         }
         fontTexture.computeVertexData(text, vbo, screenPosition, texturePosition);
         ebo.clear();
+        int charIndex = 0;
         for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == '\n' || c == '\r') continue;
+            if (fontTexture.getGlyph(c) == null) continue;
             for (int j = 0; j < indices.length; j++) {
-                ebo.put((short) (i * 4 + indices[j]));
+                ebo.put((short) (charIndex * 4 + indices[j]));
             }
+            charIndex++;
         }
         vao.bind(ctx);
         vao.setDrawMode(BufferDrawMode.TRIANGLES);
@@ -205,14 +225,13 @@ public class StringRenderer implements RenderedItem {
     }
 
     /**
-     * Disposes the existing VAO/VBO/EBO (if any) and creates new ones sized to the current text.
-     * Must only be called when {@code text} is non-empty.
+     * Disposes the existing VAO/VBO/EBO (if any) and creates new ones sized to the renderable
+     * character count. Must only be called when {@code len > 0}.
      */
-    private void reallocate(RenderContext ctx) {
+    private void reallocate(RenderContext ctx, int len) {
         if (allocatedLength > 0) {
             vao.dispose();
         }
-        int len = text.length();
         vao.createEbo(indices.length * len);
         vao.createVbo(new VertexDataStructure(screenPosition, texturePosition), fourCorners.size() * len);
         vao.init(ctx);
@@ -220,7 +239,7 @@ public class StringRenderer implements RenderedItem {
         ebo = vao.getEbo();
         vbo.setup(shaderProgram);
         allocatedLength = len;
-        LOG.debug("Reallocated text buffers for {} characters", len);
+        LOG.debug("Reallocated text buffers for {} renderable characters", len);
     }
 
     @Override

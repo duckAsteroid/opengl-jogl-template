@@ -89,6 +89,7 @@ public class FontTexture implements Resource {
 				continue;
 			}
 			GlyphData g = glyphs.get(c);
+			if (g == null) continue;
 			lineWidth += g.bounds().width;
 		}
 		width = Math.max(width, lineWidth);
@@ -118,6 +119,7 @@ public class FontTexture implements Resource {
 				continue;
 			}
 			GlyphData g = glyphs.get(c);
+			if (g == null) continue;
 			lineHeight = Math.max(lineHeight, g.bounds().height);
 		}
 		height += lineHeight;
@@ -137,17 +139,25 @@ public class FontTexture implements Resource {
 	public void computeVertexData(CharSequence text, VertexBufferObject vbo, VertexElement screenEl, VertexElement texEl) {
 		List<Vertice> corners = Vertice.standardFourVertices().toList();
 		Point cursor = new Point(0, 0);
+		int charIndex = 0;
 		for (int i = 0; i < text.length(); i++) {
-			GlyphData glyph = glyphs.get(text.charAt(i));
+			char c = text.charAt(i);
+			if (c == '\n') {
+				cursor.x = 0;
+				cursor.y += fontHeight;
+				continue;
+			}
+			GlyphData glyph = glyphs.get(c);
 			if (glyph == null) continue;
 			Rectangle screen = glyph.rawBounds(cursor);
 			org.joml.Vector4f tex = glyph.normalBounds();
 			for (int j = 0; j < corners.size(); j++) {
 				Vertice v = corners.get(j);
-				vbo.setElement(i * 4 + j, screenEl, v.from(screen));
-				vbo.setElement(i * 4 + j, texEl,    v.from(tex));
+				vbo.setElement(charIndex * 4 + j, screenEl, v.from(screen));
+				vbo.setElement(charIndex * 4 + j, texEl,    v.from(tex));
 			}
 			cursor.x += glyph.advance();
+			charIndex++;
 		}
 	}
 
@@ -157,6 +167,16 @@ public class FontTexture implements Resource {
 		texture.dispose();
 	}
 
+
+	/**
+	 * Returns the pixel height of the tallest glyph in the font.
+	 * Use this as the Y advance when wrapping to a new line.
+	 *
+	 * @return line height in pixels
+	 */
+	public int getFontHeight() {
+		return fontHeight;
+	}
 
 	/**
 	 * Returns the GPU texture containing the full glyph strip image.
