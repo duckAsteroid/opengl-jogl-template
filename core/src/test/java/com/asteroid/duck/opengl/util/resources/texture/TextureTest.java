@@ -4,6 +4,7 @@ import org.joml.Matrix3x2f;
 import org.joml.Vector2f;
 import org.junit.jupiter.api.Test;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL13;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -27,10 +28,13 @@ class TextureTest {
 
 	@Test
 	void normalisationMatrix() {
-		try (MockedStatic<GL11> mockedStatic = Mockito.mockStatic(GL11.class)) {
+		try (MockedStatic<GL11> mockedStatic = Mockito.mockStatic(GL11.class);
+						MockedStatic<GL13> mockedStatic13 = Mockito.mockStatic(GL13.class)) {
 			final int ID = 1;
 			mockedStatic.when(GL11::glGenTextures).thenReturn(ID);
 			mockedStatic.when(() -> GL11.glBindTexture(GL11.GL_TEXTURE_2D, ID))
+							.thenAnswer(this::logMethod);
+			mockedStatic13.when(() -> GL13.glActiveTexture(GL13.GL_TEXTURE0))
 							.thenAnswer(this::logMethod);
 			mockedStatic.when(() ->
 											GL11.glTexImage2D(
