@@ -1,5 +1,7 @@
 package com.asteroid.duck.opengl.util.wave;
 
+import com.asteroid.duck.opengl.util.audio.analysis.BeatDetector;
+import com.asteroid.duck.opengl.util.audio.analysis.FrequencyBand;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

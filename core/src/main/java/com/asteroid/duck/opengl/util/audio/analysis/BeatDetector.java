@@ -242,7 +242,7 @@ public class BeatDetector implements FrequencySink {
      * using the same log-frequency scale that FFTProcessor uses internally.
      * Returns {0, 0} if the band has no overlap with the FFT's output range.
      */
-    static int[] computeBinRange(FrequencyBand band, int numBins, float fftFMin, float fftFMax) {
+    public static int[] computeBinRange(FrequencyBand band, int numBins, float fftFMin, float fftFMax) {
         if (band.fMin() >= fftFMax || band.fMax() <= fftFMin) {
             return new int[]{0, 0};
         }
