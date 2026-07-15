@@ -76,12 +76,18 @@ public class Main extends GLWindow implements RenderContext {
         kr.registerKeyAction(KeyCombination.namedWithMods("RIGHT", "SHIFT"), () -> stepClock(100.0), "When paused, advance time 100 s");
         kr.registerKeyAction(KeyCombination.named("PRINT_SCREEN"), this::captureNextFrame, "Save screenshot");
         kr.registerKeyAction(KeyCombination.namedWithMods("PRINT_SCREEN", "SHIFT"), () -> startRecording(Duration.ofSeconds(5)), "Record 5s video");
-        kr.registerKeyAction(GLFW_KEY_I, this::printInstructions, "Print instructions");
+        kr.registerKeyAction(GLFW_KEY_I, this::printKeyBindings, "Print key bindings");
         kr.registerKeyAction(GLFW_KEY_F11, this::toggleFullscreen, "Toggle fullscreen mode");
         kr.registerKeyAction(GLFW_KEY_HOME, this::resetWindowSize, "Reset window to original size");
         kr.registerKeyAction(GLFW_KEY_EQUAL, this::scaleWindowUp, "Scale window up by 2x");
         kr.registerKeyAction(GLFW_KEY_MINUS, this::scaleWindowDown, "Scale window down by 2x");
         kr.registerKeyAction(GLFW_KEY_F1, this::printDebug, "Print debug data");
+    }
+
+    private void printKeyBindings() {
+        LOG.info("Keys:");
+        getKeyRegistry().stream().forEach(ka ->
+                LOG.info("\t{} - {}", ka.getCombination().asSimpleString(), ka.getDescription()));
     }
 
     private void printDebug() {

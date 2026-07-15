@@ -112,7 +112,6 @@ public class KeyRegistry implements Iterable<KeyAction> {
 
 	/**
 	 * Stream all registered actions in insertion order.
-	 * Used by {@link com.asteroid.duck.opengl.util.GLWindow#printInstructions()} to print the key-help table.
 	 *
 	 * @return an ordered stream of all currently registered actions
 	 */

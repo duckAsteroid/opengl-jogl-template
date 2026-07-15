@@ -48,7 +48,6 @@ internal state directly. This keeps all key bindings in one place while GLWindow
 | `resetWindowSize()` | Restore the window to its original size |
 | `scaleWindowUp()` | Double the window size |
 | `scaleWindowDown()` | Halve the window size |
-| `printInstructions()` | Print registered key bindings to stdout |
 
 ```java
 // Typical wiring in registerKeys():

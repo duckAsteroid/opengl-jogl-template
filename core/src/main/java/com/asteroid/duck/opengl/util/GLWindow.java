@@ -24,7 +24,12 @@ import org.jcodec.api.awt.AWTSequenceEncoder;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferInt;
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.file.Files;
@@ -44,6 +49,8 @@ import javax.imageio.ImageIO;
 import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
 import static org.lwjgl.glfw.GLFW.*;
 import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL15.*;
+import static org.lwjgl.opengl.GL21.GL_PIXEL_PACK_BUFFER;
 import static org.lwjgl.system.MemoryStack.stackPush;
 import static org.lwjgl.system.MemoryUtil.NULL;
 import static org.lwjgl.system.MemoryUtil.memAlloc;
@@ -91,6 +98,17 @@ public abstract class GLWindow implements RenderContext {
 	private volatile RecordingRequest pendingRecording = null;
 	/** The currently active recording session; only accessed on the GL thread. */
 	private RecordingSession activeRecording = null;
+	/**
+	 * Holds the most recently completed session so {@link #dispose()} can join its encode thread
+	 * even after {@code activeRecording} has been nulled when the session expired naturally.
+	 */
+	private RecordingSession lastSession = null;
+
+	/** Minimum nanoseconds between captured frames — caps capture at 30 fps. */
+	private static final long CAPTURE_INTERVAL_NS = 1_000_000_000L / 30;
+
+	/** Cached result of the one-time FFmpeg availability probe; null = not yet checked. */
+	private static Optional<String> ffmpegPath = null;
 
 	/**
 	 * Create and display a GLFW window with an OpenGL 3.3 Core Profile context.
@@ -306,8 +324,8 @@ public abstract class GLWindow implements RenderContext {
     }
 
 	/**
-	 * Run the main render loop: calls {@link #init()}, {@link #registerKeys()}, and
-	 * {@link #printInstructions()} once, then enters the frame loop until the window closes.
+	 * Run the main render loop: calls {@link #init()} and {@link #registerKeys()} once,
+	 * then enters the frame loop until the window closes.
 	 *
 	 * <p>Each frame: polls events, optionally clears the screen, calls {@link #render()},
 	 * processes any pending screenshot capture, and swaps buffers. On exit, calls
@@ -319,9 +337,11 @@ public abstract class GLWindow implements RenderContext {
 		// initialize
 		// ---------------
 		clock.reset();
+		drawSplash();
+		glfwSwapBuffers(windowHandle);
+		glfwPollEvents();
 		init();
 		registerKeys();
-		printInstructions();
 
 		// loop
 		while (!windowClosing)
@@ -361,6 +381,7 @@ public abstract class GLWindow implements RenderContext {
 			if (activeRecording != null) {
 				if (activeRecording.isExpired() || activeRecording.stopping) {
 					endRecordingSession(activeRecording);
+					lastSession = activeRecording;
 					activeRecording = null;
 				} else {
 					captureFrameForRecording(activeRecording);
@@ -399,6 +420,16 @@ public abstract class GLWindow implements RenderContext {
 	public abstract void registerKeys();
 
 	/**
+	 * Render a splash screen while {@link #init()} loads resources.
+	 * Called once before {@code init()}, with a buffer swap immediately after so the frame is visible.
+	 * The default implementation does nothing (transparent/black window during init).
+	 * Override to draw a logo or loading graphic using the {@link RenderContext} available via {@code this}.
+	 *
+	 * @throws IOException if splash resource loading fails
+	 */
+	protected void drawSplash() throws IOException {}
+
+	/**
 	 * Initialise GL resources for this window.
 	 * Called once at the start of {@link #displayLoop()}; allocate shaders, buffers, and textures here.
 	 *
@@ -412,19 +443,6 @@ public abstract class GLWindow implements RenderContext {
 	 * @throws IOException if rendering fails due to an I/O-backed resource
 	 */
 	public abstract void render() throws IOException;
-
-	/**
-	 * Print the registered key bindings to standard output.
-	 * Called once after {@link #registerKeys()} so the user sees the controls on startup.
-	 */
-	public void printInstructions() {
-		int maxKeyStrWidth = getKeyRegistry().stream().mapToInt(ka -> ka.getCombination().asSimpleString().length()).max().orElse(0);
-		String fmt = "\t%-" + maxKeyStrWidth + "s - %s";
-		LOG.info("Keys:");
-		for(KeyAction ka : getKeyRegistry()) {
-			LOG.info(fmt, ka.getCombination().asSimpleString(), ka.getDescription());
-		}
-	}
 
 	@Override
 	public void captureNextFrame(Path destination) {
@@ -452,28 +470,36 @@ public abstract class GLWindow implements RenderContext {
 			IntBuffer pw = stack.mallocInt(1), ph = stack.mallocInt(1);
 			glfwGetFramebufferSize(windowHandle, pw, ph);
 			int w = pw.get(0), h = ph.get(0);
-			int stride = w * 3;
-			ByteBuffer pixels = memAlloc(stride * h);
+			ByteBuffer pixels = memAlloc(w * h * 3);
 			try {
 				glReadPixels(0, 0, w, h, GL_RGB, GL_UNSIGNED_BYTE, pixels);
-				int[] rgb = new int[w * h];
-				for (int y = 0; y < h; y++) {
-					// GL stores rows bottom-to-top; invert so row 0 is the top of the image.
-					int src = (h - 1 - y) * stride;
-					for (int x = 0; x < w; x++) {
-						int i = src + x * 3;
-						rgb[y * w + x] = ((pixels.get(i) & 0xFF) << 16)
-								| ((pixels.get(i + 1) & 0xFF) << 8)
-								|  (pixels.get(i + 2) & 0xFF);
-					}
-				}
-				BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
-				img.setRGB(0, 0, w, h, rgb, 0, w);
-				return img;
+				return pixelsToImage(pixels, w, h);
 			} finally {
 				memFree(pixels);
 			}
 		}
+	}
+
+	/**
+	 * Converts a tightly-packed bottom-up RGB byte buffer (as returned by {@code glReadPixels})
+	 * into a top-down {@link BufferedImage}. The buffer position is not modified.
+	 */
+	private static BufferedImage pixelsToImage(ByteBuffer pixels, int w, int h) {
+		int stride = w * 3;
+		int[] rgb = new int[w * h];
+		for (int y = 0; y < h; y++) {
+			// GL stores rows bottom-to-top; invert so row 0 is the top of the image.
+			int src = (h - 1 - y) * stride;
+			for (int x = 0; x < w; x++) {
+				int i = src + x * 3;
+				rgb[y * w + x] = ((pixels.get(i) & 0xFF) << 16)
+						| ((pixels.get(i + 1) & 0xFF) << 8)
+						|  (pixels.get(i + 2) & 0xFF);
+			}
+		}
+		BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+		img.setRGB(0, 0, w, h, rgb, 0, w);
+		return img;
 	}
 
 	/**
@@ -493,36 +519,132 @@ public abstract class GLWindow implements RenderContext {
 		});
 	}
 
-	/** Starts a new {@link RecordingSession}: opens the encoder and launches the encode thread. */
+	/** Starts a new {@link RecordingSession}: selects encoder, allocates PBOs, and launches the encode thread. */
 	private void beginRecordingSession(RecordingRequest req) {
 		try {
 			if (req.path().getParent() != null) Files.createDirectories(req.path().getParent());
-			AWTSequenceEncoder encoder = AWTSequenceEncoder.createSequenceEncoder(req.path().toFile(), 30);
-			RecordingSession session = new RecordingSession(req.path(), encoder, getClock().track(req.duration()));
+
+			int w, h;
+			try (MemoryStack stack = stackPush()) {
+				IntBuffer pw = stack.mallocInt(1), ph = stack.mallocInt(1);
+				glfwGetFramebufferSize(windowHandle, pw, ph);
+				w = pw.get(0); h = ph.get(0);
+			}
+
+			FrameEncoder encoder;
+			Optional<String> ffmpeg = findFfmpeg();
+			if (ffmpeg.isPresent()) {
+				LOG.info("Recording using FFmpeg encoder ({})", ffmpeg.get());
+				encoder = new FFmpegFrameEncoder(ffmpeg.get(), req.path(), w, h, 30);
+			} else {
+				LOG.info("FFmpeg not found — falling back to JCodec encoder");
+				encoder = new JCodecFrameEncoder(req.path(), 30);
+			}
+
+			RecordingSession session = new RecordingSession(req.path(), encoder, getClock().track(req.duration()), w, h);
+
+			// Allocate two PBOs and pre-size their storage so glReadPixels is non-blocking.
+			glGenBuffers(session.pbos);
+			long size = (long) w * h * 3;
+			for (int pbo : session.pbos) {
+				glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
+				glBufferData(GL_PIXEL_PACK_BUFFER, size, GL_STREAM_READ);
+			}
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+
 			session.encodeThread = Thread.ofVirtual().start(() -> runEncodeLoop(session));
 			activeRecording = session;
-			LOG.info("Recording started: {} (duration {}s)", req.path(), req.duration().toSeconds());
+			LOG.info("Recording started: {} ({}x{}, {}s)", req.path(), w, h, req.duration().toSeconds());
 		} catch (IOException e) {
 			LOG.error("Failed to start recording to {}", req.path(), e);
 		}
 	}
 
-	/** Signals the session's encode thread to drain the queue and finalise the MP4. */
+	/**
+	 * Probes whether {@code ffmpeg} is on PATH and caches the result.
+	 * Returns the executable name to use, or empty if not found.
+	 */
+	private static Optional<String> findFfmpeg() {
+		if (ffmpegPath == null) {
+			try {
+				Process p = new ProcessBuilder("ffmpeg", "-version")
+						.redirectErrorStream(true)
+						.start();
+				p.getInputStream().transferTo(OutputStream.nullOutputStream());
+				ffmpegPath = p.waitFor(5, TimeUnit.SECONDS) && p.exitValue() == 0
+						? Optional.of("ffmpeg") : Optional.empty();
+			} catch (Exception e) {
+				ffmpegPath = Optional.empty();
+			}
+		}
+		return ffmpegPath;
+	}
+
+	/**
+	 * Drains the last pending PBO frame, deletes both PBOs, then signals the encode thread
+	 * to drain the queue and finalise the MP4. Must be called on the GL thread.
+	 */
 	private void endRecordingSession(RecordingSession session) {
+		// The most recent glReadPixels was issued into pbos[1 - pboIndex]; read it now
+		// before we delete the buffers. This may stall briefly but it's a one-time cost.
+		if (session.pboReady) {
+			int lastWritten = 1 - session.pboIndex;
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, session.pbos[lastWritten]);
+			ByteBuffer pixels = glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY,
+					(long) session.captureWidth * session.captureHeight * 3, null);
+			if (pixels != null) {
+				BufferedImage img = pixelsToImage(pixels, session.captureWidth, session.captureHeight);
+				glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+				session.queue.offer(img);
+			}
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+		}
+		glDeleteBuffers(session.pbos);
 		session.stopping = true;
 		LOG.debug("Recording stopping: {}", session.path);
 	}
 
-	/** Reads the current frame and offers it to the session's encode queue (drops if full). */
+	/**
+	 * Double-buffered PBO capture: issues an async {@code glReadPixels} into PBO[N] (non-blocking),
+	 * then maps PBO[N-1] — which the GPU has had a full frame interval to DMA — and hands the
+	 * resulting image to the encode queue. Throttled to 30 fps via wall-clock time so the encoder
+	 * frame rate matches its declared rate.
+	 */
 	private void captureFrameForRecording(RecordingSession session) {
-		BufferedImage frame = readFramebuffer();
-		if (!session.queue.offer(frame) && !session.frameDropWarned) {
-			LOG.warn("Recording frame dropped — JCodec encode slower than render rate");
-			session.frameDropWarned = true;
+		long now = System.nanoTime();
+		if (now - session.lastCaptureNs < CAPTURE_INTERVAL_NS) return;
+		session.lastCaptureNs = now;
+
+		int w = session.captureWidth, h = session.captureHeight;
+		int writeIdx = session.pboIndex;
+		int readIdx  = 1 - session.pboIndex;
+
+		// Issue async readback into the write PBO — returns immediately, GPU does the transfer.
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, session.pbos[writeIdx]);
+		glReadPixels(0, 0, w, h, GL_RGB, GL_UNSIGNED_BYTE, 0L);
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+
+		// Map the read PBO — the GPU has had one full frame interval to complete the prior transfer.
+		if (session.pboReady) {
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, session.pbos[readIdx]);
+			ByteBuffer pixels = glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY,
+					(long) w * h * 3, null);
+			if (pixels != null) {
+				BufferedImage img = pixelsToImage(pixels, w, h);
+				glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+				if (!session.queue.offer(img) && !session.frameDropWarned) {
+					LOG.warn("Recording frame dropped — encoder slower than capture rate");
+					session.frameDropWarned = true;
+				}
+			}
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 		}
+
+		session.pboIndex = readIdx; // swap: next call writes to what we just read
+		session.pboReady = true;
 	}
 
-	/** Encode-thread body: drains the queue through JCodec until stopped, then finalises. */
+	/** Encode-thread body: drains the queue through the active {@link FrameEncoder} until stopped, then finalises. */
 	private void runEncodeLoop(RecordingSession session) {
 		try {
 			while (!session.stopping || !session.queue.isEmpty()) {
@@ -561,16 +683,19 @@ public abstract class GLWindow implements RenderContext {
 		if (glfwKeyCallback != null) glfwKeyCallback.close();
 		if (glfwFramebufferSizeCallback != null) glfwFramebufferSizeCallback.close();
         if (glfwWindowCloseCallback != null) glfwWindowCloseCallback.close();
-		RecordingSession recording = activeRecording;
-		if (recording != null) {
+		// End any recording still active (window closed mid-recording).
+		if (activeRecording != null) {
+			lastSession = activeRecording;
 			activeRecording = null;
-			endRecordingSession(recording);
-			if (recording.encodeThread != null) {
-				try {
-					recording.encodeThread.join(30_000);
-				} catch (InterruptedException e) {
-					Thread.currentThread().interrupt();
-				}
+			endRecordingSession(lastSession);
+		}
+		// Wait for the encode thread regardless of how the session ended
+		// (natural expiry sets lastSession in the render loop; window-close sets it above).
+		if (lastSession != null && lastSession.encodeThread != null) {
+			try {
+				lastSession.encodeThread.join(30_000);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
 			}
 		}
 		resourceManager.dispose();
@@ -795,21 +920,118 @@ public abstract class GLWindow implements RenderContext {
 
 	private static final class RecordingSession {
 		final Path path;
-		final AWTSequenceEncoder encoder;
+		final FrameEncoder encoder;
 		final ArrayBlockingQueue<BufferedImage> queue = new ArrayBlockingQueue<>(30);
 		Thread encodeThread;
 		final Timer durationTracker;
 		volatile boolean stopping;
 		boolean frameDropWarned;
+		// Double-buffered PBO state — only accessed on the GL thread.
+		final int[] pbos = new int[2];
+		int pboIndex = 0;        // index of the PBO to write into on the next capture
+		boolean pboReady = false; // true once the first write has been issued
+		final int captureWidth;
+		final int captureHeight;
+		long lastCaptureNs = 0;  // wall-clock time of the last captured frame
 
-		RecordingSession(Path path, AWTSequenceEncoder encoder, Timer durationTracker) {
+		RecordingSession(Path path, FrameEncoder encoder, Timer durationTracker, int width, int height) {
 			this.path = path;
 			this.encoder = encoder;
 			this.durationTracker = durationTracker;
+			this.captureWidth = width;
+			this.captureHeight = height;
 		}
 
 		boolean isExpired() {
 			return durationTracker.hasElapsed();
+		}
+	}
+
+	/** Common contract for video encoding backends. */
+	private interface FrameEncoder {
+		void encodeImage(BufferedImage image) throws IOException;
+		void finish() throws IOException;
+	}
+
+	/** JCodec-backed encoder — pure Java, no external dependencies. */
+	private static final class JCodecFrameEncoder implements FrameEncoder {
+		private final AWTSequenceEncoder encoder;
+
+		JCodecFrameEncoder(Path path, int fps) throws IOException {
+			this.encoder = AWTSequenceEncoder.createSequenceEncoder(path.toFile(), fps);
+		}
+
+		@Override
+		public void encodeImage(BufferedImage image) throws IOException {
+			encoder.encodeImage(image);
+		}
+
+		@Override
+		public void finish() throws IOException {
+			encoder.finish();
+		}
+	}
+
+	/**
+	 * FFmpeg-backed encoder: spawns {@code ffmpeg} and pipes raw RGB24 frames to its stdin.
+	 * Uses {@code libx264} with {@code yuv420p} output — compatible with virtually all players.
+	 * FFmpeg's stderr is drained to SLF4J debug so pipe-buffer stalls can't deadlock the process.
+	 */
+	private static final class FFmpegFrameEncoder implements FrameEncoder {
+		private static final Logger LOG = LoggerFactory.getLogger(FFmpegFrameEncoder.class);
+
+		private final Process process;
+		private final OutputStream stdin;
+		private final byte[] pixelBuf; // reused across frames to avoid per-frame allocation
+
+		FFmpegFrameEncoder(String ffmpegBin, Path output, int width, int height, int fps) throws IOException {
+			this.pixelBuf = new byte[width * height * 3];
+			this.process = new ProcessBuilder(
+					ffmpegBin, "-y",
+					"-f", "rawvideo",
+					"-pixel_format", "rgb24",
+					"-video_size", width + "x" + height,
+					"-framerate", String.valueOf(fps),
+					"-i", "pipe:0",
+					"-c:v", "libx264",
+					"-pix_fmt", "yuv420p",
+					"-movflags", "+faststart",
+					output.toString())
+					.start();
+			this.stdin = new BufferedOutputStream(process.getOutputStream(), 1 << 17);
+			// Drain stderr on a virtual thread so the pipe buffer never fills and deadlocks ffmpeg.
+			Thread.ofVirtual().start(() -> {
+				try (BufferedReader r = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+					r.lines().forEach(line -> LOG.debug("ffmpeg: {}", line));
+				} catch (IOException ignored) {}
+			});
+		}
+
+		@Override
+		public void encodeImage(BufferedImage image) throws IOException {
+			// Extract TYPE_INT_RGB pixels and unpack to RGB bytes for ffmpeg's rawvideo input.
+			int[] data = ((DataBufferInt) image.getRaster().getDataBuffer()).getData();
+			for (int i = 0; i < data.length; i++) {
+				pixelBuf[i * 3]     = (byte) ((data[i] >> 16) & 0xFF);
+				pixelBuf[i * 3 + 1] = (byte) ((data[i] >> 8)  & 0xFF);
+				pixelBuf[i * 3 + 2] = (byte)  (data[i]        & 0xFF);
+			}
+			stdin.write(pixelBuf);
+		}
+
+		@Override
+		public void finish() throws IOException {
+			stdin.flush();
+			stdin.close(); // signals EOF to ffmpeg, which then writes the MP4 trailer and exits
+			try {
+				if (!process.waitFor(30, TimeUnit.SECONDS)) {
+					process.destroyForcibly();
+					LOG.error("FFmpeg did not finish within 30 s — process killed");
+				}
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				process.destroyForcibly();
+			}
 		}
 	}
 }
