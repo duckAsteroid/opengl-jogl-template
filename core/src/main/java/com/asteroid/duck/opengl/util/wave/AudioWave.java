@@ -21,7 +21,6 @@ import org.joml.Vector4f;
 
 import java.io.IOException;
 import java.util.Objects;
-import java.util.stream.IntStream;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT;
@@ -130,10 +129,11 @@ public class AudioWave implements RenderedItem, Transformable {
 
     private void fillVboAmplitude(VertexBufferObject vbo) {
         AmplitudeFunction fn = this.amplitudeFunction;
-        IntStream.range(0, SCREEN_WIDTH).forEach(i -> {
+        Vector2f scratch = new Vector2f();
+        for (int i = 0; i < SCREEN_WIDTH; i++) {
             float x = (((float) i / SCREEN_WIDTH) * 2f) - 1f;
-            vbo.setElement(i, POSITION, new Vector2f(x, fn.amplitudeAt(i, x)));
-        });
+            vbo.setElement(i, POSITION, scratch.set(x, fn.amplitudeAt(i, x)));
+        }
     }
 
     private void rebuildVboAmplitude() {
