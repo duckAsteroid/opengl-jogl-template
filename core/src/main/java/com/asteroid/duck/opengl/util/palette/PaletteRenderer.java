@@ -7,6 +7,7 @@ import com.asteroid.duck.opengl.util.resources.shader.ShaderSource;
 import com.asteroid.duck.opengl.util.resources.texture.io.TextureData;
 import com.asteroid.duck.opengl.util.resources.texture.Texture;
 import com.asteroid.duck.opengl.util.resources.texture.TextureUnit;
+import org.joml.Vector2i;
 import org.lwjgl.BufferUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +26,7 @@ import java.nio.IntBuffer;
 public class PaletteRenderer extends AbstractPassthruRenderer {
 	private static final Logger LOG = LoggerFactory.getLogger(PaletteRenderer.class);
 
+	//language=GLSL
 	private static final String VERTEX_SHADER = """
 			#version 330
 
@@ -40,6 +42,7 @@ public class PaletteRenderer extends AbstractPassthruRenderer {
 			}
 			""";
 
+	//language=GLSL
 	private static final String FRAGMENT_SHADER = """
 			#version 460
 
@@ -47,6 +50,7 @@ public class PaletteRenderer extends AbstractPassthruRenderer {
 
 			uniform sampler2D tex;
 			uniform sampler2D palette;
+			uniform ivec2 palSize;
 
 			in vec2 texCoords;
 			out vec4 fragColor;
@@ -54,8 +58,7 @@ public class PaletteRenderer extends AbstractPassthruRenderer {
 			void main() {
 			    // lookup palette index for texel (the red channel, 0-1 with R16 precision)
 			    float pos = texture(tex, texCoords).r;
-			    // decode linear position into 2D palette coords using actual texture dimensions
-			    ivec2 palSize = textureSize(palette, 0);
+			    // decode linear position into 2D palette coords
 			    float pixelIndex = pos * float(palSize.x * palSize.y);
 			    float col = (mod(pixelIndex, float(palSize.x)) + 0.5) / float(palSize.x);
 			    float row = (floor(pixelIndex / float(palSize.x)) + 0.5) / float(palSize.y);
@@ -66,7 +69,7 @@ public class PaletteRenderer extends AbstractPassthruRenderer {
 	// indexed texture
 	private final String textureName;
 
-	// the 1D palette with an RGB value for each index
+	// the palette texture with an RGB value for each index
 	private Texture palette;
 	private TextureUnit paletteUnit;
 	private final String paletteName;
@@ -179,6 +182,8 @@ public class PaletteRenderer extends AbstractPassthruRenderer {
 		super.init(ctx);
 		shaderProgram.use(ctx);
 		this.paletteUnit.useInShader(shaderProgram, "palette");
+		shaderProgram.uniforms().get("palSize", Vector2i.class)
+				.set(new Vector2i(palette.getWidth(), palette.getHeight()));
 	}
 
 	@Override

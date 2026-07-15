@@ -2,6 +2,7 @@ package com.asteroid.duck.opengl.util.resources.shader;
 
 import org.joml.Matrix4f;
 import org.joml.Vector2f;
+import org.joml.Vector2i;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.lwjgl.system.MemoryStack;
@@ -15,6 +16,7 @@ import static org.lwjgl.opengl.GL20C.glUniform1f;
 import static org.lwjgl.opengl.GL20C.glUniform1fv;
 import static org.lwjgl.opengl.GL20C.glUniform1i;
 import static org.lwjgl.opengl.GL20C.glUniform2f;
+import static org.lwjgl.opengl.GL20C.glUniform2i;
 import static org.lwjgl.opengl.GL20C.glUniform3f;
 import static org.lwjgl.opengl.GL20C.glUniform4f;
 import static org.lwjgl.opengl.GL20C.glUniform4fv;
@@ -65,6 +67,9 @@ public class Uniforms {
 		if (Integer.class.equals(type) || int.class.equals(type)) {
 			return (Uniform<T>) new Uniform<>(this, name, loc, this::setInteger);
 		}
+		if (Vector2i.class.isAssignableFrom(type)) {
+			return (Uniform<T>) new Uniform<>(this, name, loc, this::setVector2i);
+		}
 		if (Vector2f.class.isAssignableFrom(type)) {
 			return (Uniform<T>) new Uniform<>(this, name, loc, this::setVector2f);
 		}
@@ -111,6 +116,11 @@ public class Uniforms {
 	void setVector2f_float(int location, float x, float y)
 	{
 		glUniform2f(location, x, y);
+	}
+
+	void setVector2i(int location, Vector2i value)
+	{
+		glUniform2i(location, value.x, value.y);
 	}
 
 	void setVector2f(int location, Vector2f value)
