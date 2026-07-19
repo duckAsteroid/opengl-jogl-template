@@ -5,23 +5,23 @@ import com.asteroid.duck.opengl.util.stats.StatsFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.sound.sampled.LineUnavailableException;
 import java.util.List;
 
 import static com.asteroid.duck.opengl.util.audio.LineAcquirer.IDEAL;
 
 /**
- * Background thread that drains a {@link AudioDataSource} and fans the raw PCM bytes out to one
+ * Background thread that drains an {@link AudioLine} and fans the raw PCM bytes out to one
  * or more {@link AudioSink} instances.
  *
- * <p>The reader runs a tight poll loop: it calls {@link AudioDataSource#available()} and, when data
+ * <p>The reader runs a tight poll loop: it calls {@link AudioLine#available()} and, when data
  * is ready, reads up to {@value #CHUNK_SIZE} bytes and forwards them to every registered sink.
  * The loop yields the thread when nothing is available so the audio source can refill its internal
  * buffer without busy-spinning at 100 % CPU.</p>
  *
- * <p>A line is injected at any time via {@link #setLine}. Replacing the line atomically stops and
- * closes the old one before opening and starting the new one, so the reader always sees a running
- * line once one is set. The thread blocks in {@link #waitForLine()} until the first line arrives.</p>
+ * <p>A source is injected at any time via {@link #setLine}, which opens and starts it. Replacing
+ * the source atomically stops and closes the old line before opening and starting the new one, so
+ * the reader always sees a running line once one is set. The thread blocks in
+ * {@link #waitForLine()} until the first line arrives.</p>
  *
  * <h2>Thread safety</h2>
  * {@link #setLine} is synchronized on {@code this}; the loop thread waits on the same monitor.
@@ -49,7 +49,7 @@ public class AudioReader implements Runnable {
     private final Stats available = StatsFactory.stats("Audio: Available");
     private final byte[] audioChunk = new byte[CHUNK_SIZE];
     private final List<AudioSink> sinks;
-    private AudioDataSource mLine = null;
+    private AudioLine mLine = null;
     private volatile boolean running = true;
 
     /**
@@ -83,7 +83,7 @@ public class AudioReader implements Runnable {
     }
 
     public void run() {
-        AudioDataSource line = null;
+        AudioLine line = null;
         try {
             while (running) {
                 line = waitForLine();
@@ -112,14 +112,14 @@ public class AudioReader implements Runnable {
     }
 
     /**
-     * Blocks the calling thread until a non-null {@link AudioDataSource} has been injected via
+     * Blocks the calling thread until a non-null {@link AudioLine} has been opened via
      * {@link #setLine}. Uses {@link Object#wait()} on {@code this}, so it releases the lock
      * while waiting and will not spin.
      *
      * @return the currently set line; never {@code null}
      * @throws InterruptedException if the thread is interrupted while waiting
      */
-    protected AudioDataSource waitForLine() throws InterruptedException {
+    protected AudioLine waitForLine() throws InterruptedException {
         synchronized (this) {
             while (mLine == null) {
                 LOG.debug("Waiting for audio line...");
@@ -131,31 +131,27 @@ public class AudioReader implements Runnable {
 
     /**
      * Replace the active audio source. If a previous line is open it is stopped and closed first.
-     * The new line is opened with {@link #LINE_BUFFER_SIZE} and started before being made active.
-     * Passing {@code null} suspends capture until a new line is provided.
+     * The new source is opened with {@link #LINE_BUFFER_SIZE} and started before being made
+     * active. Passing {@code null} suspends capture until a new source is provided.
      *
-     * @param line the new audio data source to capture from, or {@code null} to pause capture
+     * @param source the new audio data source to capture from, or {@code null} to pause capture
      */
-    public void setLine(AudioDataSource line) {
+    public void setLine(AudioDataSource source) {
         synchronized (this) {
             if (this.mLine != null) {
                 this.mLine.stop();
                 this.mLine.close();
+                this.mLine = null;
             }
-            if (line != null) {
+            if (source != null) {
                 try {
-                    if (!line.isOpen()) {
-                        line.open(IDEAL, LINE_BUFFER_SIZE);
-                    }
-                    if (!line.isRunning()) {
-                        line.start();
-                    }
-                } catch (LineUnavailableException e) {
-                    LOG.error("Line unavailable: {}", line.getName(), e);
-                    line = null;
+                    AudioLine opened = source.open(IDEAL, LINE_BUFFER_SIZE);
+                    opened.start();
+                    this.mLine = opened;
+                } catch (AudioSourceUnavailableException e) {
+                    LOG.error("Line unavailable: {}", source.getName(), e);
                 }
             }
-            this.mLine = line;
             notifyAll();
         }
     }

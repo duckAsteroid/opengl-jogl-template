@@ -1,7 +1,5 @@
 package com.asteroid.duck.opengl.util.audio;
 
-import com.asteroid.duck.opengl.util.RenderContext;
-import com.asteroid.duck.opengl.util.audio.simulated.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,116 +8,55 @@ import javax.sound.sampled.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Stream;
+
 /**
- * Discovers and selects Java Sound {@link javax.sound.sampled.TargetDataLine}s for live audio capture.
+ * Discovers real Java Sound {@link javax.sound.sampled.TargetDataLine}s for live audio capture.
  *
- * <p>On {@link #init}, all available mixers are scanned for lines that match the desired
- * {@link javax.sound.sampled.AudioFormat}. If the system property {@code simulate.audio=true} is
- * set, a synthetic stereo oscillator is prepended so the rest of the pipeline works without a
- * physical input device. The selected source can be cycled at runtime via {@link #next()} and
- * {@link #previous()}.</p>
+ * <p>Purely a discovery utility — it does not hold any selection or opened state. Turn a
+ * discovered {@link MixerLine} into an {@link AudioDataSource} via
+ * {@link MixerLine#toAudioDataSource()} and add it to an {@link AudioSources} alongside any
+ * other sources (e.g. from {@code com.asteroid.duck.opengl.util.audio.simulated.SimulatedSources}).</p>
+ *
+ * <pre>{@code
+ * AudioSources sources = new AudioSources();
+ * LineAcquirer.allLinesMatching(LineAcquirer.IDEAL)
+ *         .map(LineAcquirer.MixerLine::toAudioDataSource)
+ *         .forEach(sources::add);
+ * }</pre>
  */
-public class LineAcquirer {
+public final class LineAcquirer {
   private static final Logger LOG = LoggerFactory.getLogger(LineAcquirer.class);
 
-  private List<AudioDataSource> sources = new ArrayList<>();
-  private int selectedSource = 0;
-
-  /** Default constructor; sources are populated by {@link #init}. */
-  public LineAcquirer() {}
+  private LineAcquirer() {}
 
   /**
-   * Discover available audio sources and prepare them for use.
-   *
-   * <p>If {@code simulate.audio=true} a synthetic source is added first. Then all Java Sound
-   * mixers supporting {@code ideal} as a capture format are opened and registered.</p>
-   *
-   * @param ctx   the render context (unused beyond providing access to the timer for simulation)
-   * @param ideal the desired capture format; matching lines must support this format
-   * @throws RuntimeException if no sources are found after scanning all mixers
-   */
-  public void init(RenderContext ctx, AudioFormat ideal)  {
-    if (System.getProperty("simulate.audio", "false").equalsIgnoreCase("true")) {
-      StereoDataSource audio = getSampledWaveformData();
-      sources.add(new SimulatedDataSource(ctx.getClock(), audio));
-    }
-    List<MixerLine> mixerLines = allLinesMatching(ideal).toList();
-    mixerLines.stream().map(MixerLine::getTargetDataLine)
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-            .forEach(sources::add);
-    if (sources.isEmpty()) {
-      throw new RuntimeException("No sources found");
-    }
-  }
-
-  /**
-   * Returns the currently selected audio source.
-   *
-   * @return the active {@link AudioDataSource}
-   */
-  public AudioDataSource getSelectedSource() {
-    return sources.get(selectedSource);
-  }
-
-  /**
-   * Advance to the next source in the cycle and return the one that was active before the switch.
-   *
-   * @return the previously selected {@link AudioDataSource}
-   */
-  public AudioDataSource next() {
-    AudioDataSource current = getSelectedSource();
-    selectedSource = (selectedSource + 1) % sources.size();
-    return current;
-  }
-
-  /**
-   * Step back to the previous source in the cycle and return the one that was active before the switch.
-   *
-   * @return the previously selected {@link AudioDataSource}
-   */
-  public AudioDataSource previous() {
-    AudioDataSource current = getSelectedSource();
-    selectedSource = (selectedSource - 1 + sources.size()) % sources.size();
-    return current;
-  }
-
-  /**
-   * Create a synthetic stereo waveform source for use when no physical audio input is available.
-   * Generates a middle-C tone panned slowly left and right at 1 Hz.
-   *
-   * @return a stereo data source suitable for passing to {@link com.asteroid.duck.opengl.util.audio.AudioReader}
-   */
-  public static StereoDataSource getSampledWaveformData() {
-    Waveform midC = Waveform.MIDDLE_C.amplify(100);
-
-    return OscillatingStereoPositioner.fullScale(1.0).wrap(midC);
-  }
-
-  /**
-   * A pairing of a Java Sound {@link Mixer} with one of its available {@link Line.Info} descriptors.
-   * Used to represent a candidate audio capture line before it has been opened.
+   * A pairing of a Java Sound {@link Mixer} with one of its available {@link DataLine.Info} descriptors.
+   * Represents a candidate audio capture line before it has been opened.
    *
    * @param mixer the mixer that owns this line
    * @param line  descriptor for the specific line on the mixer
    */
-  public record MixerLine(Mixer mixer, Line.Info line) {
+  public record MixerLine(Mixer mixer, DataLine.Info line) {
     /**
-     * Attempt to open this line as a {@link TargetDataLine} wrapped in a {@link TargetLineSource}.
+     * Wrap this candidate as an {@link AudioDataSource}. The underlying line is not acquired or
+     * opened until {@link AudioDataSource#open} is called.
      *
-     * @return the opened source, or empty if the line is unavailable
+     * @return a lazily-opened source
      */
-    public Optional<AudioDataSource> getTargetDataLine() {
-      final String lineDesc = toString();
-      try {
-        return Optional.of(new TargetLineSource(lineDesc, (TargetDataLine) mixer.getLine(line)));
-      } catch (LineUnavailableException e) {
-          LOG.error("Line unavailable: {}", lineDesc, e);
-        return Optional.empty();
-      }
+    public AudioDataSource toAudioDataSource() {
+      return new TargetLineSource(displayName(), mixer, line);
     }
+
+    /**
+     * A short, UI-friendly name for this line — just the mixer name.
+     *
+     * @return concise display name
+     */
+    public String displayName() {
+      return mixer.getMixerInfo().getName();
+    }
+
     @NotNull
     @Override
     public String toString() {
@@ -166,8 +103,8 @@ public class LineAcquirer {
    */
   public static Stream<MixerLine> allLinesMatching(DataLine.Info info) {
     return allLines().stream()
-            .filter(line -> info.getLineClass().isAssignableFrom(line.line.getLineClass()))
-      .filter(line -> line.mixer.isLineSupported(info));
+            .filter(line -> info.getLineClass().isAssignableFrom(line.line().getLineClass()))
+      .filter(line -> line.mixer().isLineSupported(info));
   }
 
   /** The preferred capture format: 48 kHz, 16-bit, stereo, signed, little-endian. */
@@ -179,15 +116,14 @@ public class LineAcquirer {
    * @param args command-line arguments (ignored)
    */
   public static void main(String[] args) {
-    LineAcquirer laq = new LineAcquirer();
-    laq.dump();
+    dump();
   }
 
   /**
    * Print all available {@link #IDEAL}-format mixer lines to standard output.
    * Useful for diagnosing which physical inputs the Java Sound API can see.
    */
-  public void dump() {
+  public static void dump() {
     List<MixerLine> mixerLines = allLinesMatching(IDEAL).toList();
     mixerLines.forEach(ml -> LOG.info("{}", ml));
   }

@@ -82,8 +82,8 @@ Contains every reusable abstraction for working with OpenGL via LWJGL.
 | `util.resources.bound` | Generic bind/unbind exclusivity system (`Binder`, `ExclusivityGroup`) |
 | `util.resources.manager` | `ResourceManager` – owns and disposes all GL resources for a window |
 | `util.resources.io` | Resource loaders (`ClasspathLoader`, `PathBasedLoader`) |
-| `util.audio` | Audio capture (`AudioDataSource`, `LineAcquirer`, `TargetLineSource`, `RollingFloatBuffer`) |
-| `util.audio.simulated` | Synthesised audio sources for headless/test use (`Waveform`, `SimulatedDataSource`, `OscillatingStereoPositioner`) |
+| `util.audio` | Audio capture (`AudioDataSource`, `AudioLine`, `AudioSources`, `LineAcquirer`, `TargetLineSource`, `RollingFloatBuffer`) |
+| `util.audio.simulated` | Synthesised audio sources for headless/test use (`Waveform`, `SimulatedDataSource`, `SimulatedSources`, `OscillatingStereoPositioner`) |
 | `util.wave` | Real-time audio visualisation (`AudioWave`, `AudioReader`) |
 | `util.geom` | Basic 2-D geometry helpers (`Rectangle`, `Triangles`, `Vertice`, etc.) |
 | `util.palette` | Colour palette rendering (`ColorPalette`, `PaletteRenderer`) |

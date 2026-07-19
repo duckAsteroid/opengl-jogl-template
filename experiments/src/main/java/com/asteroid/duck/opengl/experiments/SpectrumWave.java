@@ -2,7 +2,9 @@ package com.asteroid.duck.opengl.experiments;
 
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.audio.AudioReader;
+import com.asteroid.duck.opengl.util.audio.AudioSources;
 import com.asteroid.duck.opengl.util.audio.LineAcquirer;
+import com.asteroid.duck.opengl.util.audio.simulated.SimulatedSources;
 import com.asteroid.duck.opengl.util.color.StandardColors;
 import com.asteroid.duck.opengl.util.keys.KeyCombination;
 import com.asteroid.duck.opengl.util.resources.font.FontTexture;
@@ -83,7 +85,8 @@ public class SpectrumWave implements Experiment {
 			1f/20f  // fast decay — clears in ~0.3 s so next kick can re-trigger
 	);
 
-	private final LineAcquirer lineAcquirer = new LineAcquirer();
+	private final AudioSources audioSources = new AudioSources();
+	private int selectedSource = 0;
 
 	private AudioReader audioReader;
 	private Thread      audioReaderThread;
@@ -110,8 +113,11 @@ public class SpectrumWave implements Experiment {
 		audioReaderThread.setDaemon(true);
 		audioReaderThread.start();
 
-		lineAcquirer.init(ctx, LineAcquirer.IDEAL);
-		audioReader.setLine(lineAcquirer.getSelectedSource());
+		audioSources.add(SimulatedSources.middleC(ctx.getClock()));
+		LineAcquirer.allLinesMatching(LineAcquirer.IDEAL)
+				.map(LineAcquirer.MixerLine::toAudioDataSource)
+				.forEach(audioSources::add);
+		audioReader.setLine(audioSources.list().get(selectedSource));
 
 		initBeatLabels(ctx);
 
@@ -119,12 +125,12 @@ public class SpectrumWave implements Experiment {
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		ctx.getKeyRegistry().registerKeyAction(KeyCombination.simple('J'), () -> {
-			lineAcquirer.next();
-			audioReader.setLine(lineAcquirer.getSelectedSource());
+			selectedSource = (selectedSource + 1) % audioSources.size();
+			audioReader.setLine(audioSources.list().get(selectedSource));
 		}, "Switch to the next audio input");
 		ctx.getKeyRegistry().registerKeyAction(KeyCombination.simple('H'), () -> {
-			lineAcquirer.previous();
-			audioReader.setLine(lineAcquirer.getSelectedSource());
+			selectedSource = (selectedSource - 1 + audioSources.size()) % audioSources.size();
+			audioReader.setLine(audioSources.list().get(selectedSource));
 		}, "Switch to the previous audio input");
 	}
 

@@ -2,8 +2,10 @@ package com.asteroid.duck.opengl.experiments;
 
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.audio.AudioReader;
+import com.asteroid.duck.opengl.util.audio.AudioSources;
 import com.asteroid.duck.opengl.util.audio.LineAcquirer;
 import com.asteroid.duck.opengl.util.audio.PboAudioSink;
+import com.asteroid.duck.opengl.util.audio.simulated.SimulatedSources;
 import com.asteroid.duck.opengl.util.color.StandardColors;
 import com.asteroid.duck.opengl.util.keys.KeyCombination;
 import com.asteroid.duck.opengl.util.wave.AmplitudeFunction;
@@ -27,7 +29,8 @@ public class SoundWave implements Experiment {
 	private Thread audioReaderThread;
 	private AudioWave audioWave;
 
-	private final LineAcquirer lineAcquirer = new LineAcquirer();
+	private final AudioSources audioSources = new AudioSources();
+	private int selectedSource = 0;
 	private final Random random = new Random();
 	private float lineWidth = 6.0f;
 	private int channelMode = AudioWave.CHANNEL_BLEND;
@@ -45,20 +48,24 @@ public class SoundWave implements Experiment {
 		audioWave = new AudioWave(audioSink);
 		audioWave.init(ctx);
 
-		lineAcquirer.init(ctx, LineAcquirer.IDEAL);
+		audioSources.add(SimulatedSources.middleC(ctx.getClock()));
+		LineAcquirer.allLinesMatching(LineAcquirer.IDEAL)
+				.map(LineAcquirer.MixerLine::toAudioDataSource)
+				.forEach(audioSources::add);
+
 		audioReader = new AudioReader(List.of(audioSink));
 		audioReaderThread = new Thread(audioReader, "audio-reader");
 		audioReaderThread.setDaemon(true);
 		audioReaderThread.start();
-		audioReader.setLine(lineAcquirer.getSelectedSource());
+		audioReader.setLine(audioSources.list().get(selectedSource));
 
 		ctx.getKeyRegistry().registerKeyAction(KeyCombination.simple('J'), () -> {
-			lineAcquirer.next();
-			audioReader.setLine(lineAcquirer.getSelectedSource());
+			selectedSource = (selectedSource + 1) % audioSources.size();
+			audioReader.setLine(audioSources.list().get(selectedSource));
 		}, "Switch to the next audio input line");
 		ctx.getKeyRegistry().registerKeyAction(KeyCombination.simple('H'), () -> {
-			lineAcquirer.previous();
-			audioReader.setLine(lineAcquirer.getSelectedSource());
+			selectedSource = (selectedSource - 1 + audioSources.size()) % audioSources.size();
+			audioReader.setLine(audioSources.list().get(selectedSource));
 		}, "Switch to the previous audio input line");
 		ctx.getKeyRegistry().registerKeyAction(KeyCombination.simple('C'), () -> {
 			StandardColors[] colours = StandardColors.values();

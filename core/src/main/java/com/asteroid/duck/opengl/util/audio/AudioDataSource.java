@@ -1,11 +1,11 @@
 package com.asteroid.duck.opengl.util.audio;
 
 import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.LineUnavailableException;
-import javax.sound.sampled.TargetDataLine;
 
 /**
- * Our interface into an underlying (possibly simulated) audio data source
+ * A pluggable, possibly-simulated source of raw PCM audio. Describes itself (name, supported
+ * formats) and can be {@linkplain #open opened} to obtain an {@link AudioLine} for actually
+ * reading data.
  */
 public interface AudioDataSource {
     /**
@@ -14,54 +14,23 @@ public interface AudioDataSource {
      * @return display name; never {@code null}
      */
 	String getName();
+
 	/**
-	 * Open using a given format
-	 * @param format the format
+	 * The audio formats this source is able to open. May contain wildcard fields
+	 * (see {@link javax.sound.sampled.AudioSystem#NOT_SPECIFIED}), mirroring
+	 * {@link javax.sound.sampled.DataLine.Info#getFormats()}.
+	 *
+	 * @return supported formats; never {@code null}, may be empty if unknown
+	 */
+	AudioFormat[] getSupportedFormats();
+
+	/**
+	 * Open this source for reading in the given format.
+	 *
+	 * @param format the format to open in
 	 * @param bufferSize buffer size in bytes
-	 * @throws LineUnavailableException if can't do it
+	 * @return a handle for reading, starting, stopping, and closing the opened line
+	 * @throws AudioSourceUnavailableException if the source cannot be opened in this format right now
 	 */
-	void open(AudioFormat format, int bufferSize) throws LineUnavailableException;
-
-    /**
-     * Returns {@code true} if the line has been opened via {@link #open} and not yet closed.
-     * A source that is open but not {@linkplain #isRunning() running} has been paused.
-     *
-     * @return {@code true} if the underlying line is open
-     */
-	boolean isOpen();
-
-	/**
-	 * Start the data source
-	 */
-	void start();
-	/**
-	 * How many bytes are available to read
-	 * @return number of bytes available
-	 */
-	int available();
-	/**
-	 * Read raw audio data into the given array
-	 * @param array the array to read into
-	 * @param start start index in the array, the first byte read will go here
-	 * @param length maximum number of bytes to read
-	 * @return number of bytes actually read
-	 */
-	int read(byte[] array, int start, int length);
-	/**
-	 * Stop the data source (can be restarted)
-	 */
-	void stop();
-
-	/**
-	 * Close the data source (cannot be restarted)
-	 */
-	void close();
-
-    /**
-     * Returns {@code true} if the source has been {@linkplain #start() started} and is actively
-     * delivering audio data. A line can be open but not running if it has been stopped.
-     *
-     * @return {@code true} if the source is currently capturing and delivering data
-     */
-	boolean isRunning();
+	AudioLine open(AudioFormat format, int bufferSize) throws AudioSourceUnavailableException;
 }

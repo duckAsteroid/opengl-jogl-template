@@ -5,20 +5,22 @@
 The audio pipeline is split into three independent layers:
 
 ```
-AudioDataSource (hardware line)                          [audio package]
-  └─ AudioReader (background thread)
-       └─ AudioSink.write(byte[], offset, length)
-            ├─ PboAudioSink  → GL 1-D texture → AudioWave / RadialWave  [wave package]
-            └─ FrequencyProcessor → FFTProcessor → FrequencySink         [audio.analysis package]
-                 ├─ BeatDetector   → getBeatStrength(band)
-                 └─ SpectrumAnalyser / RadialSpectrumAnalyser → doRender  [wave package]
+AudioDataSource (pluggable: real line or simulated)       [audio / audio.simulated packages]
+  └─ AudioLine (opened via AudioDataSource.open)
+       └─ AudioReader (background thread)
+            └─ AudioSink.write(byte[], offset, length)
+                 ├─ PboAudioSink  → GL 1-D texture → AudioWave / RadialWave  [wave package]
+                 └─ FrequencyProcessor → FFTProcessor → FrequencySink         [audio.analysis package]
+                      ├─ BeatDetector   → getBeatStrength(band)
+                      └─ SpectrumAnalyser / RadialSpectrumAnalyser → doRender  [wave package]
 ```
 
 **Package layout:**
 
 | Package | Contents |
 |---|---|
-| `util.audio` | Capture: `AudioReader`, `PboAudioSink`, `RollingAudioBuffer`, `LineAcquirer` |
+| `util.audio` | Capture: `AudioReader`, `PboAudioSink`, `RollingAudioBuffer`, `AudioDataSource`, `AudioLine`, `AudioSources`, `LineAcquirer`, `TargetLineSource`, `AudioSourceUnavailableException` |
+| `util.audio.simulated` | Synthetic sources: `SimulatedDataSource`, `SimulatedSources`, `Waveform`, `OscillatingStereoPositioner` |
 | `util.audio.analysis` | Signal processing: `FFTProcessor`, `FrequencyProcessor`, `FrequencySink`, `BeatDetector`, `FrequencyBand` |
 | `util.wave` | Renderers: `AudioWave`, `RadialWave`, `SpectrumAnalyser`, `RadialSpectrumAnalyser` |
 
@@ -74,22 +76,29 @@ each write so the GL thread can snapshot it without locking.
 
 ## AudioReader — the capture thread
 
-`AudioReader` runs a single background thread that drains an `AudioDataSource` and fans out
-to one or more `AudioSink` implementations.
+`AudioReader` runs a single background thread that drains an `AudioLine` and fans out
+to one or more `AudioSink` implementations. It takes an `AudioDataSource` (not an already-opened
+line) via `setLine` — opening, starting, stopping, and closing are its responsibility.
 
 ```java
 AudioReader audioReader = new AudioReader(List.of(audioSink));   // one or more sinks
 Thread audioReaderThread = new Thread(audioReader, "audio-reader");
 audioReaderThread.setDaemon(true);
 audioReaderThread.start();
-audioReader.setLine(lineAcquirer.getSelectedSource());           // start capturing
+audioReader.setLine(audioSources.list().get(selectedSource));    // opens, starts, begins capturing
 ```
+
+If the source can't be opened, `setLine` logs the `AudioSourceUnavailableException` and leaves
+the reader paused (as if `null` had been passed) rather than throwing.
 
 ### Switching audio source at runtime (safe from any thread)
 
+Selection is the caller's responsibility — `AudioSources` and `LineAcquirer` hold no notion of
+"current". A typical experiment keeps its own index into `audioSources.list()`:
+
 ```java
-lineAcquirer.next();
-audioReader.setLine(lineAcquirer.getSelectedSource());
+selectedSource = (selectedSource + 1) % audioSources.size();
+audioReader.setLine(audioSources.list().get(selectedSource));
 ```
 
 ### Shutdown
@@ -102,19 +111,86 @@ audioReaderThread.join(2000);
 
 ---
 
-## LineAcquirer — audio device discovery
+## AudioDataSource / AudioLine — pluggable capture sources
+
+`AudioDataSource` is a lightweight descriptor: a name, the `AudioFormat[]` it can open in, and
+`open(format, bufferSize)`, which returns an `AudioLine` — the actual open handle with
+`available()` / `read()` / `start()` / `stop()` / `isRunning()` / `close()` (`AudioLine` is
+`AutoCloseable`). There's no `isOpen()` on the descriptor — an `AudioLine` only exists once a
+source has been successfully opened, so "read before open" isn't representable.
 
 ```java
-LineAcquirer lineAcquirer = new LineAcquirer();
-lineAcquirer.init(ctx, LineAcquirer.IDEAL);   // IDEAL = 48 kHz, 16-bit stereo
-
-AudioDataSource current  = lineAcquirer.getSelectedSource();
-AudioDataSource next     = lineAcquirer.next();      // returns old source, advances index
-AudioDataSource previous = lineAcquirer.previous();  // wraps around
+public interface AudioDataSource {
+    String getName();
+    AudioFormat[] getSupportedFormats();
+    AudioLine open(AudioFormat format, int bufferSize) throws AudioSourceUnavailableException;
+}
 ```
 
-Pass `-Dsimulate.audio=true` to prepend a `SimulatedDataSource` to the list (useful for
-headless testing and CI).
+`open()` throws `AudioSourceUnavailableException` (wrapping the underlying cause, e.g. a
+`LineUnavailableException` for real hardware) rather than a `javax.sound.sampled` type directly —
+callers only need to handle one exception type regardless of which kind of source they opened.
+
+Two implementations ship in the framework:
+
+| Implementation | Package | Backed by |
+|---|---|---|
+| `TargetLineSource` | `util.audio` | A real `javax.sound.sampled.TargetDataLine`, discovered via `LineAcquirer` |
+| `SimulatedDataSource` | `util.audio.simulated` | A synthetic `StereoDataSource` sampled against a `Clock`, built via `SimulatedSources` |
+
+---
+
+## AudioSources — a pluggable list of sources
+
+`AudioSources` is just a mutable, add/remove list of `AudioDataSource` — real, simulated, or a
+mix. It tracks no selection; the caller (typically an experiment) owns an index into
+`audioSources.list()`.
+
+```java
+AudioSources audioSources = new AudioSources();
+audioSources.add(SimulatedSources.middleC(ctx.getClock()));   // always-available synthetic source
+audioSources.add(someOtherSource);
+audioSources.remove(someOtherSource);
+
+List<AudioDataSource> all = audioSources.list();   // unmodifiable, live view
+int count = audioSources.size();
+```
+
+---
+
+## LineAcquirer — real audio device discovery
+
+`LineAcquirer` is a static-only utility for discovering real Java Sound capture lines — it holds
+no state and does not know about simulated audio. Turn a discovered `MixerLine` into an
+`AudioDataSource` via `toAudioDataSource()`, then add it to an `AudioSources`. The underlying
+`TargetDataLine` is not acquired until the resulting source is `open()`ed, so discovery itself is
+side-effect-free.
+
+```java
+LineAcquirer.allLinesMatching(LineAcquirer.IDEAL)   // IDEAL = 48 kHz, 16-bit stereo
+        .map(LineAcquirer.MixerLine::toAudioDataSource)
+        .forEach(audioSources::add);
+```
+
+`MixerLine.displayName()` gives a short, UI-friendly name (just the mixer name); `toString()`
+keeps the full `Mixer`/`DataLine.Info` dump for diagnostics/logs.
+
+## SimulatedSources — synthetic audio, explicitly opted in
+
+There is no system property or hidden flag; a client adds a simulated source exactly like a real
+one, whenever it wants one available (e.g. always, so it's one `J`/`H` press away, or only under
+a headless/CI condition it decides itself):
+
+```java
+audioSources.add(SimulatedSources.middleC(ctx.getClock()));   // middle-C tone panned at 1 Hz
+```
+
+`SimulatedDataSource`'s constructor also takes an explicit display name directly, for building
+custom synthetic sources beyond what `SimulatedSources` provides:
+
+```java
+new SimulatedDataSource("My synth", ctx.getClock(), myStereoDataSource)
+```
 
 ---
 
@@ -129,19 +205,24 @@ private PboAudioSink audioSink;
 private AudioReader audioReader;
 private Thread audioReaderThread;
 private AudioWave audioWave;
-private final LineAcquirer lineAcquirer = new LineAcquirer();
+private final AudioSources audioSources = new AudioSources();
+private int selectedSource = 0;
 
 // init():
 audioSink = PboAudioSink.create(AudioWave.AUDIO_BUFFER_SIZE, ctx);
 audioWave  = new AudioWave(audioSink);
 audioWave.init(ctx);
 
-lineAcquirer.init(ctx, LineAcquirer.IDEAL);
+audioSources.add(SimulatedSources.middleC(ctx.getClock()));
+LineAcquirer.allLinesMatching(LineAcquirer.IDEAL)
+        .map(LineAcquirer.MixerLine::toAudioDataSource)
+        .forEach(audioSources::add);
+
 audioReader = new AudioReader(List.of(audioSink));
 audioReaderThread = new Thread(audioReader, "audio-reader");
 audioReaderThread.setDaemon(true);
 audioReaderThread.start();
-audioReader.setLine(lineAcquirer.getSelectedSource());
+audioReader.setLine(audioSources.list().get(selectedSource));
 
 // doRender():
 audioSink.upload();
@@ -304,18 +385,23 @@ private final SpectrumAnalyser analyser =
                 .withBarColors(new Vector3f(0, 0.8f, 0), new Vector3f(0.8f, 0, 0));
 private AudioReader audioReader;
 private Thread audioReaderThread;
-private final LineAcquirer lineAcquirer = new LineAcquirer();
+private final AudioSources audioSources = new AudioSources();
+private int selectedSource = 0;
 
 // init():
 freqProc.addSink(analyser);
 analyser.init(ctx);
 
-lineAcquirer.init(ctx, LineAcquirer.IDEAL);
+audioSources.add(SimulatedSources.middleC(ctx.getClock()));
+LineAcquirer.allLinesMatching(LineAcquirer.IDEAL)
+        .map(LineAcquirer.MixerLine::toAudioDataSource)
+        .forEach(audioSources::add);
+
 audioReader = new AudioReader(List.of(freqProc));
 audioReaderThread = new Thread(audioReader, "spectrum-audio-reader");
 audioReaderThread.setDaemon(true);
 audioReaderThread.start();
-audioReader.setLine(lineAcquirer.getSelectedSource());
+audioReader.setLine(audioSources.list().get(selectedSource));
 
 // doRender():
 freqProc.process();
@@ -650,19 +736,24 @@ private FrequencyProcessor freqProc;
 private BeatDetector       beatDetector;
 private AudioReader        audioReader;
 private Thread             audioReaderThread;
-private final LineAcquirer lineAcquirer = new LineAcquirer();
+private final AudioSources audioSources = new AudioSources();
+private int                selectedSource = 0;
 
 // ── init() ─────────────────────────────────────────────────────────────────────
 freqProc     = new FrequencyProcessor(1024, 128, 48_000f, 20f, 20_000f, -80f, 0f);
 beatDetector = new BeatDetector(freqProc);          // geometry derived from freqProc
 freqProc.addSink(beatDetector);
 
-lineAcquirer.init(ctx, LineAcquirer.IDEAL);
+audioSources.add(SimulatedSources.middleC(ctx.getClock()));
+LineAcquirer.allLinesMatching(LineAcquirer.IDEAL)
+        .map(LineAcquirer.MixerLine::toAudioDataSource)
+        .forEach(audioSources::add);
+
 audioReader = new AudioReader(List.of(freqProc));   // freqProc replaces RollingAudioBuffer
 audioReaderThread = new Thread(audioReader, "beat-audio-reader");
 audioReaderThread.setDaemon(true);
 audioReaderThread.start();
-audioReader.setLine(lineAcquirer.getSelectedSource());
+audioReader.setLine(audioSources.list().get(selectedSource));
 
 // ── doRender() — one call runs the FFT and notifies all sinks ──────────────────
 freqProc.process();
@@ -737,7 +828,8 @@ private SpectrumAnalyser   analyser;
 private BeatDetector       beats;
 private AudioReader        audioReader;
 private Thread             audioReaderThread;
-private final LineAcquirer lineAcquirer = new LineAcquirer();
+private final AudioSources audioSources = new AudioSources();
+private int                selectedSource = 0;
 
 // ── init() ─────────────────────────────────────────────────────────────────────
 freqProc = new FrequencyProcessor(1024, 128, 48_000f, 20f, 20_000f, -80f, 0f);
@@ -746,14 +838,17 @@ beats    = new BeatDetector(freqProc);        // geometry matched automatically
 freqProc.addSink(analyser);
 freqProc.addSink(beats);
 
-lineAcquirer.init(ctx, LineAcquirer.IDEAL);
+audioSources.add(SimulatedSources.middleC(ctx.getClock()));
+LineAcquirer.allLinesMatching(LineAcquirer.IDEAL)
+        .map(LineAcquirer.MixerLine::toAudioDataSource)
+        .forEach(audioSources::add);
 analyser.init(ctx);                           // GL setup only; no audio thread started
 
 audioReader = new AudioReader(List.of(freqProc));
 audioReaderThread = new Thread(audioReader, "freq-audio-reader");
 audioReaderThread.setDaemon(true);
 audioReaderThread.start();
-audioReader.setLine(lineAcquirer.getSelectedSource());
+audioReader.setLine(audioSources.list().get(selectedSource));
 
 // ── doRender() — one FFT, two consumers ───────────────────────────────────────
 freqProc.process();               // runs FFT; calls analyser.onSpectrum() and beats.onSpectrum()
@@ -809,6 +904,8 @@ values until `update()` has been called at least `historyLength * 3` times.
 | **upload() once per frame** | Call `audioSink.upload()` exactly once per frame before any renderer that shares that sink. Calling it multiple times per frame wastes a DMA transfer; skipping it leaves the texture stale. |
 | **AUDIO_BUFFER_SIZE compatibility** | `AudioWave.AUDIO_BUFFER_SIZE` and `RadialWave.AUDIO_BUFFER_SIZE` are both `2048`. Pass either constant to `PboAudioSink.create()` when sharing between them. |
 | **AudioReader thread lifecycle** | Start before calling `setLine()`; stop with `setRunning(false)` + `setLine(null)` + `join(2000)` in `dispose()`. |
+| **AudioDataSource has no `isOpen()`** | An `AudioLine` only exists once `open()` has succeeded — `setLine()` handles this for you; don't try to read/start/stop an `AudioDataSource` directly. |
+| **AudioSources tracks no selection** | It's just add/remove/list. Cycling ("next input") is the caller's own index into `audioSources.list()`. |
 | **FrequencyProcessor.process() before sinks** | Call `freqProc.process()` once per frame before any `FrequencySink` (BeatDetector, SpectrumAnalyser) that reads the result in the same frame. |
 | **addSink() is your responsibility** | Constructing a `BeatDetector` or `SpectrumAnalyser` with a `FrequencyProcessor` does NOT auto-register it. Call `freqProc.addSink(sink)` explicitly. |
 | **BeatDetector geometry must match FrequencyProcessor** | Use `new BeatDetector(freqProc)` to derive geometry automatically. If using the raw constructor, pass the same `numBins`, `fMin`, `fMax` as the `FrequencyProcessor`. |

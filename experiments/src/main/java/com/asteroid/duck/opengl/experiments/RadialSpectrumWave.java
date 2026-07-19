@@ -2,7 +2,9 @@ package com.asteroid.duck.opengl.experiments;
 
 import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.audio.AudioReader;
+import com.asteroid.duck.opengl.util.audio.AudioSources;
 import com.asteroid.duck.opengl.util.audio.LineAcquirer;
+import com.asteroid.duck.opengl.util.audio.simulated.SimulatedSources;
 import com.asteroid.duck.opengl.util.keys.KeyCombination;
 import com.asteroid.duck.opengl.util.audio.analysis.FrequencyBand;
 import com.asteroid.duck.opengl.util.audio.analysis.FrequencyProcessor;
@@ -65,7 +67,8 @@ public class RadialSpectrumWave implements Experiment {
             BEAT_BANDS, freqProc.getNumBins(), freqProc.getFMin(), freqProc.getFMax(),
             120, 1.15f, 4.0f, 1f / 20f);
 
-    private final LineAcquirer lineAcquirer = new LineAcquirer();
+    private final AudioSources audioSources = new AudioSources();
+    private int selectedSource = 0;
     private AudioReader audioReader;
     private Thread      audioReaderThread;
 
@@ -90,19 +93,22 @@ public class RadialSpectrumWave implements Experiment {
         audioReaderThread.setDaemon(true);
         audioReaderThread.start();
 
-        lineAcquirer.init(ctx, LineAcquirer.IDEAL);
-        audioReader.setLine(lineAcquirer.getSelectedSource());
+        audioSources.add(SimulatedSources.middleC(ctx.getClock()));
+        LineAcquirer.allLinesMatching(LineAcquirer.IDEAL)
+                .map(LineAcquirer.MixerLine::toAudioDataSource)
+                .forEach(audioSources::add);
+        audioReader.setLine(audioSources.list().get(selectedSource));
 
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         ctx.getKeyRegistry().registerKeyAction(KeyCombination.simple('J'), () -> {
-            lineAcquirer.next();
-            audioReader.setLine(lineAcquirer.getSelectedSource());
+            selectedSource = (selectedSource + 1) % audioSources.size();
+            audioReader.setLine(audioSources.list().get(selectedSource));
         }, "Switch to the next audio input");
         ctx.getKeyRegistry().registerKeyAction(KeyCombination.simple('H'), () -> {
-            lineAcquirer.previous();
-            audioReader.setLine(lineAcquirer.getSelectedSource());
+            selectedSource = (selectedSource - 1 + audioSources.size()) % audioSources.size();
+            audioReader.setLine(audioSources.list().get(selectedSource));
         }, "Switch to the previous audio input");
         ctx.getKeyRegistry().registerKeyAction(KeyCombination.named("RIGHT_BRACKET"), () ->
                 radial.withRepeats(Math.min(16, radial.getRepeats() + 1)),
