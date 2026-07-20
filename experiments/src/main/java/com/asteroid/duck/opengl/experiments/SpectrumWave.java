@@ -15,7 +15,7 @@ import com.asteroid.duck.opengl.util.audio.analysis.FrequencyBand;
 import com.asteroid.duck.opengl.util.audio.analysis.FrequencyProcessor;
 import com.asteroid.duck.opengl.util.wave.SpectrumAnalyser;
 import org.joml.Matrix4f;
-import org.joml.Vector3f;
+import org.joml.Vector4f;
 
 import java.awt.*;
 import java.io.IOException;
@@ -49,8 +49,8 @@ public class SpectrumWave implements Experiment {
 	private static final float GAP          = SpectrumAnalyser.DEFAULT_GAP;
 
 	// ── Colour gradient: green (low) → red (high) ────────────────────────────
-	private static final Vector3f COLOR_LOW  = new Vector3f(0.0f, 0.8f, 0.0f);
-	private static final Vector3f COLOR_HIGH = new Vector3f(0.8f, 0.0f, 0.0f);
+	private static final Vector4f COLOR_LOW  = new Vector4f(0.0f, 0.8f, 0.0f, 1.0f);
+	private static final Vector4f COLOR_HIGH = new Vector4f(0.8f, 0.0f, 0.0f, 1.0f);
 
 	// ── Beat frequency bands (tighter bass range to skip sub-bass rumble) ────
 	private static final List<FrequencyBand> BEAT_BANDS = List.of(

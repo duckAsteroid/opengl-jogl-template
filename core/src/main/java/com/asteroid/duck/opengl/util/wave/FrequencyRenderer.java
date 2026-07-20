@@ -6,7 +6,7 @@ import com.asteroid.duck.opengl.util.Transformable;
 import com.asteroid.duck.opengl.util.audio.analysis.FrequencyProcessor;
 import com.asteroid.duck.opengl.util.audio.analysis.FrequencySink;
 import org.joml.Matrix4f;
-import org.joml.Vector3f;
+import org.joml.Vector4f;
 
 import java.nio.FloatBuffer;
 
@@ -23,6 +23,12 @@ import static org.lwjgl.system.MemoryUtil.*;
  * ballistics algorithm. Concrete subclasses ({@link SpectrumAnalyser},
  * {@link RadialSpectrumAnalyser}) handle the coordinate-system-specific rendering —
  * Cartesian bars/fill or polar radial shape — without duplicating shared state.</p>
+ *
+ * <p>All bar/fill/peak colours are {@link org.joml.Vector4f} (RGBA), and the fragment shaders
+ * write the alpha channel through unmodified. {@link com.asteroid.duck.opengl.util.GLWindow}
+ * enables {@code GL_BLEND} with standard {@code SRC_ALPHA}/{@code ONE_MINUS_SRC_ALPHA}
+ * blending globally, so any colour with alpha &lt; 1 renders translucent over whatever was
+ * drawn before it in the frame.</p>
  *
  * <p>Implements {@link Transformable}: call {@link #setTransform} at any time (from any
  * thread) to apply a {@link org.joml.Matrix4f} to all output vertex positions. The matrix
@@ -85,8 +91,12 @@ public abstract class FrequencyRenderer implements RenderedItem, FrequencySink, 
     /** Width of the peak line or tick mark in pixels. Subclass default may vary. */
     protected float peakLineWidth   = 2.0f;
 
-    /** Colour of the peak-hold indicator; defaults to white. Set before {@code init()}. */
-    protected Vector3f colorPeak = new Vector3f(1.0f, 1.0f, 1.0f);
+    /**
+     * Colour of the peak-hold indicator; defaults to opaque white. Set before {@code init()}.
+     * The alpha channel is honoured — subclasses render with blending enabled, so a fractional
+     * alpha yields a translucent peak indicator.
+     */
+    protected Vector4f colorPeak = new Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
 
     // ── Transform ────────────────────────────────────────────────────────────────
 

@@ -382,7 +382,7 @@ private final FrequencyProcessor freqProc =
         new FrequencyProcessor(1024, 128, 48_000f, 20f, 20_000f, -80f, 0f);
 private final SpectrumAnalyser analyser =
         new SpectrumAnalyser(freqProc)
-                .withBarColors(new Vector3f(0, 0.8f, 0), new Vector3f(0.8f, 0, 0));
+                .withBarColors(new Vector4f(0, 0.8f, 0, 1), new Vector4f(0.8f, 0, 0, 1));
 private AudioReader audioReader;
 private Thread audioReaderThread;
 private final AudioSources audioSources = new AudioSources();
@@ -428,14 +428,21 @@ The `numBins`, `fMin`, and `fMax` are derived from the `FrequencyProcessor` auto
 ```java
 // Green at bottom → red at top:
 analyser.withBarColors(
-    new Vector3f(0.0f, 0.8f, 0.0f),   // colorLow  — bar bottom / low energy
-    new Vector3f(0.8f, 0.0f, 0.0f)    // colorHigh — bar top    / high energy
+    new Vector4f(0.0f, 0.8f, 0.0f, 1.0f),   // colorLow  — bar bottom / low energy
+    new Vector4f(0.8f, 0.0f, 0.0f, 1.0f)    // colorHigh — bar top    / high energy
 );
 // Solid white (palette-renderer compatible):
-analyser.withBarColors(new Vector3f(1, 1, 1), new Vector3f(1, 1, 1));
+analyser.withBarColors(new Vector4f(1, 1, 1, 1), new Vector4f(1, 1, 1, 1));
+// 50% translucent red bars, fading toward opaque at the tip:
+analyser.withBarColors(new Vector4f(0.8f, 0, 0, 0.5f), new Vector4f(0.8f, 0, 0, 1.0f));
 ```
 
-Default is white/white (monochrome). Call before `init()`.
+Default is opaque white/white (monochrome). Call before `init()`.
+
+Colours are RGBA (`Vector4f`). `GLWindow` enables `GL_BLEND` globally with standard
+`SRC_ALPHA`/`ONE_MINUS_SRC_ALPHA` blending, so an alpha component below 1 on either stop renders
+that part of the bar translucent over whatever was drawn earlier in the frame. The peak-hold tick
+colour (`withPeakColor`, below) is likewise RGBA.
 
 ### Peak-hold ticks
 
@@ -524,10 +531,10 @@ Key properties:
 ```java
 FrequencyProcessor freqProc = new FrequencyProcessor(4096, 128, 48_000f, 20f, 20_000f, -80f, 0f);
 RadialSpectrumAnalyser radial = new RadialSpectrumAnalyser(freqProc)
-        .withColors(new Vector3f(0, 0.2f, 0.6f),   // inner tip — deep blue
-                    new Vector3f(0, 0.7f, 0.3f),   // base circle — green
-                    new Vector3f(0.9f, 0.1f, 0))   // outer tip  — red
-        .withPeakColor(new Vector3f(1, 1, 1))       // peak line  — white
+        .withColors(new Vector4f(0, 0.2f, 0.6f, 1),   // inner tip — deep blue
+                    new Vector4f(0, 0.7f, 0.3f, 1),   // base circle — green
+                    new Vector4f(0.9f, 0.1f, 0, 1))   // outer tip  — red
+        .withPeakColor(new Vector4f(1, 1, 1, 1))       // peak line  — white
         .withRepeats(2);                            // bilateral symmetry
 freqProc.addSink(radial);
 
@@ -567,8 +574,14 @@ The fill shape uses a gradient with three named stops:
 | `outer` | 1.0 | Outward tip — maximum outward displacement |
 
 ```java
-radial.withPeakColor(new Vector3f(1, 1, 1));  // peak-hold line colour (default white)
+radial.withPeakColor(new Vector4f(1, 1, 1, 1));  // peak-hold line colour (default opaque white)
+// Translucent inner tip, opaque outer tip:
+radial.withColors(new Vector4f(0, 0.2f, 0.6f, 0.3f), new Vector4f(0, 0.7f, 0.3f, 1), new Vector4f(0.9f, 0.1f, 0, 1));
 ```
+
+Colours are RGBA (`Vector4f`), including the peak-hold line. `GLWindow` enables `GL_BLEND`
+globally with standard `SRC_ALPHA`/`ONE_MINUS_SRC_ALPHA` blending, so an alpha component below 1
+on any gradient stop renders translucent.
 
 ### Repeat / symmetry
 

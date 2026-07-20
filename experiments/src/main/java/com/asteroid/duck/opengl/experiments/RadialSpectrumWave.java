@@ -10,7 +10,7 @@ import com.asteroid.duck.opengl.util.audio.analysis.FrequencyBand;
 import com.asteroid.duck.opengl.util.audio.analysis.FrequencyProcessor;
 import com.asteroid.duck.opengl.util.audio.analysis.BeatDetector;
 import com.asteroid.duck.opengl.util.wave.RadialSpectrumAnalyser;
-import org.joml.Vector3f;
+import org.joml.Vector4f;
 
 import java.io.IOException;
 import java.util.List;
@@ -49,10 +49,10 @@ public class RadialSpectrumWave implements Experiment {
     );
 
     // ── Colours: inner tip → base circle → outer tip → peak line ─────────────────
-    private static final Vector3f COLOR_INNER = new Vector3f(0.0f, 0.2f, 0.6f);
-    private static final Vector3f COLOR_BASE  = new Vector3f(0.0f, 0.7f, 0.3f);
-    private static final Vector3f COLOR_OUTER = new Vector3f(0.9f, 0.1f, 0.0f);
-    private static final Vector3f COLOR_PEAK  = new Vector3f(1.0f, 1.0f, 1.0f);
+    private static final Vector4f COLOR_INNER = new Vector4f(0.0f, 0.2f, 0.6f, 1.0f);
+    private static final Vector4f COLOR_BASE  = new Vector4f(0.0f, 0.7f, 0.3f, 1.0f);
+    private static final Vector4f COLOR_OUTER = new Vector4f(0.9f, 0.1f, 0.0f, 1.0f);
+    private static final Vector4f COLOR_PEAK  = new Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
 
     // ── Pipeline ─────────────────────────────────────────────────────────────────
     private final FrequencyProcessor freqProc =

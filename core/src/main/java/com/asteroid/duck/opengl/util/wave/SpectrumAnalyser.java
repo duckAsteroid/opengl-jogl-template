@@ -13,7 +13,7 @@ import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderSource;
 import com.asteroid.duck.opengl.util.resources.shader.Uniform;
 import org.joml.Vector2f;
-import org.joml.Vector3f;
+import org.joml.Vector4f;
 
 import java.io.IOException;
 
@@ -60,7 +60,7 @@ import static org.lwjgl.opengl.GL30.*;
  * <pre>{@code
  * FrequencyProcessor freqProc = new FrequencyProcessor(...);
  * SpectrumAnalyser analyser = new SpectrumAnalyser(freqProc)
- *         .withBarColors(new Vector3f(0, 0.8f, 0), new Vector3f(0.8f, 0, 0))
+ *         .withBarColors(new Vector4f(0, 0.8f, 0, 1), new Vector4f(0.8f, 0, 0, 1))
  *         .withLayout(BarLayout.MIRRORED)
  *         .withDirection(BarDirection.BOTH)
  *         .withRenderMode(RenderMode.FILLED);
@@ -216,11 +216,11 @@ public class SpectrumAnalyser extends FrequencyRenderer {
             #version 330 core
             in float vT;
             out vec4 fragColor;
-            uniform vec3 uColorLow;
-            uniform vec3 uColorHigh;
+            uniform vec4 uColorLow;
+            uniform vec4 uColorHigh;
 
             void main() {
-                fragColor = vec4(mix(uColorLow, uColorHigh, vT), 1.0);
+                fragColor = mix(uColorLow, uColorHigh, vT);
             }
         """;
 
@@ -303,19 +303,19 @@ public class SpectrumAnalyser extends FrequencyRenderer {
     private static final String FRAGMENT_PEAK = """
             #version 330 core
             out vec4 fragColor;
-            uniform vec3 uPeakColor;
-            void main() { fragColor = vec4(uPeakColor, 1.0); }
+            uniform vec4 uPeakColor;
+            void main() { fragColor = uPeakColor; }
         """;
 
     // ── Construction-time parameters ────────────────────────────────────────────
 
     private final float gapFraction;
 
-    /** Bar gradient: colour at the base of each bar (magnitude = 0). */
-    private Vector3f barColorLow  = new Vector3f(1.0f, 1.0f, 1.0f);
+    /** Bar gradient: colour at the base of each bar (magnitude = 0). RGBA — alpha is honoured. */
+    private Vector4f barColorLow  = new Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
 
-    /** Bar gradient: colour at the tip of each bar (magnitude = 1). */
-    private Vector3f barColorHigh = new Vector3f(1.0f, 1.0f, 1.0f);
+    /** Bar gradient: colour at the tip of each bar (magnitude = 1). RGBA — alpha is honoured. */
+    private Vector4f barColorHigh = new Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
 
     // ── Visual configuration (set before init unless noted) ──────────────────────
 
@@ -396,13 +396,16 @@ public class SpectrumAnalyser extends FrequencyRenderer {
      * {@code vT} is 0 at the base and the current normalised magnitude at the tip. This
      * means quiet bars show mostly {@code low} and loud bars blend toward {@code high}.</p>
      *
+     * <p>Colours are RGBA — an alpha component below 1 renders the bars translucent, since
+     * {@code GL_BLEND} is enabled globally with standard alpha blending.</p>
+     *
      * @param low  colour at the base (zero energy end)
      * @param high colour at the tip (full energy end)
      * @return {@code this} for fluent chaining
      */
-    public SpectrumAnalyser withBarColors(Vector3f low, Vector3f high) {
-        this.barColorLow  = new Vector3f(low);
-        this.barColorHigh = new Vector3f(high);
+    public SpectrumAnalyser withBarColors(Vector4f low, Vector4f high) {
+        this.barColorLow  = new Vector4f(low);
+        this.barColorHigh = new Vector4f(high);
         return this;
     }
 
@@ -410,11 +413,13 @@ public class SpectrumAnalyser extends FrequencyRenderer {
      * Sets the colour of the peak-hold indicator (tick marks in BARS mode, continuous line
      * in FILLED mode). Call before {@link #init}.
      *
-     * @param color peak indicator colour (default white)
+     * <p>Colour is RGBA — an alpha component below 1 renders the peak indicator translucent.</p>
+     *
+     * @param color peak indicator colour (default opaque white)
      * @return {@code this} for fluent chaining
      */
-    public SpectrumAnalyser withPeakColor(Vector3f color) {
-        this.colorPeak = new Vector3f(color);
+    public SpectrumAnalyser withPeakColor(Vector4f color) {
+        this.colorPeak = new Vector4f(color);
         return this;
     }
 
@@ -597,8 +602,8 @@ public class SpectrumAnalyser extends FrequencyRenderer {
                 null);
         barShader.use(ctx);
         barShader.uniforms().get("uFFTTex",   Integer.class).set(0);
-        barShader.uniforms().get("uColorLow",  Vector3f.class).set(barColorLow);
-        barShader.uniforms().get("uColorHigh", Vector3f.class).set(barColorHigh);
+        barShader.uniforms().get("uColorLow",  Vector4f.class).set(barColorLow);
+        barShader.uniforms().get("uColorHigh", Vector4f.class).set(barColorHigh);
         barShader.uniforms().get("uLayout",   Integer.class).set(layout.ordinal());
         barShader.uniforms().get("uNumBins",  Integer.class).set(numBins);
         uBarsDir = barShader.uniforms().get("uBarDir", Integer.class);
@@ -615,7 +620,7 @@ public class SpectrumAnalyser extends FrequencyRenderer {
                 null);
         peakBarsShader.use(ctx);
         peakBarsShader.uniforms().get("uFFTTex",    Integer.class).set(0);
-        peakBarsShader.uniforms().get("uPeakColor", Vector3f.class).set(colorPeak);
+        peakBarsShader.uniforms().get("uPeakColor", Vector4f.class).set(colorPeak);
         peakBarsShader.uniforms().get("uLayout",    Integer.class).set(layout.ordinal());
         peakBarsShader.uniforms().get("uNumBins",   Integer.class).set(numBins);
         uPeakBarsDir = peakBarsShader.uniforms().get("uBarDir", Integer.class);
@@ -670,8 +675,8 @@ public class SpectrumAnalyser extends FrequencyRenderer {
                 null);
         fillShader.use(ctx);
         fillShader.uniforms().get("uFFTTex",        Integer.class).set(0);
-        fillShader.uniforms().get("uColorLow",       Vector3f.class).set(barColorLow);
-        fillShader.uniforms().get("uColorHigh",      Vector3f.class).set(barColorHigh);
+        fillShader.uniforms().get("uColorLow",       Vector4f.class).set(barColorLow);
+        fillShader.uniforms().get("uColorHigh",      Vector4f.class).set(barColorHigh);
         fillShader.uniforms().get("uLayout",         Integer.class).set(layout.ordinal());
         fillShader.uniforms().get("uNumFillSamples", Integer.class).set(numFillSamples);
         uFillDir = fillShader.uniforms().get("uBarDir", Integer.class);
@@ -685,7 +690,7 @@ public class SpectrumAnalyser extends FrequencyRenderer {
                 null);
         peakLineShader.use(ctx);
         peakLineShader.uniforms().get("uFFTTex",        Integer.class).set(0);
-        peakLineShader.uniforms().get("uPeakColor",     Vector3f.class).set(colorPeak);
+        peakLineShader.uniforms().get("uPeakColor",     Vector4f.class).set(colorPeak);
         peakLineShader.uniforms().get("uLayout",        Integer.class).set(layout.ordinal());
         peakLineShader.uniforms().get("uNumFillSamples",Integer.class).set(numFillSamples);
         uPeakLineDir  = peakLineShader.uniforms().get("uBarDir",    Integer.class);

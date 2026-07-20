@@ -6,7 +6,7 @@ import org.joml.Matrix4f;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderProgram;
 import com.asteroid.duck.opengl.util.resources.shader.ShaderSource;
 import com.asteroid.duck.opengl.util.resources.shader.Uniform;
-import org.joml.Vector3f;
+import org.joml.Vector4f;
 
 import java.awt.Rectangle;
 import java.io.IOException;
@@ -46,6 +46,8 @@ import static org.lwjgl.opengl.GL30.*;
  *   <li><em>outer</em> — colour at the outward tip (maximum outward displacement)</li>
  * </ul>
  * <p>The peak-hold line colour is set independently via {@link #withPeakColor}.</p>
+ * <p>All colours are RGBA ({@link org.joml.Vector4f}); an alpha component below 1 renders
+ * translucent, since {@code GL_BLEND} is enabled globally with standard alpha blending.</p>
  *
  * <h2>Repeat / symmetry</h2>
  * <p>The spectrum can be tiled around the circle any number of times via {@link #withRepeats}.
@@ -57,10 +59,10 @@ import static org.lwjgl.opengl.GL30.*;
  * <pre>{@code
  * FrequencyProcessor freqProc = new FrequencyProcessor(...);
  * RadialSpectrumAnalyser radial = new RadialSpectrumAnalyser(freqProc)
- *         .withColors(new Vector3f(0, 0.2f, 0.6f),   // inner tip — deep blue
- *                     new Vector3f(0, 0.7f, 0.3f),   // base circle — green
- *                     new Vector3f(0.9f, 0.1f, 0))   // outer tip  — red
- *         .withPeakColor(new Vector3f(1, 1, 1))       // peak line  — white
+ *         .withColors(new Vector4f(0, 0.2f, 0.6f, 1),   // inner tip — deep blue
+ *                     new Vector4f(0, 0.7f, 0.3f, 1),   // base circle — green
+ *                     new Vector4f(0.9f, 0.1f, 0, 1))   // outer tip  — red
+ *         .withPeakColor(new Vector4f(1, 1, 1, 1))       // peak line  — white
  *         .withRepeats(2);                            // bilateral symmetry
  * freqProc.addSink(radial);
  *
@@ -146,17 +148,16 @@ public class RadialSpectrumAnalyser extends FrequencyRenderer {
     private static final String FRAGMENT_FILL = """
             #version 330 core
             in  float vFillT;
-            uniform vec3 uColorInner;  // colour at the inward tip  (vFillT = 0)
-            uniform vec3 uColorBase;   // colour at the base circle  (vFillT = 0.5)
-            uniform vec3 uColorOuter;  // colour at the outward tip  (vFillT = 1)
+            uniform vec4 uColorInner;  // colour at the inward tip  (vFillT = 0)
+            uniform vec4 uColorBase;   // colour at the base circle  (vFillT = 0.5)
+            uniform vec4 uColorOuter;  // colour at the outward tip  (vFillT = 1)
             out vec4 fragColor;
 
             void main() {
                 // 3-stop gradient: inner tip → base circle → outer tip
-                vec3 color = (vFillT < 0.5)
+                fragColor = (vFillT < 0.5)
                     ? mix(uColorInner, uColorBase, vFillT * 2.0)
                     : mix(uColorBase,  uColorOuter, (vFillT - 0.5) * 2.0);
-                fragColor = vec4(color, 1.0);
             }
         """;
 
@@ -192,10 +193,10 @@ public class RadialSpectrumAnalyser extends FrequencyRenderer {
     // language=GLSL
     private static final String FRAGMENT_PEAK = """
             #version 330 core
-            uniform vec3 uPeakColor;
+            uniform vec4 uPeakColor;
             out vec4 fragColor;
             void main() {
-                fragColor = vec4(uPeakColor, 1.0);
+                fragColor = uPeakColor;
             }
         """;
 
@@ -205,12 +206,12 @@ public class RadialSpectrumAnalyser extends FrequencyRenderer {
     private final float outerHeight;
     private final float innerDepth;
 
-    /** Fill gradient stop at the inward tip (vFillT = 0). */
-    private Vector3f colorInner = new Vector3f(0.0f, 0.2f, 0.6f);
-    /** Fill gradient stop at the base circle (vFillT = 0.5). */
-    private Vector3f colorBase  = new Vector3f(0.0f, 0.7f, 0.3f);
-    /** Fill gradient stop at the outward tip (vFillT = 1). */
-    private Vector3f colorOuter = new Vector3f(0.9f, 0.1f, 0.0f);
+    /** Fill gradient stop at the inward tip (vFillT = 0). RGBA — alpha is honoured. */
+    private Vector4f colorInner = new Vector4f(0.0f, 0.2f, 0.6f, 1.0f);
+    /** Fill gradient stop at the base circle (vFillT = 0.5). RGBA — alpha is honoured. */
+    private Vector4f colorBase  = new Vector4f(0.0f, 0.7f, 0.3f, 1.0f);
+    /** Fill gradient stop at the outward tip (vFillT = 1). RGBA — alpha is honoured. */
+    private Vector4f colorOuter = new Vector4f(0.9f, 0.1f, 0.0f, 1.0f);
     // colorPeak is inherited from FrequencyRenderer (default: white)
 
     // ── GL resources ────────────────────────────────────────────────────────────
@@ -278,26 +279,31 @@ public class RadialSpectrumAnalyser extends FrequencyRenderer {
      *   <li>{@code outer} — at the outward tip (maximum outward displacement)</li>
      * </ul>
      *
+     * <p>Colours are RGBA — an alpha component below 1 renders the fill translucent, since
+     * {@code GL_BLEND} is enabled globally with standard alpha blending.</p>
+     *
      * @param inner colour at the inward tip
      * @param base  colour at the base-circle gradient midpoint
      * @param outer colour at the outward tip
      * @return {@code this} for fluent chaining
      */
-    public RadialSpectrumAnalyser withColors(Vector3f inner, Vector3f base, Vector3f outer) {
-        this.colorInner = new Vector3f(inner);
-        this.colorBase  = new Vector3f(base);
-        this.colorOuter = new Vector3f(outer);
+    public RadialSpectrumAnalyser withColors(Vector4f inner, Vector4f base, Vector4f outer) {
+        this.colorInner = new Vector4f(inner);
+        this.colorBase  = new Vector4f(base);
+        this.colorOuter = new Vector4f(outer);
         return this;
     }
 
     /**
      * Sets the colour of the smooth peak-hold line. Call before {@link #init}.
      *
-     * @param color peak line colour (default white)
+     * <p>Colour is RGBA — an alpha component below 1 renders the peak line translucent.</p>
+     *
+     * @param color peak line colour (default opaque white)
      * @return {@code this} for fluent chaining
      */
-    public RadialSpectrumAnalyser withPeakColor(Vector3f color) {
-        this.colorPeak = new Vector3f(color);
+    public RadialSpectrumAnalyser withPeakColor(Vector4f color) {
+        this.colorPeak = new Vector4f(color);
         return this;
     }
 
@@ -430,9 +436,9 @@ public class RadialSpectrumAnalyser extends FrequencyRenderer {
         fillShader.uniforms().get("uBaseRadius",   Float.class).set(baseRadius);
         fillShader.uniforms().get("uOuterHeight",  Float.class).set(outerHeight);
         fillShader.uniforms().get("uInnerDepth",   Float.class).set(innerDepth);
-        fillShader.uniforms().get("uColorInner", Vector3f.class).set(colorInner);
-        fillShader.uniforms().get("uColorBase",  Vector3f.class).set(colorBase);
-        fillShader.uniforms().get("uColorOuter", Vector3f.class).set(colorOuter);
+        fillShader.uniforms().get("uColorInner", Vector4f.class).set(colorInner);
+        fillShader.uniforms().get("uColorBase",  Vector4f.class).set(colorBase);
+        fillShader.uniforms().get("uColorOuter", Vector4f.class).set(colorOuter);
         uFillAspect   = fillShader.uniforms().get("uAspect",   Float.class);
         uFillAspect.set(1.0f);
         uFillRepeats  = fillShader.uniforms().get("uRepeats", Integer.class);
@@ -450,7 +456,7 @@ public class RadialSpectrumAnalyser extends FrequencyRenderer {
         peakShader.uniforms().get("uNumRingVerts", Integer.class).set(numRingVerts);
         peakShader.uniforms().get("uBaseRadius",   Float.class).set(baseRadius);
         peakShader.uniforms().get("uOuterHeight",  Float.class).set(outerHeight);
-        peakShader.uniforms().get("uPeakColor",    Vector3f.class).set(colorPeak);
+        peakShader.uniforms().get("uPeakColor",    Vector4f.class).set(colorPeak);
         uPeakAspect   = peakShader.uniforms().get("uAspect",   Float.class);
         uPeakAspect.set(1.0f);
         uPeakRepeats  = peakShader.uniforms().get("uRepeats", Integer.class);
