@@ -5,9 +5,9 @@ The core module includes reusable utility renderers that compose well with `Rend
 
 | Class | Package | What it does | Common use | Notes / key methods |
 |---|---|---|---|---|
-| `BlurTextureRenderer` | `com.asteroid.duck.opengl.util.blur` | Single-pass separable Gaussian blur over one axis (X or Y). | Add horizontal or vertical blur to a texture already in `ResourceManager`. | Toggle with `setBlur(boolean)`; switch axis with `setXAxis(boolean)`; tune radius with `setKernelSize(int)` (`3..65`, odd only). |
-| `OffscreenBlurTextureRenderer` | `com.asteroid.duck.opengl.util.blur` | Multi-pass blur pipeline using intermediate FBO textures. | Strong bloom/glow style blur where one pass is not enough. | Constructor accepts source texture name and pass count; `multiply(float)` controls intensity; internally alternates X/Y blur stages. |
-| `BlurKernel` | `com.asteroid.duck.opengl.util.blur` | Builds Gaussian weights/offsets for blur shaders. | Precompute or inspect kernel sample distributions. | `new BlurKernel(size).getDiscreteSampleKernel()` yields linear-sampling friendly taps. |
+| `BlurTextureRenderer` | `com.asteroid.duck.opengl.util.blur` | Single-pass separable Gaussian blur over one axis (X or Y). | Add horizontal or vertical blur to a texture already in `ResourceManager`. | Toggle with `setBlur(boolean)`; switch axis with `setXAxis(boolean)`; tune radius with `setKernelSize(int)` (`3..65`, odd only); switch sampling mode with `setNaive(boolean)` — see note below. |
+| `OffscreenBlurTextureRenderer` | `com.asteroid.duck.opengl.util.blur` | Multi-pass blur pipeline using intermediate FBO textures. | Strong bloom/glow style blur where one pass is not enough. | Constructor accepts source texture name and pass count; `multiply(float)` controls intensity; internally alternates X/Y blur stages; `setNaive(boolean)` propagates to all stages. |
+| `BlurKernel` | `com.asteroid.duck.opengl.util.blur` | Builds Gaussian weights/offsets for blur shaders. | Precompute or inspect kernel sample distributions. | `new BlurKernel(size).getDiscreteSampleKernel()` yields linear-sampling friendly (paired) taps for hardware mode; `.getNaiveSampleKernel()` yields one tap per raw offset for `texelFetch`-based naive mode. |
 | `PaletteRenderer` | `com.asteroid.duck.opengl.util.palette` | Indexed-color post-process: source texture R values (0–1) address a 2D palette texture. Total palette entries = palette width × height, up to 65 535. | Palette swapping, LUT-style recoloring, retro effects. | Source (indexed) texture must use `DataFormat.GRAY_16` for 16-bit precision. Palette is any 2D RGBA image — the shader uses `textureSize()` to decode the linear index into (col, row) automatically. Shader uniform name is `palette`; static helpers `greyScale()` and `rbgTestScale()` build `TextureData` for the palette. |
 | `ColorPalette` | `com.asteroid.duck.opengl.util.palette` | Loads and registers a palette image (cropped to one row) as a 2D texture. | Bring external palette files into `ResourceManager` for use with `PaletteRenderer`. | `new ColorPalette(mgr, file)` auto-registers by filename; `size()` returns entry count (= image width). The texture is a 2D `width × 1` image. |
 | `StringRenderer` | `com.asteroid.duck.opengl.util.text` | Renders dynamic text using a `FontTexture`. | HUD/debug overlays, FPS counters, experiment labels. | Call `setText(...)` before first render; `setTransform(Matrix4f)` sets position/rotation/scale via model matrix; `setTextColor(Vector4f)` is render-thread safe via internal queue. |
@@ -18,6 +18,26 @@ The core module includes reusable utility renderers that compose well with `Rend
 | `MultiTextureRenderer` | `com.asteroid.duck.opengl.util` | Full-screen renderer that blends/combines multiple textures in one shader. | Compositing intermediate render targets. | Binds input textures as `tex0`, `tex1`, ... and updates a time-varying `amount` uniform. |
 | `AudioWave` | `com.asteroid.duck.opengl.util.wave` | Real-time stereo audio waveform rendered as a horizontal line strip. Implements `Transformable`. | Scrolling waveform HUD overlay. | `setClearBeforeRender(false)` to skip `glClear` when compositing over another renderer; `setChannelMode(int)` (`CHANNEL_BLEND/LEFT/RIGHT/STEREO`); `setAmplitudeFunction(fn)`; `setLineWidth(float)`; `setLineColour(Vector4f)`; `setTransform(Matrix4f)` to rotate/scale/translate in NDC space. Requires `PboAudioSink`; pass `AUDIO_BUFFER_SIZE` to `PboAudioSink.create`. |
 | `RadialWave` | `com.asteroid.duck.opengl.util.wave` | Real-time stereo audio waveform rendered as a polar (radial) line loop. Implements `Transformable`. | Circular visualiser, clock-face waveform. | `setClearBeforeRender(false)` to skip `glClear` when compositing; `setChannelMode(int)` (`CHANNEL_BLEND/LEFT/RIGHT`); `setRadius(float)`; `setAmplitudeFunction(AmplitudeFunction)` (same scale as `AudioWave` — `constant(1f)` = full-scale radial excursion); `setCenter(Vector2f)`; `setLineWidth(float)`; `setLineColour(Vector4f)`; `setTransform(Matrix4f)` applied after aspect-ratio correction so the circle stays round. Requires `PboAudioSink`; pass `AUDIO_BUFFER_SIZE` to `PboAudioSink.create`. |
+
+---
+
+## Blur sampling: hardware vs naive
+
+`BlurTextureRenderer` and `OffscreenBlurTextureRenderer` support two sampling modes, selected
+with `setNaive(boolean)` (default `false` = hardware):
+
+- **Hardware** (default): pairs adjacent Gaussian taps into a single `texture()` fetch at a
+  computed sub-texel offset, relying on the GPU's bilinear filter to blend them — halves texture
+  reads per fragment. The GPU's fixed-point interpolation introduces a tiny directional bias per
+  fetch; invisible on one frame, but when the blur output feeds back into itself every frame
+  (e.g. a `MapTransformRenderItem`-style feedback loop), the bias accumulates into a slow,
+  visible image drift.
+- **Naive**: fetches every tap individually via `texelFetch` at an exact integer texel
+  coordinate — no hardware interpolation, no accumulating bias — at the cost of roughly double
+  the texture reads per fragment.
+
+Default to hardware mode; switch a renderer to naive mode if you observe slow directional drift
+in a feedback-loop effect using blur.
 
 ---
 

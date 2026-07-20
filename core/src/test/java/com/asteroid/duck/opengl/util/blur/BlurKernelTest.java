@@ -62,4 +62,20 @@ class BlurKernelTest {
 		assertNotNull(discreteSampleKernel);
 		assertEquals(6, discreteSampleKernel.size());
 	}
+
+	@Test
+	void getNaiveSampleKernel() {
+		BlurKernel kernel = new BlurKernel(13);
+
+		DiscreteSampleKernel naiveSampleKernel = kernel.getNaiveSampleKernel();
+		assertNotNull(naiveSampleKernel);
+		// one sample per raw tap - no pairing, so it's larger than the discrete (paired) kernel
+		assertEquals(kernel.offsets.length, naiveSampleKernel.size());
+		assertArrayEquals(kernel.offsets, naiveSampleKernel.offsets());
+		assertArrayEquals(kernel.weights, naiveSampleKernel.weights());
+		// offsets are exact integer texel distances, not fractional midpoints
+		for (double offset : naiveSampleKernel.offsets()) {
+			assertEquals(offset, Math.floor(offset), "naive offsets must be exact integer texel distances");
+		}
+	}
 }

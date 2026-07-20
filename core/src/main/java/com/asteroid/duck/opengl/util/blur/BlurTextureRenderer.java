@@ -21,13 +21,20 @@ import java.io.IOException;
  * enabled. Alternatively, use {@link OffscreenBlurTextureRenderer} which wires both passes
  * together automatically.</p>
  *
- * <p>The kernel is computed by {@link BlurKernel} and collapsed to a linear-interpolation
- * optimised {@link DiscreteSampleKernel} that halves the number of texture fetches per fragment.
- * The kernel is recomputed whenever {@link #setKernelSize} is called.</p>
+ * <p>The kernel is computed by {@link BlurKernel}. By default it is collapsed to a
+ * linear-interpolation optimised {@link DiscreteSampleKernel} that halves the number of texture
+ * fetches per fragment ("hardware" sampling). Both kernels are recomputed whenever
+ * {@link #setKernelSize} is called.</p>
  *
  * <p>Blur can be toggled off at runtime via {@link #setBlur(boolean)} or {@link #toggleBlur()},
  * which causes the fragment shader to pass the source texel through unchanged (still multiplied
  * by the {@code multiplier} uniform for feedback-style effects).</p>
+ *
+ * <p>{@link #setNaive(boolean)} switches to per-texel {@code texelFetch} sampling, which costs
+ * roughly double the texture fetches but avoids the GPU bilinear-filter's fixed-point
+ * quantization bias — a bias that is invisible on a single frame but can accumulate into a
+ * visible directional drift when this renderer's output feeds back into itself across frames
+ * (see {@code BLUR_DRIFT.md} in this repo). See {@link #isNaive()} for the full tradeoff.</p>
  */
 public class BlurTextureRenderer extends AbstractPassthruRenderer {
 	private static final Logger LOG = LoggerFactory.getLogger(BlurTextureRenderer.class);
@@ -68,6 +75,7 @@ public class BlurTextureRenderer extends AbstractPassthruRenderer {
 			out vec4 fragColor;
 			uniform bool x;
 			uniform bool blur;
+			uniform bool naive;
 			uniform float multiplier = 0.99;
 			uniform int kernelSize;
 			uniform float offsets[MAX_KERNEL_SIZE];
@@ -77,15 +85,27 @@ public class BlurTextureRenderer extends AbstractPassthruRenderer {
 			void main() {
 			    fragColor = texture(tex, texCoords) * (blur ? weights[0] : 1.0);
 			    if (blur) {
-			        float dimension = x ? dimensions.x : dimensions.y;
-			        for (int i = 1; i < kernelSize; i++) {
-			            float delta = offsets[i] / dimension;
-			            if (x) {
-			                fragColor += texture(tex, (texCoords + vec2(delta, 0.0))) * weights[i];
-			                fragColor += texture(tex, (texCoords - vec2(delta, 0.0))) * weights[i];
-			            } else {
-			                fragColor += texture(tex, (texCoords + vec2(0.0, delta))) * weights[i];
-			                fragColor += texture(tex, (texCoords - vec2(0.0, delta))) * weights[i];
+			        if (naive) {
+			            // Exact-texel taps via texelFetch: no hardware bilinear interpolation,
+			            // so no fixed-point quantization bias to accumulate across feedback frames.
+			            ivec2 base = ivec2(gl_FragCoord.xy);
+			            ivec2 texSize = textureSize(tex, 0);
+			            for (int i = 1; i < kernelSize; i++) {
+			                ivec2 delta = x ? ivec2(int(offsets[i]), 0) : ivec2(0, int(offsets[i]));
+			                fragColor += texelFetch(tex, clamp(base + delta, ivec2(0), texSize - 1), 0) * weights[i];
+			                fragColor += texelFetch(tex, clamp(base - delta, ivec2(0), texSize - 1), 0) * weights[i];
+			            }
+			        } else {
+			            float dimension = x ? dimensions.x : dimensions.y;
+			            for (int i = 1; i < kernelSize; i++) {
+			                float delta = offsets[i] / dimension;
+			                if (x) {
+			                    fragColor += texture(tex, (texCoords + vec2(delta, 0.0))) * weights[i];
+			                    fragColor += texture(tex, (texCoords - vec2(delta, 0.0))) * weights[i];
+			                } else {
+			                    fragColor += texture(tex, (texCoords + vec2(0.0, delta))) * weights[i];
+			                    fragColor += texture(tex, (texCoords - vec2(0.0, delta))) * weights[i];
+			                }
 			            }
 			        }
 			    }
@@ -94,7 +114,9 @@ public class BlurTextureRenderer extends AbstractPassthruRenderer {
 			""";
 
 	private int kernelSize = 29;
-	private DiscreteSampleKernel cachedKernel = new BlurKernel(kernelSize).getDiscreteSampleKernel();
+	private boolean naive = false;
+	private DiscreteSampleKernel cachedHardwareKernel = new BlurKernel(kernelSize).getDiscreteSampleKernel();
+	private DiscreteSampleKernel cachedNaiveKernel = new BlurKernel(kernelSize).getNaiveSampleKernel();
 
 	/**
 	 * Create a blur renderer that samples from the named texture.
@@ -121,13 +143,14 @@ public class BlurTextureRenderer extends AbstractPassthruRenderer {
 	protected ShaderProgram initShaderProgram(RenderContext ctx) throws IOException {
 		addVariable(ShaderVariable.booleanVariable("blur", this::isBlur));
 		addVariable(ShaderVariable.booleanVariable("x", this::isXAxis));
+		addVariable(ShaderVariable.booleanVariable("naive", this::isNaive));
 		addVariable(ShaderVariable.vec2fVariable("dimensions", () -> {
 			Texture t = ctx.getResourceManager().getTexture(textureName);
 			return new Vector2f(t.getWidth(), t.getHeight());
 		}));
-		addVariable(ShaderVariable.intVariable("kernelSize", ctx2 -> cachedKernel.size()));
-		addVariable(ShaderVariable.floatArrayVariable("offsets", () -> cachedKernel.floatOffsets()));
-		addVariable(ShaderVariable.floatArrayVariable("weights", () -> cachedKernel.floatWeights()));
+		addVariable(ShaderVariable.intVariable("kernelSize", ctx2 -> activeKernel().size()));
+		addVariable(ShaderVariable.floatArrayVariable("offsets", () -> activeKernel().floatOffsets()));
+		addVariable(ShaderVariable.floatArrayVariable("weights", () -> activeKernel().floatWeights()));
 		return ShaderProgram.compile(
 				ShaderSource.fromClass(VERTEX_SHADER, BlurTextureRenderer.class),
 				ShaderSource.fromClass(FRAGMENT_SHADER, BlurTextureRenderer.class),
@@ -202,6 +225,44 @@ public class BlurTextureRenderer extends AbstractPassthruRenderer {
 	}
 
 	/**
+	 * Returns {@code true} if the "naive" per-texel sampling path is active, {@code false} if
+	 * the hardware linear-sampling optimisation is active.
+	 *
+	 * <p>Hardware mode ({@code false}, the default) collapses adjacent kernel taps into single
+	 * bilinear-filtered fetches, halving texture reads per fragment. Naive mode fetches every
+	 * tap individually via {@code texelFetch} at an exact texel coordinate, avoiding the GPU's
+	 * fixed-point interpolation-quantization bias that can accumulate into visible drift when
+	 * this renderer's output feeds back into itself across frames (see {@code BLUR_DRIFT.md}),
+	 * at the cost of roughly double the texture fetches per fragment.</p>
+	 *
+	 * @return {@code true} for naive (texelFetch) sampling, {@code false} for hardware-optimised sampling
+	 */
+	public boolean isNaive() {
+		return naive;
+	}
+
+	/**
+	 * Choose between naive per-texel sampling and the hardware linear-sampling optimisation.
+	 * See {@link #isNaive()} for the tradeoff.
+	 *
+	 * @param naive {@code true} to sample every tap individually via {@code texelFetch};
+	 *              {@code false} to use paired bilinear-filtered fetches (default)
+	 */
+	public void setNaive(boolean naive) {
+		this.naive = naive;
+	}
+
+	/** Toggle between naive and hardware sampling. Logs the new state (useful for key-binding debug). */
+	public void toggleNaive() {
+		naive = !naive;
+		LOG.debug("Naive={}", naive);
+	}
+
+	private DiscreteSampleKernel activeKernel() {
+		return naive ? cachedNaiveKernel : cachedHardwareKernel;
+	}
+
+	/**
 	 * Returns the current odd kernel size (e.g. 29). A larger size produces a wider, softer blur
 	 * at the cost of more per-fragment texture samples.
 	 *
@@ -224,8 +285,11 @@ public class BlurTextureRenderer extends AbstractPassthruRenderer {
 		if (size % 2 == 0) size++;
 		if (size != kernelSize) {
 			kernelSize = size;
-			cachedKernel = new BlurKernel(kernelSize).getDiscreteSampleKernel();
-			LOG.info("Blur kernel size={} ({} discrete samples)", kernelSize, cachedKernel.size());
+			BlurKernel kernel = new BlurKernel(kernelSize);
+			cachedHardwareKernel = kernel.getDiscreteSampleKernel();
+			cachedNaiveKernel = kernel.getNaiveSampleKernel();
+			LOG.info("Blur kernel size={} ({} hardware / {} naive samples)",
+					kernelSize, cachedHardwareKernel.size(), cachedNaiveKernel.size());
 		}
 	}
 

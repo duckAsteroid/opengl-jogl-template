@@ -143,4 +143,32 @@ public class OffscreenBlurTextureRenderer extends CompositeRenderItem {
 	public void toggleBlur() {
 		stages.forEach(BlurTextureRenderer::toggleBlur);
 	}
+
+	/**
+	 * Returns {@code true} if all stages are using naive {@code texelFetch} sampling.
+	 * See {@link BlurTextureRenderer#isNaive()} for the hardware-vs-naive tradeoff — this matters
+	 * most here since {@code OffscreenBlurTextureRenderer} is commonly wired into a per-frame
+	 * feedback loop, where the hardware sampling bias can accumulate into visible drift.
+	 *
+	 * @return {@code true} if naive sampling is active on all stages
+	 */
+	public boolean isNaive() {
+		return stages.getFirst().isNaive();
+	}
+
+	/**
+	 * Choose between naive per-texel sampling and the hardware linear-sampling optimisation,
+	 * applied to all stages.
+	 *
+	 * @param naive {@code true} to sample every tap individually via {@code texelFetch};
+	 *              {@code false} to use paired bilinear-filtered fetches (default)
+	 */
+	public void setNaive(boolean naive) {
+		stages.forEach(s -> s.setNaive(naive));
+	}
+
+	/** Toggle naive/hardware sampling for all stages. */
+	public void toggleNaive() {
+		setNaive(!isNaive());
+	}
 }

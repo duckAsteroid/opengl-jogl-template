@@ -123,6 +123,24 @@ public class BlurKernel {
 		return new DiscreteSampleKernel(discreteOffsets, discreteWeights);
 	}
 
+    /**
+     * Returns the raw, un-paired kernel taps as a {@link DiscreteSampleKernel} — one sample per
+     * integer texel offset, with no linear-sampling pairing applied.
+     *
+     * <p>Intended for a "naive" shader sampling path that reads each tap with
+     * {@code texelFetch} at an exact texel coordinate instead of relying on the GPU's bilinear
+     * filter to blend two texels per fetch. This avoids the fixed-point quantization bias that
+     * {@link #getDiscreteSampleKernel()}'s hardware-interpolated sub-texel offsets can introduce
+     * — a bias that is imperceptible on a single frame but accumulates into visible drift when
+     * the blurred output feeds back into itself across frames (see {@code BLUR_DRIFT.md}).
+     * Costs roughly twice the texture fetches per fragment compared to the paired kernel.</p>
+     *
+     * @return a kernel with one sample per {@link #offsets} entry (no pairing)
+     */
+	public DiscreteSampleKernel getNaiveSampleKernel() {
+		return new DiscreteSampleKernel(offsets, weights);
+	}
+
 
 	/**
 	 * Pascal's triangle at row N (1 is first).
