@@ -58,7 +58,7 @@ class SimulatedAudioLine implements AudioLine {
 		ShortBuffer buffer = ByteBuffer.wrap(array, start, length).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer();
 
 		// Can the buffer take more than we can theoretically read
-		if (buffer.remaining() > samples) {
+		if (buffer.remaining() > samples * floatsPerSample()) {
 			// limit it to what we can theoretically read
 			buffer.limit(samples * floatsPerSample());
 		}
