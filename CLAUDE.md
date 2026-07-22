@@ -36,6 +36,12 @@ A Java/LWJGL 3 OpenGL framework for GPU shader experiments and real-time visuali
 
 The `run` and `debugRun` tasks automatically inject `__NV_PRIME_RENDER_OFFLOAD=1` / `__GLX_VENDOR_LIBRARY_NAME=nvidia` for NVIDIA Optimus laptops. Java 25 with `--enable-preview` is used. Tests require `-Xshare:off`.
 
+### `core`'s Gradle conventions
+
+`core/build.gradle` applies duckAsteroid's shared build conventions via the `duckasteroid-java` plugin (https://github.com/duckAsteroid/gradle-convention-plugin) instead of hand-rolling toolchain/publishing config. That plugin configures the Java toolchain, source/Javadoc jars, and registers the `mavenJava` publication — `core/build.gradle` only overrides that publication's `artifactId` (`render-core`). `experiments` and `application` don't use these conventions.
+
+These `duckasteroid-*` plugins are published only to GitHub Packages, never the Gradle Plugin Portal, so `settings.gradle` bootstraps plugin resolution first via the `io.github.duckasteroid.github-packages-settings` plugin pointed at the `duckAsteroid/gradle-convention-plugin` repo. Reading from GitHub Packages requires credentials even for public repos: `gpr.user`/`gpr.key` in `~/.gradle/gradle.properties`, or `GH_PACKAGES_READ_USER`/`GH_PACKAGES_READ_TOKEN`, or (in CI) `GITHUB_ACTOR`/`GITHUB_TOKEN`. See the `adopt-duckasteroid-gradle-conventions` skill if extending these conventions to other modules.
+
 ## Architecture
 
 ### Core rendering lifecycle

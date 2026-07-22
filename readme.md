@@ -3,6 +3,12 @@ A framework and experimental application framework for OpenGL Shaders.
 Loosely based on https://github.com/tsoding/opengl-template but written
 in Java using LWJGL https://www.lwjgl.org/ OpenGL API.
 
+## Build
+
+`core` applies duckAsteroid's shared Gradle conventions (the `duckasteroid-java` plugin, from
+https://github.com/duckAsteroid/gradle-convention-plugin) for its Java toolchain and publishing setup.
+These plugins are hosted on GitHub Packages, so resolving the build requires read credentials — see
+`gradle-convention-plugin`'s README, or `CLAUDE.md` in this repo, for how to configure them.
 
 # TO DO
 

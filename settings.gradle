@@ -1,3 +1,20 @@
+pluginManagement {
+    repositories {
+        // Adding githubPackages{} below replaces the implicit default repo list,
+        // so the Plugin Portal needs to be re-added explicitly.
+        gradlePluginPortal()
+    }
+}
+
+plugins {
+    id 'io.github.duckasteroid.github-packages-settings' version '0.1.3'
+}
+
+githubPackages {
+    owner = "duckAsteroid"
+    repository = "gradle-convention-plugin"
+}
+
 rootProject.name = 'opengl-jogl-template'
 include 'core', 'experiments', 'application'
 

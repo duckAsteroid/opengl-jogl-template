@@ -1,18 +1,11 @@
 plugins {
   id 'java-library'
   id 'io.github.duckasteroid.agent-docs.publish' version '1.0.10'
-  id 'maven-publish'
-}
-
-java {
-  withSourcesJar()
-  withJavadocJar()
+  id 'duckasteroid-java' version '1.0.0-RC1'
 }
 
 agentDocs {
 }
-
-group = 'com.asteroid.duck.opengl'
 
 dependencies {
   // Logging
@@ -51,11 +44,11 @@ tasks.named('packageAgentDocs') {
   archiveBaseName = 'render-core'
 }
 
+// duckasteroid-java already registers the 'mavenJava' publication; just rename the artifact.
 publishing {
   publications {
-    mavenJava(MavenPublication) {
+    named('mavenJava', MavenPublication) {
       artifactId = 'render-core'
-      from components.java
     }
   }
 }
