@@ -47,7 +47,7 @@ The `run` and `debugRun` tasks automatically inject `__NV_PRIME_RENDER_OFFLOAD=1
 
 These `duckasteroid-*` plugins are published only to GitHub Packages, never the Gradle Plugin Portal, so `settings.gradle` bootstraps plugin resolution first via the `io.github.duckasteroid.github-packages-settings` plugin pointed at the `duckAsteroid/gradle-convention-plugin` repo. Reading from GitHub Packages requires credentials even for public repos: `gpr.user`/`gpr.key` in `~/.gradle/gradle.properties`, or `GH_PACKAGES_READ_USER`/`GH_PACKAGES_READ_TOKEN`, or (in CI) `GITHUB_ACTOR`/`GITHUB_TOKEN`. See the `adopt-duckasteroid-gradle-conventions` skill if extending these conventions to other modules.
 
-**Releasing `render-core`:** push a tag matching `core/v<version>` (e.g. via axion-release's `./gradlew :core:release`) to trigger `.github/workflows/release-core.yml`, which builds, publishes the jar/sources/javadoc to this repo's GitHub Packages feed, and creates a GitHub Release from the tag.
+**Releasing `render-core`:** push a tag matching `core/v<version>` or the plain `v<version>` fallback (e.g. via axion-release's `./gradlew :core:release`) to trigger `.github/workflows/release-core.yml`, which builds, publishes the jar/sources/javadoc to this repo's GitHub Packages feed, and creates a GitHub Release from the tag. Since `core` is the only module using this convention today, either tag shape resolves unambiguously to its version — if a second module adopts axion-release versioning later, revisit whether plain `v*` tags still make sense.
 
 ## Architecture
 
