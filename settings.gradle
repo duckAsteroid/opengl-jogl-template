@@ -7,7 +7,7 @@ pluginManagement {
 }
 
 plugins {
-    id 'io.github.duckasteroid.github-packages-settings' version '0.1.3'
+    id 'io.github.duckasteroid.github-packages-settings' version '0.2.0'
 }
 
 githubPackages {

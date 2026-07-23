@@ -38,9 +38,16 @@ The `run` and `debugRun` tasks automatically inject `__NV_PRIME_RENDER_OFFLOAD=1
 
 ### `core`'s Gradle conventions
 
-`core/build.gradle` applies duckAsteroid's shared build conventions via the `duckasteroid-java` plugin (https://github.com/duckAsteroid/gradle-convention-plugin) instead of hand-rolling toolchain/publishing config. That plugin configures the Java toolchain, source/Javadoc jars, and registers the `mavenJava` publication — `core/build.gradle` only overrides that publication's `artifactId` (`render-core`). `experiments` and `application` don't use these conventions.
+`core/build.gradle` applies duckAsteroid's shared build conventions (https://github.com/duckAsteroid/gradle-convention-plugin) instead of hand-rolling toolchain/publishing config:
+
+- `duckasteroid-java` — Java toolchain, source/Javadoc jars, and the `mavenJava` publication (`core/build.gradle` only overrides that publication's `artifactId`, to `render-core`). Also wires up axion-release versioning: `core`'s version comes from git tags matching `core/v<version>` (falls back to `v<version>` at the repo root, then `0.0.0+notag` if untagged).
+- `duckasteroid-github-packages-self` — opt-in; adds a publishing repository that publishes `mavenJava` to *this* repo's own GitHub Packages Maven feed (owner/repo auto-derived from the `origin` remote). No GPG signing is required for this path.
+
+`experiments` and `application` don't use these conventions. Publishing to Maven Central/OSSRH is a separate opt-in (`duckasteroid-maven-central`), not applied here.
 
 These `duckasteroid-*` plugins are published only to GitHub Packages, never the Gradle Plugin Portal, so `settings.gradle` bootstraps plugin resolution first via the `io.github.duckasteroid.github-packages-settings` plugin pointed at the `duckAsteroid/gradle-convention-plugin` repo. Reading from GitHub Packages requires credentials even for public repos: `gpr.user`/`gpr.key` in `~/.gradle/gradle.properties`, or `GH_PACKAGES_READ_USER`/`GH_PACKAGES_READ_TOKEN`, or (in CI) `GITHUB_ACTOR`/`GITHUB_TOKEN`. See the `adopt-duckasteroid-gradle-conventions` skill if extending these conventions to other modules.
+
+**Releasing `render-core`:** push a tag matching `core/v<version>` (e.g. via axion-release's `./gradlew :core:release`) to trigger `.github/workflows/release-core.yml`, which builds, publishes the jar/sources/javadoc to this repo's GitHub Packages feed, and creates a GitHub Release from the tag.
 
 ## Architecture
 
