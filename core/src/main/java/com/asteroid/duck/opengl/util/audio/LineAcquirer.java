@@ -1,6 +1,5 @@
 package com.asteroid.duck.opengl.util.audio;
 
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +56,6 @@ public final class LineAcquirer {
       return mixer.getMixerInfo().getName();
     }
 
-    @NotNull
     @Override
     public String toString() {
       return mixer.getMixerInfo().getName() + ":"+ line.toString();

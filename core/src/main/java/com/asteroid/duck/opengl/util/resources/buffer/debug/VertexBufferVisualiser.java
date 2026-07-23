@@ -5,7 +5,6 @@ import com.asteroid.duck.opengl.util.resources.buffer.ebo.ElementBufferObject;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexBufferObject;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexDataStructure;
 import com.asteroid.duck.opengl.util.resources.buffer.vbo.VertexElement;
-import org.jetbrains.annotations.NotNull;
 import org.joml.Vector2f;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
@@ -52,7 +51,6 @@ public class VertexBufferVisualiser {
 						.collect(Collectors.joining(","));
 	}
 
-	@NotNull
 	private static String hex(Byte b) {
 		var hex = Integer.toHexString(b & 0xFF).toUpperCase();
 		if (hex.length() == 1) {

@@ -7,9 +7,9 @@ description = 'A template application for OpenGL (via JOGL) projects and experim
 
 ext {
     javaLanguageVersion = 25
-    lwjglVersion = '3.4.1'
+    lwjglVersion = '3.4.2'
     lwjglNatives = 'natives-linux'
-    jomlVersion = '1.10.8'
+    jomlVersion = '1.10.9'
 }
 
 allprojects {
@@ -41,10 +41,10 @@ subprojects {
 
     dependencies {
         // Use a valid JUnit 5 release so Gradle's JUnit Platform can load the launcher and engine
-        testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
-        testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.10.0'
+        testImplementation 'org.junit.jupiter:junit-jupiter:6.1.2'
+        testImplementation 'org.junit.jupiter:junit-jupiter-engine:6.1.2'
         // Ensure the JUnit Platform launcher is on the test runtime classpath for Gradle
-        testImplementation 'org.junit.platform:junit-platform-launcher:1.10.0'
+        testImplementation 'org.junit.platform:junit-platform-launcher:6.1.2'
         testImplementation 'org.mockito:mockito-inline:5.2.0'
     }
 }
