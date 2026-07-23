@@ -6,7 +6,7 @@ in Java using LWJGL https://www.lwjgl.org/ OpenGL API.
 ## Build
 
 `core` applies duckAsteroid's shared Gradle conventions (`duckasteroid-java` plus the opt-in
-`duckasteroid-github-packages-self`, from https://github.com/duckAsteroid/gradle-convention-plugin)
+`duckasteroid-github-packages-publish`, from https://github.com/duckAsteroid/gradle-convention-plugin)
 for its Java toolchain, git-tag-based versioning, and publishing to this repo's own GitHub Packages
 feed. These plugins are hosted on GitHub Packages themselves, so resolving the build requires read
 credentials — see `gradle-convention-plugin`'s README, or `CLAUDE.md` in this repo, for how to

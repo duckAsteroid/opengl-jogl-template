@@ -41,7 +41,7 @@ The `run` and `debugRun` tasks automatically inject `__NV_PRIME_RENDER_OFFLOAD=1
 `core/build.gradle` applies duckAsteroid's shared build conventions (https://github.com/duckAsteroid/gradle-convention-plugin) instead of hand-rolling toolchain/publishing config:
 
 - `duckasteroid-java` — Java toolchain, source/Javadoc jars, and the `mavenJava` publication (`core/build.gradle` only overrides that publication's `artifactId`, to `render-core`). Also wires up axion-release versioning: `core`'s version comes from git tags matching `core/v<version>` (falls back to `v<version>` at the repo root, then `0.0.0+notag` if untagged).
-- `duckasteroid-github-packages-self` — opt-in; adds a publishing repository that publishes `mavenJava` to *this* repo's own GitHub Packages Maven feed (owner/repo auto-derived from the `origin` remote). No GPG signing is required for this path.
+- `duckasteroid-github-packages-publish` — opt-in; adds a publishing repository that publishes `mavenJava` to *this* repo's own GitHub Packages Maven feed (owner/repo auto-derived from the `origin` remote). No GPG signing is required for this path.
 
 `experiments` and `application` don't use these conventions. Publishing to Maven Central/OSSRH is a separate opt-in (`duckasteroid-maven-central`), not applied here.
 

@@ -1,8 +1,8 @@
 plugins {
   id 'java-library'
   id 'io.github.duckasteroid.agent-docs.publish' version '1.0.10'
-  id 'duckasteroid-java' version '1.0.0-RC2'
-  id 'duckasteroid-github-packages-self' version '1.0.0-RC2'
+  id 'duckasteroid-java' version '1.0.0-RC3'
+  id 'duckasteroid-github-packages-publish' version '1.0.0-RC3'
 }
 
 agentDocs {
