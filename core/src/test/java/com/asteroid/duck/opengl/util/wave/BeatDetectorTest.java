@@ -10,10 +10,10 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class BeatDetectorTest {
 
-    // FFT geometry matching SpectrumAnalyser defaults
-    private static final int   NUM_BINS  = 128;
-    private static final float FFT_F_MIN = 20f;
-    private static final float FFT_F_MAX = 20_000f;
+    // FFT geometry — matches FrequencyProcessorTest defaults
+    private static final int   FFT_SIZE    = 1024;
+    private static final float SAMPLE_RATE = 48_000f;
+    private static final int   RAW_BINS    = FFT_SIZE / 2 + 1;
 
     // Small history so tests warm up quickly
     private static final int   HISTORY   = 5;
@@ -22,12 +22,12 @@ class BeatDetectorTest {
     private static final float DECAY      = 0.1f;
 
     private BeatDetector detector(List<FrequencyBand> bands) {
-        return new BeatDetector(bands, NUM_BINS, FFT_F_MIN, FFT_F_MAX,
+        return new BeatDetector(bands, FFT_SIZE, SAMPLE_RATE,
                 HISTORY, THRESHOLD, SENSITIVITY, DECAY);
     }
 
     private static float[] uniformMagnitudes(float value) {
-        float[] m = new float[NUM_BINS];
+        float[] m = new float[RAW_BINS];
         java.util.Arrays.fill(m, value);
         return m;
     }
@@ -42,32 +42,35 @@ class BeatDetectorTest {
 
     @Test
     void bassCoversLowBins() {
-        int[] range = BeatDetector.computeBinRange(FrequencyBand.BASS, NUM_BINS, FFT_F_MIN, FFT_F_MAX);
-        assertEquals(0, range[0], "bass should start at bin 0");
+        int[] range = BeatDetector.computeBinRange(FrequencyBand.BASS, FFT_SIZE, SAMPLE_RATE);
+        assertTrue(range[0] >= 1, "bass should start at or after bin 1 (bin 0 is DC)");
         assertTrue(range[1] > range[0], "bass should cover at least one bin");
-        assertTrue(range[1] < NUM_BINS, "bass should not reach the top bin");
+        assertTrue(range[1] < RAW_BINS / 4, "bass should stay in the low end of the spectrum");
     }
 
     @Test
-    void hiHatCoversHighBins() {
-        int[] range = BeatDetector.computeBinRange(FrequencyBand.HI_HAT, NUM_BINS, FFT_F_MIN, FFT_F_MAX);
-        assertTrue(range[0] > NUM_BINS / 2, "hi-hat should start in the upper half");
-        assertEquals(NUM_BINS, range[1], "hi-hat should reach the last bin");
+    void hiHatSpansHundredsOfRawBins() {
+        // Unlike a log-binned display grid, raw linear FFT bins mean a wide band like
+        // hi-hat (2kHz-20kHz) legitimately covers hundreds of distinct bins — this
+        // resolution is exactly what a small numBins display grid used to throw away.
+        int[] range = BeatDetector.computeBinRange(FrequencyBand.HI_HAT, FFT_SIZE, SAMPLE_RATE);
+        assertTrue(range[1] - range[0] > 300, "hi-hat should span hundreds of raw bins");
+        assertTrue(range[1] <= FFT_SIZE / 2, "hi-hat should not exceed the Nyquist bin");
     }
 
     @Test
     void bandOutsideFFTRangeIsEmpty() {
-        FrequencyBand outOfRange = new FrequencyBand("infrasound", 1f, 15f);
-        int[] range = BeatDetector.computeBinRange(outOfRange, NUM_BINS, FFT_F_MIN, FFT_F_MAX);
+        FrequencyBand outOfRange = new FrequencyBand("ultrasound", 30_000f, 40_000f);
+        int[] range = BeatDetector.computeBinRange(outOfRange, FFT_SIZE, SAMPLE_RATE);
         assertEquals(range[0], range[1], "out-of-range band should have no bins");
     }
 
     @Test
     void bandsAreContiguous() {
         // Bass, snare, hi-hat should partition the bin space with no gaps
-        int[] bass  = BeatDetector.computeBinRange(FrequencyBand.BASS,   NUM_BINS, FFT_F_MIN, FFT_F_MAX);
-        int[] snare = BeatDetector.computeBinRange(FrequencyBand.SNARE,  NUM_BINS, FFT_F_MIN, FFT_F_MAX);
-        int[] hihat = BeatDetector.computeBinRange(FrequencyBand.HI_HAT, NUM_BINS, FFT_F_MIN, FFT_F_MAX);
+        int[] bass  = BeatDetector.computeBinRange(FrequencyBand.BASS,   FFT_SIZE, SAMPLE_RATE);
+        int[] snare = BeatDetector.computeBinRange(FrequencyBand.SNARE,  FFT_SIZE, SAMPLE_RATE);
+        int[] hihat = BeatDetector.computeBinRange(FrequencyBand.HI_HAT, FFT_SIZE, SAMPLE_RATE);
         assertEquals(bass[1],  snare[0], "bass/snare boundary should be contiguous");
         assertEquals(snare[1], hihat[0], "snare/hi-hat boundary should be contiguous");
     }
@@ -87,7 +90,7 @@ class BeatDetectorTest {
     @Test
     void bassSpikeTriggersBass() {
         BeatDetector d = detector(FrequencyBand.defaults());
-        int[] bassRange = BeatDetector.computeBinRange(FrequencyBand.BASS, NUM_BINS, FFT_F_MIN, FFT_F_MAX);
+        int[] bassRange = BeatDetector.computeBinRange(FrequencyBand.BASS, FFT_SIZE, SAMPLE_RATE);
 
         // Warm up with baseline — extra frames let the startup transient decay to zero
         float[] baseline = uniformMagnitudes(0.2f);
@@ -102,7 +105,7 @@ class BeatDetectorTest {
     @Test
     void bassSpikeLeavesSnareUnaffected() {
         BeatDetector d = detector(FrequencyBand.defaults());
-        int[] bassRange = BeatDetector.computeBinRange(FrequencyBand.BASS, NUM_BINS, FFT_F_MIN, FFT_F_MAX);
+        int[] bassRange = BeatDetector.computeBinRange(FrequencyBand.BASS, FFT_SIZE, SAMPLE_RATE);
 
         // Extra frames let the startup transient decay to zero before the spike
         float[] baseline = uniformMagnitudes(0.2f);
@@ -118,7 +121,7 @@ class BeatDetectorTest {
     @Test
     void beatStrengthDecays() {
         BeatDetector d = detector(FrequencyBand.defaults());
-        int[] bassRange = BeatDetector.computeBinRange(FrequencyBand.BASS, NUM_BINS, FFT_F_MIN, FFT_F_MAX);
+        int[] bassRange = BeatDetector.computeBinRange(FrequencyBand.BASS, FFT_SIZE, SAMPLE_RATE);
 
         float[] baseline = uniformMagnitudes(0.2f);
         for (int i = 0; i < HISTORY * 2; i++) d.update(baseline);

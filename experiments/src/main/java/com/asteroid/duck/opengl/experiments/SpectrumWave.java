@@ -27,8 +27,11 @@ import static org.lwjgl.opengl.GL11.*;
  * Spectrum analyser experiment: log-frequency bar chart (20 Hz–20 kHz) with retro peak-hold ticks
  * and beat-detection letter flash overlaid on the bars.
  *
- * <p>A {@link FrequencyProcessor} acts as the shared FFT source, feeding both a
- * {@link SpectrumAnalyser} (bar and tick renderer) and a {@link BeatDetector}. On each beat in the
+ * <p>A single {@link FrequencyProcessor} acts as the shared FFT source, feeding both a
+ * {@link SpectrumAnalyser} (bar and tick renderer) and a {@link BeatDetector}. Since
+ * {@link BeatDetector} reads {@link FrequencyProcessor}'s raw, un-coarsened FFT bins rather than
+ * its display-sized bars, one processor now serves both consumers at full frequency resolution —
+ * no need for a second, higher-resolution FFT dedicated to beat detection. On each beat in the
  * bass / mid / treble bands the corresponding letter (B / M / T) flashes at full brightness over
  * the spectrum bars; between beats each letter stays visible at {@value #LETTER_DIM_ALPHA} alpha.</p>
  *
@@ -38,7 +41,6 @@ import static org.lwjgl.opengl.GL11.*;
 public class SpectrumWave implements Experiment {
 
 	// ── FFT / display parameters ──────────────────────────────────────────────
-	private static final int   FFT_BINS     = 128; // resolution for beat detection
 	private static final int   DISPLAY_BINS = 12;  // bars shown on screen (~1 octave each)
 	private static final int   FFT_SIZE     = 4096;
 	private static final float SAMPLE_RATE  = 48_000f;
@@ -66,19 +68,16 @@ public class SpectrumWave implements Experiment {
 	private static final int FONT_PT = 150;
 
 	// ── Pipeline ──────────────────────────────────────────────────────────────
-	// High-resolution processor: 128 bins → BeatDetector (more bins = better kick/snare separation)
+	// Single processor: 12 bins for the display bars, plus BeatDetector reads its raw FFT bins
+	// directly — full resolution for beat detection at no extra FFT cost.
 	private final FrequencyProcessor freqProc =
-			new FrequencyProcessor(FFT_SIZE, FFT_BINS, SAMPLE_RATE, F_MIN, F_MAX, DB_FLOOR, DB_CEILING);
-
-	// Display processor: 12 bins → SpectrumAnalyser (~1 octave per bar)
-	private final FrequencyProcessor displayProc =
 			new FrequencyProcessor(FFT_SIZE, DISPLAY_BINS, SAMPLE_RATE, F_MIN, F_MAX, DB_FLOOR, DB_CEILING);
 
 	private final SpectrumAnalyser analyser =
-			new SpectrumAnalyser(displayProc, GAP).withBarColors(COLOR_LOW, COLOR_HIGH);
+			new SpectrumAnalyser(freqProc, GAP).withBarColors(COLOR_LOW, COLOR_HIGH);
 
 	private final BeatDetector beats = new BeatDetector(
-			BEAT_BANDS, freqProc.getNumBins(), freqProc.getFMin(), freqProc.getFMax(),
+			BEAT_BANDS, freqProc.getFftSize(), freqProc.getSampleRate(),
 			120,    // ~2 s history — stable baseline across 4/4 kick pattern at 120 BPM
 			1.15f,  // lower threshold: sustained bass line means kick only clears ~15–25% above avg
 			4.0f,   // sensitivity: 25% spike → full beat strength
@@ -104,11 +103,11 @@ public class SpectrumWave implements Experiment {
 
 	@Override
 	public void init(RenderContext ctx) throws IOException {
-		displayProc.addSink(analyser);
+		freqProc.addSink(analyser);
 		freqProc.addSink(beats);
 		analyser.init(ctx);
 
-		audioReader = new AudioReader(List.of(freqProc, displayProc));
+		audioReader = new AudioReader(List.of(freqProc));
 		audioReaderThread = new Thread(audioReader, "spectrum-audio-reader");
 		audioReaderThread.setDaemon(true);
 		audioReaderThread.start();
@@ -184,7 +183,6 @@ public class SpectrumWave implements Experiment {
 	@Override
 	public void doRender(RenderContext ctx) {
 		freqProc.process();
-		displayProc.process();
 		analyser.doRender(ctx);
 
 		bassLabel.setTextColor(  StandardColors.WHITE.withAlpha(letterAlpha(beats.getBeatStrength(0))));

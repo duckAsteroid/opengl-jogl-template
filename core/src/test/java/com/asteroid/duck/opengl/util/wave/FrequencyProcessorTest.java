@@ -34,6 +34,18 @@ class FrequencyProcessorTest {
         }
     }
 
+    /** Captures every onRawSpectrum call for inspection. */
+    static class RawCaptureSink implements FrequencySink {
+        final List<float[]> received = new ArrayList<>();
+
+        @Override
+        public void onRawSpectrum(float[] rawMagnitudes, int fftSize, float sampleRate) {
+            float[] copy = new float[rawMagnitudes.length];
+            System.arraycopy(rawMagnitudes, 0, copy, 0, rawMagnitudes.length);
+            received.add(copy);
+        }
+    }
+
     // ── Parameter accessors ──────────────────────────────────────────────────────
 
     @Test
@@ -43,6 +55,22 @@ class FrequencyProcessorTest {
         assertEquals(FFT_SIZE,    p.getFftSize());
         assertEquals(F_MIN,       p.getFMin());
         assertEquals(F_MAX,       p.getFMax());
+        assertEquals(SAMPLE_RATE, p.getSampleRate());
+    }
+
+    // ── Raw magnitude fan-out ────────────────────────────────────────────────────
+
+    @Test
+    void processDeliversRawMagnitudesToSinks() {
+        FrequencyProcessor p = processor();
+        RawCaptureSink sink = new RawCaptureSink();
+        p.addSink(sink);
+
+        p.process();
+
+        assertEquals(1, sink.received.size(), "raw sink should be called once");
+        assertEquals(FFT_SIZE / 2 + 1, sink.received.get(0).length,
+                "raw magnitudes should be indexed by linear FFT bin, not numBins");
     }
 
     // ── Fan-out ──────────────────────────────────────────────────────────────────

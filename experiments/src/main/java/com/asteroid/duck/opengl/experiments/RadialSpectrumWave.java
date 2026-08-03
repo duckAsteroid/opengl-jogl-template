@@ -21,10 +21,11 @@ import static org.lwjgl.opengl.GL11.*;
  * Radial spectrum analyser experiment: a smooth filled shape radiates inward and outward
  * from a base circle as audio energy varies across the frequency spectrum.
  *
- * <p>A {@link FrequencyProcessor} at 128 bins feeds a {@link BeatDetector} for beat-strength
- * data. A separate display processor at {@link RadialSpectrumAnalyser#DEFAULT_RING_VERTS}
- * vertices drives the {@link RadialSpectrumAnalyser}, which uses {@code GL_LINEAR} texture
- * filtering to produce a smooth curve between FFT bins — no hard bar edges.
+ * <p>A single {@link FrequencyProcessor} at 128 bins drives the {@link RadialSpectrumAnalyser},
+ * which uses {@code GL_LINEAR} texture filtering to produce a smooth curve between FFT bins — no
+ * hard bar edges. The same processor also feeds a {@link BeatDetector}, which reads its raw,
+ * un-coarsened FFT bins directly rather than the 128-bin display grid, so beat detection keeps
+ * full frequency resolution regardless of the display bin count.
  * A continuous white peak-hold line traces the historical outer maximum.</p>
  *
  * <p>Key bindings: <kbd>J</kbd> / <kbd>H</kbd> cycle audio inputs; <kbd>P</kbd> saves a screenshot;
@@ -64,7 +65,7 @@ public class RadialSpectrumWave implements Experiment {
                     .withPeakColor(COLOR_PEAK);
 
     private final BeatDetector beats = new BeatDetector(
-            BEAT_BANDS, freqProc.getNumBins(), freqProc.getFMin(), freqProc.getFMax(),
+            BEAT_BANDS, freqProc.getFftSize(), freqProc.getSampleRate(),
             120, 1.15f, 4.0f, 1f / 20f);
 
     private final AudioSources audioSources = new AudioSources();
