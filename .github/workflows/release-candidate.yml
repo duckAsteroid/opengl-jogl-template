@@ -55,6 +55,9 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Tag next release candidates
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew tagReleaseCandidates
 
       # One GitHub pre-release per build/release-manifest.json entry. An empty manifest (no project

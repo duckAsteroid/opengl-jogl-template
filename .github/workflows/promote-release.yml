@@ -53,6 +53,9 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Promote release candidates to final
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew promoteReleaseCandidates
 
       # One GitHub Release per build/release-manifest.json entry. An empty manifest (no project had
