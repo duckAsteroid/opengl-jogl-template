@@ -40,14 +40,19 @@ The `run` and `debugRun` tasks automatically inject `__NV_PRIME_RENDER_OFFLOAD=1
 
 `core/build.gradle` applies duckAsteroid's shared build conventions (https://github.com/duckAsteroid/gradle-convention-plugin) instead of hand-rolling toolchain/publishing config:
 
-- `duckasteroid-java` — Java toolchain, source/Javadoc jars, and the `mavenJava` publication (`core/build.gradle` only overrides that publication's `artifactId`, to `render-core`). Also wires up axion-release versioning: `core`'s version comes from git tags matching `core/v<version>` (falls back to `v<version>` at the repo root, then `0.0.0+notag` if untagged).
+- `duckasteroid-java` — Java toolchain, source/Javadoc jars, and the `mavenJava` publication (`core/build.gradle` only overrides that publication's `artifactId`, to `render-core`). Also wires up git-tag/conventional-commit versioning: `core`'s version comes from git tags matching `core/v<version>` (falls back to `v<version>` at the repo root, then `0.0.0+notag` if untagged); ordinary builds compute an `X.Y.Z-SNAPSHOT` from Conventional Commits since the last final tag. See [VERSIONING.md](https://github.com/duckAsteroid/gradle-convention-plugin/blob/main/VERSIONING.md) in the conventions repo for the full explanation.
 - `duckasteroid-github-packages-publish` — opt-in; adds a publishing repository that publishes `mavenJava` to *this* repo's own GitHub Packages Maven feed (owner/repo auto-derived from the `origin` remote). No GPG signing is required for this path.
+- `duckasteroid-release-flow` — opt-in; adds the `tagReleaseCandidate`/`promoteReleaseCandidate`/`changelogForReleaseCandidate`/`changelogForRelease` tasks that drive the `develop` → `release` → `main` release flow below.
 
 `experiments` and `application` don't use these conventions. Publishing to Maven Central/OSSRH is a separate opt-in (`duckasteroid-maven-central`), not applied here.
 
 These `duckasteroid-*` plugins are published only to GitHub Packages, never the Gradle Plugin Portal, so `settings.gradle` bootstraps plugin resolution first via the `io.github.duckasteroid.github-packages-settings` plugin pointed at the `duckAsteroid/gradle-convention-plugin` repo. Reading from GitHub Packages requires credentials even for public repos: `gpr.user`/`gpr.key` in `~/.gradle/gradle.properties`, or `GH_PACKAGES_READ_USER`/`GH_PACKAGES_READ_TOKEN`, or (in CI) `GITHUB_ACTOR`/`GITHUB_TOKEN`. See the `adopt-duckasteroid-gradle-conventions` skill if extending these conventions to other modules.
 
-**Releasing `render-core`:** push a tag matching `core/v<version>` or the plain `v<version>` fallback (e.g. via axion-release's `./gradlew :core:release`) to trigger `.github/workflows/release-core.yml`, which builds, publishes the jar/sources/javadoc to this repo's GitHub Packages feed, and creates a GitHub Release from the tag. Since `core` is the only module using this convention today, either tag shape resolves unambiguously to its version — if a second module adopts axion-release versioning later, revisit whether plain `v*` tags still make sense.
+**Releasing `render-core`:** this repo follows the conventions repo's `develop` → `release` → `main` flow:
+- Merging accepted work from `develop` into `release` triggers `.github/workflows/release-candidate.yml`: it mints the next `core/vX.Y.Z-RCn` tag (auto-incrementing `n` for the same candidate version), builds, publishes to GitHub Packages, and cuts a GitHub pre-release.
+- Merging `release` into `main` triggers `.github/workflows/promote-release.yml`: it strips the `-RCn` suffix off the nearest RC tag, tags/publishes the final `core/vX.Y.Z`, and cuts the GitHub Release.
+- Both tasks respect `-Prelease.forceVersion=X.Y.Z` as a backstop and are plain Gradle tasks runnable locally (`./gradlew :core:tagReleaseCandidate`, etc.), not just from CI.
+- Since `core` is the only module using this convention today, its tag prefix (`core/v`) resolves unambiguously — if a second module adopts this versioning later, revisit whether the plain `v*` fallback still makes sense.
 
 ## Architecture
 
