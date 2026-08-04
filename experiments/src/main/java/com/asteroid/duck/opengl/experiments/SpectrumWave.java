@@ -81,6 +81,7 @@ public class SpectrumWave implements Experiment {
 			120,    // ~2 s history — stable baseline across 4/4 kick pattern at 120 BPM
 			1.15f,  // lower threshold: sustained bass line means kick only clears ~15–25% above avg
 			4.0f,   // sensitivity: 25% spike → full beat strength
+			BeatDetector.DEFAULT_NOISE_FLOOR, // ignore ratio spikes during near-silence
 			1f/20f  // fast decay — clears in ~0.3 s so next kick can re-trigger
 	);
 

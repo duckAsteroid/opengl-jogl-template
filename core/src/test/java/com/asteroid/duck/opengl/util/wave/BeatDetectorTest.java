@@ -19,11 +19,12 @@ class BeatDetectorTest {
     private static final int   HISTORY   = 5;
     private static final float THRESHOLD  = 1.3f;
     private static final float SENSITIVITY = 2.0f;
+    private static final float NOISE_FLOOR = 0.02f;
     private static final float DECAY      = 0.1f;
 
     private BeatDetector detector(List<FrequencyBand> bands) {
         return new BeatDetector(bands, FFT_SIZE, SAMPLE_RATE,
-                HISTORY, THRESHOLD, SENSITIVITY, DECAY);
+                HISTORY, THRESHOLD, SENSITIVITY, NOISE_FLOOR, DECAY);
     }
 
     private static float[] uniformMagnitudes(float value) {
@@ -85,6 +86,23 @@ class BeatDetectorTest {
         for (int b = 0; b < d.getBandCount(); b++) {
             assertEquals(0f, d.getBeatStrength(b), 1e-6f, "silence should produce no beat");
         }
+    }
+
+    @Test
+    void quietNoiseFluctuationDoesNotTriggerFalseBeat() {
+        BeatDetector d = detector(FrequencyBand.defaults());
+        int[] bassRange = BeatDetector.computeBinRange(FrequencyBand.BASS, FFT_SIZE, SAMPLE_RATE);
+
+        // Warm up on a near-silent baseline, well below the noise floor
+        float[] quiet = uniformMagnitudes(0.001f);
+        for (int i = 0; i < HISTORY * 3; i++) d.update(quiet);
+
+        // 3x relative spike — comfortably above the ratio threshold — but still far below the
+        // absolute noise floor. Without the noiseFloor gate this would falsely trigger.
+        d.update(spikeMagnitudes(0.001f, 0.003f, bassRange[0], bassRange[1]));
+
+        assertEquals(0f, d.getBeatStrength("bass"), 1e-6f,
+                "sub-noise-floor fluctuation should not trigger a beat even with a high ratio");
     }
 
     @Test

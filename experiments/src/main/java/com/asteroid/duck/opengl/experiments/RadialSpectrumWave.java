@@ -66,7 +66,7 @@ public class RadialSpectrumWave implements Experiment {
 
     private final BeatDetector beats = new BeatDetector(
             BEAT_BANDS, freqProc.getFftSize(), freqProc.getSampleRate(),
-            120, 1.15f, 4.0f, 1f / 20f);
+            120, 1.15f, 4.0f, BeatDetector.DEFAULT_NOISE_FLOOR, 1f / 20f);
 
     private final AudioSources audioSources = new AudioSources();
     private int selectedSource = 0;
