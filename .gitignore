@@ -33,6 +33,6 @@ last.experiment
 /font-images/
 /renderdoc/
 
-# agent-docs skills resolved from dependencies/plugins (regenerate via :core:resolveAgentDocs);
+# agent-docs skills resolved from dependencies/plugins (regenerate via :render-core:resolveAgentDocs);
 # .claude/skills is a tracked symlink to this directory
 /.agents/skills/

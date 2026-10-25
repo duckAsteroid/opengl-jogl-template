@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this project is
 
-A Java/LWJGL 3 OpenGL framework for GPU shader experiments and real-time visualisations. Three Gradle sub-projects: `core` (library), `experiments` (runnable demos), `application` (placeholder).
+A Java/LWJGL 3 OpenGL framework for GPU shader experiments and real-time visualisations. Three Gradle sub-projects: `render-core` (library), `experiments` (runnable demos), `application` (placeholder).
 
 ## Build & run commands
 
@@ -21,11 +21,11 @@ A Java/LWJGL 3 OpenGL framework for GPU shader experiments and real-time visuali
 # Run all tests
 ./gradlew test
 
-# Run only core tests (most tests live here; GL tests require a live context)
-./gradlew :core:test
+# Run only render-core tests (most tests live here; GL tests require a live context)
+./gradlew :render-core:test
 
 # Run a single test class
-./gradlew :core:test --tests "com.asteroid.duck.opengl.util.keys.KeysTest"
+./gradlew :render-core:test --tests "com.asteroid.duck.opengl.util.keys.KeysTest"
 
 # Run with LWJGL debug agent (logs all GL calls to debugRun.gl.log)
 ./gradlew :experiments:debugRun
@@ -36,11 +36,11 @@ A Java/LWJGL 3 OpenGL framework for GPU shader experiments and real-time visuali
 
 The `run` and `debugRun` tasks automatically inject `__NV_PRIME_RENDER_OFFLOAD=1` / `__GLX_VENDOR_LIBRARY_NAME=nvidia` for NVIDIA Optimus laptops. Java 25 with `--enable-preview` is used. Tests require `-Xshare:off`.
 
-### `core`'s Gradle conventions
+### `render-core`'s Gradle conventions
 
-`core/build.gradle` applies duckAsteroid's shared build conventions (https://github.com/duckAsteroid/gradle-convention-plugin) instead of hand-rolling toolchain/publishing config:
+`render-core/build.gradle` applies duckAsteroid's shared build conventions (https://github.com/duckAsteroid/gradle-convention-plugin) instead of hand-rolling toolchain/publishing config:
 
-- `duckasteroid-java` — Java toolchain, source/Javadoc jars, and the `mavenJava` publication (`core/build.gradle` only overrides that publication's `artifactId`, to `render-core`). Also wires up git-tag/conventional-commit versioning: `core`'s version comes from git tags matching `core/v<version>` (falls back to `v<version>` at the repo root, then `0.0.0+notag` if untagged); ordinary builds compute an `X.Y.Z-SNAPSHOT` from Conventional Commits since the last final tag. See [VERSIONING.md](https://github.com/duckAsteroid/gradle-convention-plugin/blob/main/VERSIONING.md) in the conventions repo for the full explanation.
+- `duckasteroid-java` — Java toolchain, source/Javadoc jars, and the `mavenJava` publication (whose `artifactId` is simply the project name, `render-core`). Also wires up git-tag/conventional-commit versioning: `render-core`'s version comes from git tags matching `render-core/v<version>` (falls back to `v<version>` at the repo root, then `0.0.0+notag` if untagged); ordinary builds compute an `X.Y.Z-SNAPSHOT` from Conventional Commits since the last final tag. See [VERSIONING.md](https://github.com/duckAsteroid/gradle-convention-plugin/blob/main/VERSIONING.md) in the conventions repo for the full explanation.
 - `duckasteroid-github-packages-publish` — opt-in; adds a publishing repository that publishes `mavenJava` to *this* repo's own GitHub Packages Maven feed (owner/repo auto-derived from the `origin` remote). No GPG signing is required for this path.
 - `duckasteroid-release-flow` — opt-in; adds the `tagReleaseCandidate`/`promoteReleaseCandidate`/`changelogForReleaseCandidate`/`changelogForRelease` tasks that drive the `develop` → `release` → `main` release flow below.
 
@@ -49,16 +49,16 @@ The `run` and `debugRun` tasks automatically inject `__NV_PRIME_RENDER_OFFLOAD=1
 These `duckasteroid-*` plugins are published only to GitHub Packages, never the Gradle Plugin Portal, so `settings.gradle` bootstraps plugin resolution first via the `io.github.duckasteroid.github-packages-settings` plugin pointed at the `duckAsteroid/gradle-convention-plugin` repo. Reading from GitHub Packages requires credentials even for public repos: `gpr.user`/`gpr.key` in `~/.gradle/gradle.properties`, or `GH_PACKAGES_READ_USER`/`GH_PACKAGES_READ_TOKEN`, or (in CI) `GITHUB_ACTOR`/`GITHUB_TOKEN`. See the `adopt-duckasteroid-gradle-conventions` skill if extending these conventions to other modules.
 
 **Releasing `render-core`:** this repo follows the conventions repo's `develop` → `release` → `main` flow:
-- Merging accepted work from `develop` into `release` triggers `.github/workflows/release-candidate.yml`: it mints the next `core/vX.Y.Z-RCn` tag (auto-incrementing `n` for the same candidate version), builds, publishes to GitHub Packages, and cuts a GitHub pre-release.
-- Merging `release` into `main` triggers `.github/workflows/promote-release.yml`: it strips the `-RCn` suffix off the nearest RC tag, tags/publishes the final `core/vX.Y.Z`, and cuts the GitHub Release.
-- Both tasks respect `-Prelease.forceVersion=X.Y.Z` as a backstop and are plain Gradle tasks runnable locally (`./gradlew :core:tagReleaseCandidate`, etc.), not just from CI.
-- Since `core` is the only module using this convention today, its tag prefix (`core/v`) resolves unambiguously — if a second module adopts this versioning later, revisit whether the plain `v*` fallback still makes sense.
+- Merging accepted work from `develop` into `release` triggers `.github/workflows/release-candidate.yml`: it mints the next `render-core/vX.Y.Z-RCn` tag (auto-incrementing `n` for the same candidate version), builds, publishes to GitHub Packages, and cuts a GitHub pre-release.
+- Merging `release` into `main` triggers `.github/workflows/promote-release.yml`: it strips the `-RCn` suffix off the nearest RC tag, tags/publishes the final `render-core/vX.Y.Z`, and cuts the GitHub Release.
+- Both tasks respect `-Prelease.forceVersion=X.Y.Z` as a backstop and are plain Gradle tasks runnable locally (`./gradlew :render-core:tagReleaseCandidate`, etc.), not just from CI.
+- Since `render-core` is the only module using this convention today, its tag prefix (`render-core/v`) resolves unambiguously — if a second module adopts this versioning later, revisit whether the plain `v*` fallback still makes sense.
 
 ## Architecture
 
 ### Core rendering lifecycle
 
-Every renderable object implements `RenderedItem` (`core/src/main/java/…/util/RenderedItem.java`):
+Every renderable object implements `RenderedItem` (`render-core/src/main/java/…/util/RenderedItem.java`):
 
 ```
 init(RenderContext)   → called once before the loop; allocate GL resources here
@@ -160,7 +160,7 @@ ctx.stopRecording();  // stop before duration expires
 
 Timing uses `RenderContext.getClock()` (not wall-clock time) so paused or slowed renders are handled correctly.
 
-**JCodec dependency** (`org.jcodec:jcodec:0.2.5` + `jcodec-javase:0.2.5`) is in `core/build.gradle`. No native binaries required.
+**JCodec dependency** (`org.jcodec:jcodec:0.2.5` + `jcodec-javase:0.2.5`) is in `render-core/build.gradle`. No native binaries required.
 
 ### GLSL shaders
 
@@ -171,4 +171,4 @@ Shaders live in `experiments/src/main/resources/glsl/<name>/vertex.glsl` and `fr
 - All GL calls must happen on the GL/render thread.
 - GL handles are `null` until `init()` is called; using them before or after is undefined.
 - SLF4J for logging; set `-Dsystem.slf4j.internal.verbosity=WARN` for clean output.
-- `core` uses Google AutoService (`@AutoService`) for `Binder` implementations; run `./gradlew :core:compileJava` to regenerate the service file after adding a new `Binder`.
+- `render-core` uses Google AutoService (`@AutoService`) for `Binder` implementations; run `./gradlew :render-core:compileJava` to regenerate the service file after adding a new `Binder`.

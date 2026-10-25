@@ -55,7 +55,7 @@ tasks.register('restorePulseAudioSource') {
 }
 
 dependencies {
-    implementation project(':core')
+    implementation project(':render-core')
 
     // JOML for math
     implementation "org.joml:joml:${jomlVersion}"

@@ -16,5 +16,5 @@ githubPackages {
 }
 
 rootProject.name = 'opengl-jogl-template'
-include 'core', 'experiments', 'application'
+include 'render-core', 'experiments', 'application'
 

@@ -42,16 +42,3 @@ dependencies {
   testImplementation 'org.junit.platform:junit-platform-launcher:6.1.2'
   testImplementation 'org.mockito:mockito-inline:5.2.0'
 }
-
-tasks.named('packageAgentDocs') {
-  archiveBaseName = 'render-core'
-}
-
-// duckasteroid-java already registers the 'mavenJava' publication; just rename the artifact.
-publishing {
-  publications {
-    named('mavenJava', MavenPublication) {
-      artifactId = 'render-core'
-    }
-  }
-}

@@ -11,7 +11,7 @@ Java using [LWJGL 3](https://www.lwjgl.org/).
 
 ```
 opengl-jogl-template/
-├── core/          # Reusable OpenGL framework library
+├── render-core/   # Reusable OpenGL framework library
 ├── experiments/   # Runnable demos / sandbox application
 ├── application/   # Placeholder for a future standalone application
 ├── docs/          # Developer notes
@@ -20,7 +20,7 @@ opengl-jogl-template/
 ```
 
 Three Gradle sub-projects are declared in `settings.gradle`:
-`core`, `experiments`, and `application`.
+`render-core`, `experiments`, and `application`.
 
 ---
 
@@ -62,7 +62,7 @@ Useful experiment-specific run targets defined in `experiments/build.gradle`:
 
 ## Sub-projects
 
-### `core` – OpenGL framework library
+### `render-core` – OpenGL framework library
 
 **Role:** A `java-library` that all other sub-projects depend on.
 Contains every reusable abstraction for working with OpenGL via LWJGL.
@@ -107,9 +107,9 @@ Contains every reusable abstraction for working with OpenGL via LWJGL.
 
 #### Testing
 
-Unit tests live in `core/src/test/java`. Run with:
+Unit tests live in `render-core/src/test/java`. Run with:
 ```bash
-./gradlew :core:test
+./gradlew :render-core:test
 ```
 
 Tests use JUnit 5 and Mockito. Because most GL calls require a live context, pure-Java logic
@@ -119,7 +119,7 @@ Tests use JUnit 5 and Mockito. Because most GL calls require a live context, pur
 
 ### `experiments` – Runnable demos
 
-**Role:** An `application` sub-project that depends on `core` and provides a collection of
+**Role:** An `application` sub-project that depends on `render-core` and provides a collection of
 self-contained OpenGL experiments. Each experiment implements the `Experiment` interface (which
 extends `RenderedItem`) and is selected at runtime via `ExperimentChooser`.
 
@@ -162,7 +162,7 @@ Or use one of the named Gradle tasks (`runTextureRenderer`, `debugRun`, etc.).
 
 ### `application` – Standalone application (placeholder)
 
-**Role:** An empty sub-project reserved for a future polished application built on top of `core`.
+**Role:** An empty sub-project reserved for a future polished application built on top of `render-core`.
 The `build.gradle` is currently empty; no source files exist yet.
 
 ---

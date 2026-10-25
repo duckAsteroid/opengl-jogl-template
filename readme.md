@@ -5,15 +5,16 @@ in Java using LWJGL https://www.lwjgl.org/ OpenGL API.
 
 ## Build
 
-`core` applies duckAsteroid's shared Gradle conventions (`duckasteroid-java` plus the opt-in
+`render-core` applies duckAsteroid's shared Gradle conventions (`duckasteroid-java` plus the opt-in
 `duckasteroid-github-packages-publish`, from https://github.com/duckAsteroid/gradle-convention-plugin)
 for its Java toolchain, git-tag-based versioning, and publishing to this repo's own GitHub Packages
 feed. These plugins are hosted on GitHub Packages themselves, so resolving the build requires read
 credentials — see `gradle-convention-plugin`'s README, or `CLAUDE.md` in this repo, for how to
 configure them.
 
-Pushing a tag matching `core/v<version>` triggers `.github/workflows/release-core.yml`, which
-builds, publishes `render-core` to GitHub Packages, and cuts a GitHub Release.
+Releases follow a `develop` → `release` → `main` flow (`duckasteroid-release-flow`): merging into
+`release` mints a `render-core/vX.Y.Z-RCn` tag and publishes a pre-release, and merging `release`
+into `main` promotes it to `render-core/vX.Y.Z`. See `CLAUDE.md` for details.
 
 # TO DO
 
