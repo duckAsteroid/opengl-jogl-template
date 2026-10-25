@@ -129,7 +129,7 @@ renderer.setTransform(new Matrix4f().rotateZ(angle).scale(pulse));
 renderer.setTransform(new Matrix4f());
 ```
 
-All three hand the matrix to the GL thread through a `PendingValue` (`util/renderaction/`): a preallocated, lock-guarded, last-write-wins slot. `setTransform` (and `AudioWave`/`RadialWave`'s `setLineColour`) is a no-op when the value is unchanged and never allocates, so calling it every frame is fine. `setAmplitudeFunction` likewise skips the VBO rebuild for an equal function — `AmplitudeFunction.constant`/`ellipse` return value-equal records. `FrequencyRenderer` subclasses read the transform via `currentTransform()`. Other one-off setters (line width, channel mode, radius, centre) still go through `RenderActionQueue`.
+All three hand the matrix to the GL thread through a `PendingValue` (`util/renderaction/`): a preallocated, lock-guarded, last-write-wins slot. `setTransform` (and `AudioWave`/`RadialWave`'s `setLineColour`) is a no-op when the value is unchanged and never allocates, so calling it every frame is fine. `setAmplitudeFunction` likewise skips the VBO rebuild for an equal function — `AmplitudeFunction.constant`/`ellipse` return value-equal records. `FrequencyRenderer` subclasses read the transform via `currentTransform()`. The remaining wave setters (line width, channel mode, radius, centre) are volatile fields (or, for the centre, another `PendingValue`) compared against the GL thread's last-applied value, so they are equally cheap; neither wave class uses `RenderActionQueue` any more.
 
 ### Screenshot and video capture
 
