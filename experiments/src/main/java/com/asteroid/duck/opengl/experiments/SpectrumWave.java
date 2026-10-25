@@ -19,6 +19,7 @@ import org.joml.Vector4f;
 
 import java.awt.*;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
 
 import static org.lwjgl.opengl.GL11.*;
@@ -82,7 +83,7 @@ public class SpectrumWave implements Experiment {
 			1.15f,  // lower threshold: sustained bass line means kick only clears ~15–25% above avg
 			4.0f,   // sensitivity: 25% spike → full beat strength
 			BeatDetector.DEFAULT_NOISE_FLOOR, // ignore ratio spikes during near-silence
-			1f/20f  // fast decay — clears in ~0.3 s so next kick can re-trigger
+			Duration.ofMillis(333) // fast decay — clears in ~0.3 s so next kick can re-trigger
 	);
 
 	private final AudioSources audioSources = new AudioSources();

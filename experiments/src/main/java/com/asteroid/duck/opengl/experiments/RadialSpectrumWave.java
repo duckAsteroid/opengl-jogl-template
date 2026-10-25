@@ -13,6 +13,7 @@ import com.asteroid.duck.opengl.util.wave.RadialSpectrumAnalyser;
 import org.joml.Vector4f;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
 
 import static org.lwjgl.opengl.GL11.*;
@@ -66,7 +67,7 @@ public class RadialSpectrumWave implements Experiment {
 
     private final BeatDetector beats = new BeatDetector(
             BEAT_BANDS, freqProc.getFftSize(), freqProc.getSampleRate(),
-            120, 1.15f, 4.0f, BeatDetector.DEFAULT_NOISE_FLOOR, 1f / 20f);
+            120, 1.15f, 4.0f, BeatDetector.DEFAULT_NOISE_FLOOR, Duration.ofMillis(333));
 
     private final AudioSources audioSources = new AudioSources();
     private int selectedSource = 0;
