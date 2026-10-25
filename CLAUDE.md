@@ -98,7 +98,10 @@ To add a new experiment: implement `Experiment`, add the fully-qualified class n
 
 ### Audio thread safety
 
-`AudioReader` runs a producer thread that writes into a GPU-mapped `ByteBuffer` via a circular buffer (`RollingFloatBuffer`). The render thread reads only the write-head position. This is the only intentionally concurrent code; everything else is single-threaded on the GL thread.
+`AudioReader` runs a producer thread (use a **platform** thread; it parks 0.5 ms when the line is empty) that fans PCM bytes out to `AudioSink`s. This is the only intentionally concurrent code; everything else is single-threaded on the GL thread.
+
+- `RollingAudioBuffer` (CPU ring buffer) uses a seqlock-style `claimed`/`written` counter pair so a reader never sees a torn or lapped sample; tainted samples are re-read, then held.
+- `PboAudioSink` writes into a persistently-mapped PBO. `upload()` snapshots the head before issuing the (asynchronous) GPU copy and `getHead()` returns that snapshot; `AudioWave`/`RadialWave` draw the newest window *ending* at it, with `AUDIO_BUFFER_SIZE` = 4× the window as headroom for writes landing while the copy is pending. Don't draw from the oldest end of the ring — that's where the audio thread is writing.
 
 ### Transformable renderers
 
@@ -126,7 +129,7 @@ renderer.setTransform(new Matrix4f().rotateZ(angle).scale(pulse));
 renderer.setTransform(new Matrix4f());
 ```
 
-`AudioWave` and `RadialWave` route `setTransform` through a `RenderActionQueue` (strict ordering, last-write-wins). `FrequencyRenderer` subclasses use a `volatile` reference (same visibility guarantee, but no queuing — concurrent callers race; the last store wins).
+All three hand the matrix to the GL thread through a `PendingValue` (`util/renderaction/`): a preallocated, lock-guarded, last-write-wins slot. `setTransform` (and `AudioWave`/`RadialWave`'s `setLineColour`) is a no-op when the value is unchanged and never allocates, so calling it every frame is fine. `setAmplitudeFunction` likewise skips the VBO rebuild for an equal function — `AmplitudeFunction.constant`/`ellipse` return value-equal records. `FrequencyRenderer` subclasses read the transform via `currentTransform()`. Other one-off setters (line width, channel mode, radius, centre) still go through `RenderActionQueue`.
 
 ### Screenshot and video capture
 
