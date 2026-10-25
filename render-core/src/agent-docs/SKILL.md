@@ -68,6 +68,7 @@ double t = ctx.getClock().elapsed();          // seconds since start (double)
 
 // Viewport
 Rectangle win = ctx.getWindow();              // window size in screen coordinates (not framebuffer pixels)
+Dimension fb = ctx.getFramebufferSize();      // framebuffer size in pixels: use for glViewport and FBO sizing
 Matrix4f proj = ctx.ortho();                  // orthographic projection sized to the GL framebuffer (viewport pixels)
 
 // Resources

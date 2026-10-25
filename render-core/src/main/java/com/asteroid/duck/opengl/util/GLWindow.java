@@ -887,8 +887,19 @@ public abstract class GLWindow implements RenderContext {
 		return window.getWidth()+"x"+window.getHeight();
 	}
 
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>Note: screen coordinates, not pixels. See {@link #getFramebufferSize()}.</p>
+	 */
+	@Override
 	public Rectangle getWindow() {
 		return window;
+	}
+
+	@Override
+	public Dimension getFramebufferSize() {
+		return new Dimension(viewportWidth, viewportHeight);
 	}
 
 	@Override
@@ -904,7 +915,8 @@ public abstract class GLWindow implements RenderContext {
 	/**
 	 * Returns the current window dimensions as a 2D float vector.
 	 *
-	 * @return {@code (width, height)} in pixels; same values as {@link #getWindow()}.width/height
+	 * @return {@code (width, height)} in screen coordinates, not pixels; same values as
+	 *         {@link #getWindow()}.width/height. See {@link #getFramebufferSize()} for pixels.
 	 */
 	public Vector2f getWindowDimensions() {
 		return new Vector2f(window.width, window.height);

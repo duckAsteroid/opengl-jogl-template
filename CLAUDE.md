@@ -68,7 +68,7 @@ dispose()             → free all GL and native resources
 
 `RenderContext` (`util/RenderContext.java`) is the interface passed everywhere — it gives access to `ResourceManager`, `Clock`, `KeyRegistry`, window geometry, and orthographic projection. **Never hold a direct reference to the window; always use `RenderContext`.**
 
-> **High-DPI note:** `getWindow()` returns the GLFW window size in *screen coordinates*. On high-DPI displays the GL framebuffer (viewport) is larger. `ortho()` always uses the framebuffer dimensions, so projection coordinates are always in real pixels — use `ortho()` for any pixel-space projection and avoid deriving projection from `getWindow()` dimensions.
+> **High-DPI note:** `getWindow()` returns the GLFW window size in *screen coordinates*. On high-DPI displays the GL framebuffer (viewport) is larger. `ortho()` always uses the framebuffer dimensions, so projection coordinates are always in real pixels — use `ortho()` for any pixel-space projection and `getFramebufferSize()` for viewport/FBO sizes; never derive either from `getWindow()` dimensions. Native Wayland on a scaled display (scale 2: a 1920×1080 window has a 3840×2160 framebuffer) is where this bites.
 
 `GLWindow` (`util/GLWindow.java`) is the abstract GLFW window that owns the render loop and implements `RenderContext`. Concrete windows extend it and implement `init()`, `render()`, and `registerKeys()`. To change GLFW init or window hints (e.g. `GLFW_PLATFORM`, which defaults to X11 on Linux), pass a `GLFWConfigurer` to the constructor — its `beforeInit()` / `beforeCreateWindow()` hooks run after GLWindow's defaults, so they override them.
 
