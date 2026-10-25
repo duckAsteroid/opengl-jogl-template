@@ -4,6 +4,7 @@ import com.asteroid.duck.opengl.util.RenderContext;
 import com.asteroid.duck.opengl.util.RenderedItem;
 import com.asteroid.duck.opengl.util.Transformable;
 import com.asteroid.duck.opengl.util.audio.PboAudioSink;
+import com.asteroid.duck.opengl.util.renderaction.PendingValue;
 import com.asteroid.duck.opengl.util.renderaction.RenderActionQueue;
 import com.asteroid.duck.opengl.util.resources.buffer.BufferDrawMode;
 import com.asteroid.duck.opengl.util.resources.buffer.UpdateHint;
@@ -22,7 +23,6 @@ import org.joml.Vector4f;
 import java.awt.*;
 import java.io.IOException;
 import java.util.Objects;
-import java.util.stream.IntStream;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL13.*;
@@ -83,14 +83,18 @@ public class RadialWave implements RenderedItem, Transformable {
     private volatile boolean clearBeforeRender = true;
 
     private static final String ACTION_LINE_WIDTH   = "lineWidth";
-    private static final String ACTION_LINE_COLOUR  = "lineColour";
     private static final String ACTION_CHANNEL_MODE = "channelMode";
     private static final String ACTION_RADIUS       = "radius";
     private static final String ACTION_CENTER       = "center";
-    private static final String ACTION_TRANSFORM    = "transform";
     private final RenderActionQueue renderActions = new RenderActionQueue(
-            ACTION_LINE_WIDTH, ACTION_LINE_COLOUR, ACTION_CHANNEL_MODE,
-            ACTION_RADIUS, ACTION_CENTER, ACTION_TRANSFORM);
+            ACTION_LINE_WIDTH, ACTION_CHANNEL_MODE, ACTION_RADIUS, ACTION_CENTER);
+
+    // Colour and transform are typically set every frame, so they bypass the action queue: each
+    // call copies into a preallocated slot (no-op when unchanged), applied at the next frame.
+    private final PendingValue<Vector4f> lineColour = new PendingValue<>(new Vector4f(1.0f), (src, dst) -> dst.set(src));
+    private final PendingValue<Matrix4f> transform  = new PendingValue<>(new Matrix4f(), (src, dst) -> dst.set(src));
+    private final Vector4f glLineColour = new Vector4f(1.0f); // GL thread only
+    private final Matrix4f glTransform  = new Matrix4f();     // GL thread only
 
     // language=GLSL
     private static final String VERTEX_SHADER = """
@@ -161,20 +165,21 @@ public class RadialWave implements RenderedItem, Transformable {
         vao.init(ctx);
         var vbo = vao.createVbo(new VertexDataStructure(DIRECTION, AMPLITUDE), SAMPLE_COUNT);
         vbo.init(ctx);
-        IntStream.range(0, SAMPLE_COUNT).forEach(i -> {
+        Vector2f scratch = new Vector2f();
+        for (int i = 0; i < SAMPLE_COUNT; i++) {
             float angle = (float) (2.0 * Math.PI * i / SAMPLE_COUNT);
-            vbo.setElement(i, DIRECTION, new Vector2f((float) Math.cos(angle), (float) Math.sin(angle)));
-        });
+            vbo.setElement(i, DIRECTION, scratch.set((float) Math.cos(angle), (float) Math.sin(angle)));
+        }
         fillVboAmplitude(vbo);
         vbo.update(UpdateHint.STATIC);
     }
 
     private void fillVboAmplitude(VertexBufferObject vbo) {
         AmplitudeFunction fn = this.amplitudeFunction;
-        IntStream.range(0, SAMPLE_COUNT).forEach(i -> {
+        for (int i = 0; i < SAMPLE_COUNT; i++) {
             float x = (((float) i / SAMPLE_COUNT) * 2f) - 1f;
-            vbo.setElement(i, AMPLITUDE, fn.amplitudeAt(i, x));
-        });
+            vbo.setElement(i, AMPLITUDE, fn.amplitudeAt(i, x)); // float overload: no boxing
+        }
     }
 
     private void rebuildVboAmplitude() {
@@ -218,6 +223,12 @@ public class RadialWave implements RenderedItem, Transformable {
         }
         shader.use(ctx);
         renderActions.processAll(ctx);
+        if (lineColour.takeIfChanged(glLineColour)) {
+            uColour.set(glLineColour);
+        }
+        if (transform.takeIfChanged(glTransform)) {
+            uTransform.set(glTransform);
+        }
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_1D, audioSink.getTextureId());
         // Draw the newest SAMPLE_COUNT samples, ending at the uploaded head.
@@ -244,14 +255,13 @@ public class RadialWave implements RenderedItem, Transformable {
     }
 
     /**
-     * Set the RGBA colour of the radial waveform line. Enqueued as a render action; the vector
-     * is copied so the caller may reuse or modify it after this call.
+     * Set the RGBA colour of the radial waveform line, applied at the start of the next frame. The
+     * vector is copied so the caller may reuse it; cheap to call every frame (a no-op when unchanged).
      *
      * @param colour the desired line colour as an RGBA vector in [0, 1] per component
      */
     public void setLineColour(Vector4f colour) {
-        Vector4f copy = new Vector4f(colour);
-        renderActions.enqueue(ACTION_LINE_COLOUR, ctx -> uColour.set(copy));
+        lineColour.offer(colour);
     }
 
     /**
@@ -277,13 +287,17 @@ public class RadialWave implements RenderedItem, Transformable {
      * The per-vertex value returned by {@code fn} is multiplied directly by the normalised audio
      * sample, so {@link AmplitudeFunction#constant(float) constant(1f)} gives full-scale radial
      * excursion — the same scale as {@link AudioWave} with the same function.
-     * The new function takes effect on the next rendered frame.
+     * The new function takes effect on the next rendered frame. Passing a function equal to the
+     * current one is a no-op, so this is cheap to call every frame.
      *
      * @param fn the new amplitude envelope; use {@link AmplitudeFunction#constant} for uniform
      *           excursion or {@link AmplitudeFunction#ellipse} to taper to zero at the seam
      */
     public void setAmplitudeFunction(AmplitudeFunction fn) {
-        this.amplitudeFunction = Objects.requireNonNull(fn);
+        if (Objects.requireNonNull(fn).equals(this.amplitudeFunction)) {
+            return; // unchanged: skip the VBO rebuild
+        }
+        this.amplitudeFunction = fn;
         this.amplitudeDirty = true;
     }
 
@@ -308,8 +322,9 @@ public class RadialWave implements RenderedItem, Transformable {
     }
 
     /**
-     * Set a transform matrix applied to the final NDC position of every vertex.
-     * Enqueued as a render action; the matrix is copied so the caller may reuse it after this call.
+     * Set a transform matrix applied to the final NDC position of every vertex, from the start of
+     * the next frame. The matrix is copied so the caller may reuse it; cheap to call every frame
+     * (a no-op when unchanged, and no allocation when changed).
      *
      * <p>The identity matrix (default) leaves the waveform unchanged. Use JOML to compose
      * rotations, scales, and translations — for example, to spin the circle and pulse its size
@@ -327,8 +342,7 @@ public class RadialWave implements RenderedItem, Transformable {
      * @param matrix the transform to apply; pass {@code new Matrix4f()} to reset to identity
      */
     public void setTransform(Matrix4f matrix) {
-        Matrix4f copy = new Matrix4f(matrix);
-        renderActions.enqueue(ACTION_TRANSFORM, ctx -> uTransform.set(copy));
+        transform.offer(matrix);
     }
 
     /**
