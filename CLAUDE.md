@@ -88,7 +88,7 @@ To add a new experiment: implement `Experiment`, add the fully-qualified class n
 
 `ResourceManager` (owned by `GLWindow`) is the single owner of all GL handles. Load textures, shaders, and buffers through it — it calls `dispose()` on all resources at shutdown.
 
-**Binding exclusivity:** VAOs, EBOs, shader programs, and textures use `ExclusivityGroup<T>` wrappers (`util/resources/bound/`). Always bind through the wrapper, never raw GL calls, to prevent accidental double-binding.
+**Binding exclusivity:** VAOs, EBOs, shader programs, and textures use `ExclusivityGroup<T>` wrappers (`util/resources/bound/`). Always bind through the wrapper, never raw GL calls, to prevent accidental double-binding. The group skips the GL call when asked to bind the resource it last bound, so a raw `glBindVertexArray` (etc.) desyncs it and a later `bind()` silently does nothing; if a raw bind is unavoidable, call `exclusivityGroup(...).invalidate()` afterwards.
 
 **Native memory:** `VertexBufferObject` allocates off-heap via `MemoryUtil.memAlloc`. Always call `dispose()` — leaks are not GC-collected.
 
