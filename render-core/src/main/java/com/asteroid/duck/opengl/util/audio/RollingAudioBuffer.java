@@ -1,5 +1,6 @@
 package com.asteroid.duck.opengl.util.audio;
 
+import java.lang.invoke.VarHandle;
 import java.nio.FloatBuffer;
 
 /**
@@ -9,11 +10,25 @@ import java.nio.FloatBuffer;
  * normalised floats with channel selection. This defers the short-to-float conversion and
  * channel blending to read time, keeping the write path as cheap as possible.</p>
  *
- * <p>Thread-safe for a single writer and single reader: {@code writePos} is {@code volatile},
- * so the reader snapshots it once before reading and is guaranteed to see all bytes written
- * before that snapshot.</p>
+ * <h2>Thread safety</h2>
+ * Safe for a single writer and a single reader, without locks, using a seqlock-style protocol
+ * over two monotonically increasing byte counters:
+ * <ul>
+ *   <li>{@code claimed} is published by the writer <em>before</em> it copies a chunk, so it marks
+ *       the furthest byte the writer may be touching;</li>
+ *   <li>{@code written} is published <em>after</em> the copy, so every byte before it is
+ *       complete.</li>
+ * </ul>
+ * The reader snapshots {@code written}, reads the window ending there, then re-reads
+ * {@code claimed}: any byte older than {@code claimed - capacity} may have been overwritten
+ * by a writer that lapped the reader mid-read. Those samples are re-read (up to
+ * {@value #MAX_READ_ATTEMPTS} attempts) and, failing that, replaced with the oldest
+ * known-good sample, so a reader never sees a torn or out-of-order sample (issue #27).
  */
 public class RollingAudioBuffer implements AudioSink {
+
+    /** Read attempts before tainted samples are held at the oldest known-good value. */
+    static final int MAX_READ_ATTEMPTS = 3;
 
     /**
      * Raw audio bytes: interleaved little-endian 16-bit stereo PCM.
@@ -21,8 +36,14 @@ public class RollingAudioBuffer implements AudioSink {
      */
     private final byte[] data;
 
-    /** Write position in bytes; always advances in multiples of 4 (one stereo frame). */
-    private volatile int writePos;
+    /** Total bytes the writer has started writing (published before the copy). */
+    private volatile long claimed;
+
+    /** Total bytes the writer has finished writing (published after the copy). */
+    private volatile long written;
+
+    /** Reader-owned scratch for {@link #read(FloatBuffer, ChannelMode)}; grown on demand. */
+    private float[] scratch = new float[0];
 
     /**
      * Create a ring buffer large enough to hold the given number of stereo frames.
@@ -42,7 +63,14 @@ public class RollingAudioBuffer implements AudioSink {
     @Override
     public void write(byte[] chunk, int offset, int length) {
         int capacity = data.length;
-        int pos = writePos;
+        int dropped = Math.max(0, length - capacity); // only the last capacity bytes survive
+        offset += dropped;
+        length -= dropped;
+        long start = written + dropped;
+        claimed = start + length;
+        VarHandle.storeStoreFence(); // claim is visible before any data byte changes
+
+        int pos = (int) (start % capacity);
         if (pos + length <= capacity) {
             System.arraycopy(chunk, offset, data, pos, length);
         } else {
@@ -50,7 +78,7 @@ public class RollingAudioBuffer implements AudioSink {
             System.arraycopy(chunk, offset, data, pos, firstPart);
             System.arraycopy(chunk, offset + firstPart, data, 0, length - firstPart);
         }
-        writePos = (pos + length) % capacity; // volatile write after data is visible
+        written = start + length; // volatile write publishes the data
     }
 
     /**
@@ -61,16 +89,7 @@ public class RollingAudioBuffer implements AudioSink {
      * @param mode  which channel(s) to use for the mono output
      */
     public void readSamples(float[] dest, int count, ChannelMode mode) {
-        int pos = writePos; // volatile snapshot — establishes happens-before with write
-        int capacity = data.length;
-        int clamped = Math.min(count, capacity / 4);
-        int startByte = ((pos - clamped * 4) % capacity + capacity) % capacity;
-
-        for (int i = 0; i < clamped; i++) {
-            short l = getShortAt(startByte + i * 4);
-            short r = getShortAt(startByte + i * 4 + 2);
-            dest[i] = toFloat(l, r, mode);
-        }
+        readConsistent(dest, Math.min(count, data.length / 4), mode);
     }
 
     /**
@@ -81,16 +100,49 @@ public class RollingAudioBuffer implements AudioSink {
      * @param mode which channel(s) to use for Y
      */
     public void read(FloatBuffer dest, ChannelMode mode) {
-        int pos = writePos; // volatile snapshot
-        int capacity = data.length;
-        int readExtent = Math.min(dest.limit() / 2, capacity / 4);
-        int startByte = ((pos - readExtent * 4) % capacity + capacity) % capacity;
-
-        for (int i = 0; i < readExtent && dest.remaining() >= 2; i++) {
+        int readExtent = Math.min(Math.min(dest.limit(), dest.remaining()) / 2, data.length / 4);
+        if (scratch.length < readExtent) {
+            scratch = new float[readExtent];
+        }
+        readConsistent(scratch, readExtent, mode);
+        for (int i = 0; i < readExtent; i++) {
             dest.put(normalise(i, readExtent));
-            short l = getShortAt(startByte + i * 4);
-            short r = getShortAt(startByte + i * 4 + 2);
-            dest.put(toFloat(l, r, mode));
+            dest.put(scratch[i]);
+        }
+    }
+
+    /**
+     * Fill {@code dest[0..frames-1]} with the newest {@code frames} samples, guaranteeing none of
+     * them was overwritten by the writer while being read.
+     */
+    private void readConsistent(float[] dest, int frames, ChannelMode mode) {
+        int capacity = data.length;
+        for (int attempt = 1; ; attempt++) {
+            long end = written; // acquire: every byte before end is complete
+            long windowStart = end - frames * 4L;
+            // Frames before the first byte ever written read as silence.
+            int firstWritten = windowStart < 0 ? (int) Math.min(frames, (-windowStart + 3) / 4) : 0;
+            for (int i = 0; i < firstWritten; i++) {
+                dest[i] = 0f;
+            }
+            for (int i = firstWritten; i < frames; i++) {
+                int pos = (int) ((windowStart + i * 4L) % capacity);
+                dest[i] = toFloat(getShortAt(pos), getShortAt((pos + 2) % capacity), mode);
+            }
+            VarHandle.acquireFence(); // data reads complete before re-checking the writer
+            long overwrittenBefore = claimed - capacity;
+            if (overwrittenBefore <= windowStart) {
+                return; // writer never reached our window
+            }
+            int firstGood = (int) Math.min(frames, (overwrittenBefore - windowStart + 3) / 4);
+            if (attempt == MAX_READ_ATTEMPTS) {
+                // Writer keeps lapping us: hold the oldest good sample rather than show a spike.
+                float hold = firstGood < frames ? dest[firstGood] : 0f;
+                for (int i = 0; i < firstGood; i++) {
+                    dest[i] = hold;
+                }
+                return;
+            }
         }
     }
 

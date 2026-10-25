@@ -3,6 +3,7 @@ package com.asteroid.duck.opengl.util.audio;
 import org.junit.jupiter.api.Test;
 
 import java.nio.FloatBuffer;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.IntUnaryOperator;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -86,6 +87,65 @@ class RollingAudioBufferTest {
         // X values: normalise(i, 4) = (i/2.0) - 1
         assertEquals(-1.0f, dest.get(0), 0.0001f); // X of pair 0: normalise(0,4) = -1.0
         assertEquals( 0.5f, dest.get(6), 0.0001f); // X of pair 3: normalise(3,4) = 0.5
+    }
+
+    /**
+     * Stress test for issue #27: a writer lapping the buffer flat-out while the reader reads the
+     * whole capacity. The writer emits a triangle wave whose adjacent samples always differ by
+     * exactly 1, so any larger step in what the reader sees is a torn or overwritten read.
+     */
+    @Test
+    void concurrentReadNeverSeesTornOrOverwrittenSamples() throws InterruptedException {
+        int capacityFrames = 256;
+        RollingAudioBuffer buffer = new RollingAudioBuffer(capacityFrames);
+        int chunkFrames = 16; // AudioReader.CHUNK_SIZE
+        AtomicBoolean stop = new AtomicBoolean();
+        Thread writer = Thread.ofPlatform().daemon().start(() -> {
+            byte[] chunk = new byte[chunkFrames * 4];
+            int frame = 0;
+            while (!stop.get()) {
+                for (int i = 0; i < chunkFrames; i++, frame++) {
+                    short s = triangle(frame);
+                    chunk[i * 4]     = (byte) (s & 0xFF);
+                    chunk[i * 4 + 1] = (byte) ((s >> 8) & 0xFF);
+                    chunk[i * 4 + 2] = chunk[i * 4];
+                    chunk[i * 4 + 3] = chunk[i * 4 + 1];
+                }
+                buffer.write(chunk, 0, chunk.length);
+            }
+        });
+
+        // Let the writer lap the buffer at least once before reading.
+        while (!writer.isAlive()) Thread.onSpinWait();
+        Thread.sleep(10);
+
+        float[] samples = new float[capacityFrames];
+        int violations = 0;
+        String firstViolation = null;
+        long deadline = System.nanoTime() + 500_000_000L;
+        while (System.nanoTime() < deadline) {
+            buffer.readSamples(samples, capacityFrames, ChannelMode.LEFT);
+            for (int i = 1; i < capacityFrames; i++) {
+                int prev = Math.round(samples[i - 1] * Short.MAX_VALUE);
+                int curr = Math.round(samples[i] * Short.MAX_VALUE);
+                if (Math.abs(curr - prev) > 1) {
+                    if (firstViolation == null) {
+                        firstViolation = "sample " + i + ": " + prev + " -> " + curr;
+                    }
+                    violations++;
+                }
+            }
+        }
+        stop.set(true);
+        writer.join();
+
+        assertEquals(0, violations, "discontinuities in read samples, first at " + firstViolation);
+    }
+
+    /** Triangle wave in [-1000, 1000] with a step of exactly 1 between adjacent frames. */
+    private static short triangle(int frame) {
+        int phase = Math.floorMod(frame, 4000);
+        return (short) (phase < 2000 ? phase - 1000 : 3000 - phase);
     }
 
     @Test

@@ -36,7 +36,9 @@ import static org.lwjgl.opengl.GL13.*;
  * {@link #doRender}, so that multiple visualisers sharing the same sink see identical data.</p>
  *
  * <h2>Buffer sizing</h2>
- * Pass {@link #AUDIO_BUFFER_SIZE} to {@link PboAudioSink#create}.
+ * Pass {@link #AUDIO_BUFFER_SIZE} to {@link PboAudioSink#create}. The circle draws the newest
+ * {@value #SAMPLE_COUNT} samples ending at the sink's head; the rest of the buffer is headroom
+ * for audio written while the GPU copy is still pending (see {@link PboAudioSink}).
  */
 public class RadialWave implements RenderedItem, Transformable {
 
@@ -44,10 +46,11 @@ public class RadialWave implements RenderedItem, Transformable {
     public static final int SAMPLE_COUNT = 1024;
 
     /**
-     * Required audio ring buffer size in stereo frames.
-     * Pass this to {@link PboAudioSink#create}.
+     * Minimum audio ring buffer size in stereo frames: four times the drawn window, leaving
+     * {@code 3 × SAMPLE_COUNT} frames (≈ 64 ms at 48 kHz) of headroom for audio written while
+     * the GPU copy is still pending. Pass this to {@link PboAudioSink#create}.
      */
-    public static final int AUDIO_BUFFER_SIZE = SAMPLE_COUNT * 2;
+    public static final int AUDIO_BUFFER_SIZE = SAMPLE_COUNT * 4;
 
     private static final VertexElement DIRECTION = new VertexElement(VertexElementType.VEC_2F, "direction");
     private static final VertexElement AMPLITUDE = new VertexElement(VertexElementType.FLOAT, "amplitude");
@@ -68,7 +71,7 @@ public class RadialWave implements RenderedItem, Transformable {
     private ShaderProgram shader;
     private VertexArrayObject vao;
 
-    private Uniform<Integer>  uHead;
+    private Uniform<Integer>  uStart;
     private Uniform<Integer>  uChannel;
     private Uniform<Float>    uRadius;
     private Uniform<Float>    uAspect;
@@ -95,7 +98,7 @@ public class RadialWave implements RenderedItem, Transformable {
             in vec2 direction;
             in float amplitude;
             uniform sampler1D uAudioTex;
-            uniform int uHead;
+            uniform int uStart;
             uniform int uChannel;
             uniform vec2 uCenter;
             uniform float uRadius;
@@ -103,7 +106,7 @@ public class RadialWave implements RenderedItem, Transformable {
             uniform mat4 uTransform;
 
             void main() {
-                int sampleIndex = (2048 + uHead + gl_VertexID) % 2048;
+                int sampleIndex = (uStart + gl_VertexID) % textureSize(uAudioTex, 0);
                 vec2 stereo = texelFetch(uAudioTex, sampleIndex, 0).rg;
                 float sample = (uChannel == 0) ? (stereo.r + stereo.g) * 0.5
                              : (uChannel == 1) ? stereo.r : stereo.g;
@@ -129,9 +132,14 @@ public class RadialWave implements RenderedItem, Transformable {
      *
      * @param audioSink the shared audio sink; must have been created with at least
      *                  {@link #AUDIO_BUFFER_SIZE} frames via {@link PboAudioSink#create}
+     * @throws IllegalArgumentException if the sink is smaller than {@link #AUDIO_BUFFER_SIZE}
      */
     public RadialWave(PboAudioSink audioSink) {
         this.audioSink = Objects.requireNonNull(audioSink);
+        if (audioSink.getStereoFrames() < AUDIO_BUFFER_SIZE) {
+            throw new IllegalArgumentException("Audio sink has " + audioSink.getStereoFrames()
+                    + " frames; RadialWave needs at least AUDIO_BUFFER_SIZE = " + AUDIO_BUFFER_SIZE);
+        }
     }
 
     @Override
@@ -184,7 +192,7 @@ public class RadialWave implements RenderedItem, Transformable {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_1D, audioSink.getTextureId());
         shader.uniforms().get("uAudioTex", Integer.class).set(0);
-        this.uHead    = shader.uniforms().get("uHead",    Integer.class);
+        this.uStart   = shader.uniforms().get("uStart",   Integer.class);
         this.uChannel = shader.uniforms().get("uChannel", Integer.class);
         this.uRadius  = shader.uniforms().get("uRadius",  Float.class);
         this.uAspect  = shader.uniforms().get("uAspect",  Float.class);
@@ -212,7 +220,8 @@ public class RadialWave implements RenderedItem, Transformable {
         renderActions.processAll(ctx);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_1D, audioSink.getTextureId());
-        uHead.set(audioSink.getHead());
+        // Draw the newest SAMPLE_COUNT samples, ending at the uploaded head.
+        uStart.set(Math.floorMod(audioSink.getHead() - SAMPLE_COUNT, audioSink.getStereoFrames()));
         uAspect.set(currentAspect);
         vao.bind(ctx);
         vao.doRender(ctx);
