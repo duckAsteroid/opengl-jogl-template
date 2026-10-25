@@ -32,6 +32,31 @@ public interface RenderedItem extends Resource {
 
 ---
 
+## Configuring GLFW before the window exists
+
+`GLWindow` does all GLFW setup in its constructor: it forces X11 on Linux, calls `glfwInit()`,
+then requests a resizable 3.3 core debug context. To change any of that, pass a `GLFWConfigurer`
+to the 7-argument constructor. Its hooks run *after* those defaults, so they win:
+
+```java
+// Use Wayland instead of the default X11 on Linux:
+super(resourceManager, title, width, height, icon, WindowPlacement.defaultPlacement(),
+      GLFWConfigurer.beforeInit(() -> glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_WAYLAND)));
+
+// Window hints (multisampling, no debug context, ...):
+GLFWConfigurer.beforeCreateWindow(() -> glfwWindowHint(GLFW_SAMPLES, 4));
+```
+
+| Hook | Runs | Use for |
+|---|---|---|
+| `beforeInit()` | just before `glfwInit()` | `glfwInitHint(...)`, e.g. `GLFW_PLATFORM` |
+| `beforeCreateWindow()` | just before `glfwCreateWindow()` | `glfwWindowHint(...)` |
+
+Implement the interface directly to use both hooks. No GL context is current in either, so make
+no GL calls there. `GLFWConfigurer.NONE` (what the other constructors use) changes nothing.
+
+---
+
 ## RenderContext
 
 `RenderContext` is the single argument passed to every lifecycle method. Use it instead of holding

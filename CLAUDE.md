@@ -70,7 +70,7 @@ dispose()             → free all GL and native resources
 
 > **High-DPI note:** `getWindow()` returns the GLFW window size in *screen coordinates*. On high-DPI displays the GL framebuffer (viewport) is larger. `ortho()` always uses the framebuffer dimensions, so projection coordinates are always in real pixels — use `ortho()` for any pixel-space projection and avoid deriving projection from `getWindow()` dimensions.
 
-`GLWindow` (`util/GLWindow.java`) is the abstract GLFW window that owns the render loop and implements `RenderContext`. Concrete windows extend it and implement `init()`, `render()`, and `registerKeys()`.
+`GLWindow` (`util/GLWindow.java`) is the abstract GLFW window that owns the render loop and implements `RenderContext`. Concrete windows extend it and implement `init()`, `render()`, and `registerKeys()`. To change GLFW init or window hints (e.g. `GLFW_PLATFORM`, which defaults to X11 on Linux), pass a `GLFWConfigurer` to the constructor — its `beforeInit()` / `beforeCreateWindow()` hooks run after GLWindow's defaults, so they override them.
 
 ### Experiment plugin system
 
