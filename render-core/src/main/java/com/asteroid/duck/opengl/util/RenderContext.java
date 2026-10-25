@@ -48,8 +48,9 @@ public interface RenderContext {
 	}
 
 	/**
-	 * Returns the {@link Monitor} that currently contains the largest area of this window.
-	 * Falls back to the primary monitor if no overlap is found.
+	 * Returns the {@link Monitor} this window is on: the fullscreen monitor while fullscreen,
+	 * otherwise the one containing the largest area of the window. Falls back to the primary
+	 * monitor if no overlap is found.
 	 */
 	default Monitor getCurrentMonitor() {
 		return Monitor.primary();
