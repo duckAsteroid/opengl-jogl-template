@@ -18,6 +18,8 @@ class BeatTrackerTest {
     private static final class Recorded implements BeatListener {
         final List<Double> beats = new ArrayList<>();
         final List<Double> tempos = new ArrayList<>();
+        /** {time, bpm, confidence} for every tempo report. */
+        final List<double[]> tempoReports = new ArrayList<>();
 
         @Override
         public void onBeat(double time) {
@@ -28,6 +30,7 @@ class BeatTrackerTest {
         public void onTempo(double time, double bpm, float confidence) {
             assertTrue(confidence >= 0 && confidence <= 1);
             tempos.add(bpm);
+            tempoReports.add(new double[] {time, bpm, confidence});
         }
 
         double[] beatTimes() {
@@ -97,6 +100,55 @@ class BeatTrackerTest {
         double median = errors[errors.length / 2];
         assertEquals(0, median, 0.015, "median beat error " + median);
         assertEquals(120, recorded.lastTempo(), 120 * 0.01);
+    }
+
+    private static Track.Loaded synthetic(String name) throws IOException {
+        return SyntheticTracks.all().stream().filter(t -> t.name().equals(name)).findFirst().orElseThrow().loader().load();
+    }
+
+    private static double meanConfidence(Recorded recorded, double from, double to) {
+        return recorded.tempoReports.stream().filter(r -> r[0] >= from && r[0] < to)
+                .mapToDouble(r -> r[2]).average().orElseThrow();
+    }
+
+    @Test
+    void stopsAndForgetsTheTempoWhenTheMusicStops() throws IOException {
+        Track.Loaded music = synthetic("four-on-floor-128");
+        float sampleRate = music.audio().sampleRate();
+        float[] samples = Arrays.copyOf(music.audio().samples(), music.audio().samples().length + (int) (10 * sampleRate));
+        double end = music.audio().duration();
+
+        Recorded recorded = track(samples, sampleRate);
+
+        assertTrue(Double.isNaN(recorded.lastTempo()), "tempo after silence " + recorded.lastTempo());
+        assertEquals(0, recorded.tempoReports.getLast()[2]);
+        // The reverb tail and the 1.5 s silence window allow a few more beats, no more
+        long late = recorded.beats.stream().filter(b -> b > end + 2).count();
+        assertEquals(0, late, "beats more than 2 s after the music stopped");
+    }
+
+    @Test
+    void confidenceFallsWhenTheBeatStopsAndRecoversWhenItReturns() throws IOException {
+        // 20 s of four-on-the-floor, 12 s of a sustained pad (sound, but no onsets), the music again.
+        // (The synthetic "breakdown" track keeps its claps and hats, so its beat never stops.)
+        Track.Loaded music = synthetic("four-on-floor-128");
+        float sampleRate = music.audio().sampleRate();
+        int part = (int) (20 * sampleRate);
+        int pad = (int) (12 * sampleRate);
+        float[] samples = new float[2 * part + pad];
+        System.arraycopy(music.audio().samples(), 0, samples, 0, part);
+        for (int i = 0; i < pad; i++) {
+            samples[part + i] = (float) (0.2 * Math.sin(2 * Math.PI * 220 * i / sampleRate));
+        }
+        System.arraycopy(music.audio().samples(), 0, samples, part + pad, part);
+
+        Recorded recorded = track(samples, sampleRate);
+
+        double before = meanConfidence(recorded, 10, 20);
+        double latePad = meanConfidence(recorded, 28, 32);
+        double after = meanConfidence(recorded, 44, 52);
+        assertTrue(latePad < 0.5 * before, "pad " + latePad + " vs before " + before);
+        assertTrue(after > 0.9 * before, "after " + after + " vs before " + before);
     }
 
     @Test

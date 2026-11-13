@@ -129,6 +129,14 @@ public final class TempoEstimator {
         for (int lag = 0; lag < lags; lag++) acf[lag] = padded[lag] / (n - lag);
     }
 
+    /** Forget everything heard so far (e.g. the audio went silent). */
+    public void reset() {
+        count = 0;
+        java.util.Arrays.fill(smoothed, 0);
+        bpm = Double.NaN;
+        confidence = 0;
+    }
+
     private double at(int lag, int lags) {
         return lag < lags ? acf[lag] : 0;
     }

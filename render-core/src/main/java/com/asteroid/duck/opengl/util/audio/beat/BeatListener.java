@@ -30,7 +30,8 @@ public interface BeatListener {
     default void onKick(double time, float strength) {}
 
     /**
-     * The analyser's current tempo estimate.
+     * The analyser's current tempo estimate. A {@code NaN} tempo (with zero confidence) means it
+     * has lost the beat, e.g. because the audio went silent.
      * @param time       seconds on the analyser's sample clock
      * @param bpm        tempo in beats per minute
      * @param confidence confidence in {@code [0, 1]}

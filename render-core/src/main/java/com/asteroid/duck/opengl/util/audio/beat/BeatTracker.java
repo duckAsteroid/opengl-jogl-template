@@ -6,6 +6,13 @@ package com.asteroid.duck.opengl.util.audio.beat;
  * predicted by a {@link BeatPhaseTracker} locked to the flux and the kicks. Beats are reported
  * at their predicted times as the clock reaches them, so they arrive on time, not late.
  *
+ * <p>Reported tempo confidence is the {@link TempoEstimator}'s confidence times the phase
+ * tracker's {@link BeatPhaseTracker#lockConfidence() lock confidence}, so it falls through a
+ * breakdown and recovers when the beat returns. If the input stays below
+ * {@value #SILENCE_DBFS} dBFS for {@value #SILENCE_SECONDS} s, the tracker forgets the tempo and
+ * phase — reporting a {@code NaN} tempo with zero confidence, and no more beats — and locks on
+ * afresh when sound returns.</p>
+ *
  * <p>Spectral flux is the frame-to-frame increase in windowed energy, so it peaks as an onset
  * crosses the steepest part of the Hann window, a quarter of a window in from its newest end:
  * flux frames are timed that far before the end of the window that produced them.</p>
@@ -16,6 +23,8 @@ public final class BeatTracker implements BeatAnalyser {
     /** Tempo prior: centred on dance-music tempo, a wide octave either way. */
     static final double PRIOR_BPM = 120;
     static final double PRIOR_OCTAVES = 1.0;
+    static final double SILENCE_DBFS = -60;
+    static final double SILENCE_SECONDS = 1.5;
 
     private final float sampleRate;
     private final KickDetector kicks;
@@ -25,6 +34,15 @@ public final class BeatTracker implements BeatAnalyser {
     private final BeatListener listener;
     private final int framesPerEstimate;
     private long frames;
+
+    // Silence gate: peak 10 ms mean-square level over the last SILENCE_SECONDS
+    private final int levelChunk;
+    private final double[] levels;
+    private double chunkSum;
+    private int chunkCount;
+    private long chunks;
+    private long samplesConsumed;
+    private boolean silent = true;
 
     /**
      * @param sampleRate sample rate of the audio, in Hz
@@ -54,15 +72,38 @@ public final class BeatTracker implements BeatAnalyser {
         });
         this.tempo = new TempoEstimator(flux.frameRate(), priorBpm, priorOctaves);
         this.framesPerEstimate = (int) Math.round(TEMPO_INTERVAL_SECONDS * flux.frameRate());
+        this.levelChunk = Math.max(1, Math.round(sampleRate / 100));
+        this.levels = new double[(int) Math.round(SILENCE_SECONDS * 100)];
     }
 
     private void onFrame(double time, float value) {
         double onsetTime = time - quarterWindow();
         phase.addFrame(onsetTime, value);
         tempo.add(value);
-        if (++frames % framesPerEstimate == 0 && tempo.estimate()) {
-            listener.onTempo(time, tempo.bpm(), tempo.confidence());
+        if (++frames % framesPerEstimate == 0 && !silent && tempo.estimate()) {
+            listener.onTempo(time, tempo.bpm(), tempo.confidence() * phase.lockConfidence());
             phase.onTempo(tempo.bpm(), onsetTime);
+        }
+    }
+
+    /** Update the silence gate; on going silent, forget tempo and phase. */
+    private void trackLevel(float[] samples, int offset, int length) {
+        for (int i = offset; i < offset + length; i++) {
+            chunkSum += samples[i] * samples[i];
+            samplesConsumed++;
+            if (++chunkCount < levelChunk) continue;
+            levels[(int) (chunks++ % levels.length)] = chunkSum / chunkCount;
+            chunkSum = 0;
+            chunkCount = 0;
+            double peak = 0;
+            for (double level : levels) peak = Math.max(peak, level);
+            boolean nowSilent = chunks >= levels.length && 10 * Math.log10(peak + 1e-20) < SILENCE_DBFS;
+            if (nowSilent && !silent) {
+                tempo.reset();
+                phase.reset();
+                listener.onTempo(samplesConsumed / (double) sampleRate, Double.NaN, 0);
+            }
+            silent = nowSilent;
         }
     }
 
@@ -86,6 +127,7 @@ public final class BeatTracker implements BeatAnalyser {
 
     @Override
     public void process(float[] samples, int offset, int length) {
+        trackLevel(samples, offset, length);
         kicks.process(samples, offset, length);
         flux.process(samples, offset, length);
     }

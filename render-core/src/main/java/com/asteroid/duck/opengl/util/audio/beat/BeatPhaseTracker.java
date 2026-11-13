@@ -12,7 +12,7 @@ package com.asteroid.duck.opengl.util.audio.beat;
  *       after a predicted beat, find the strongest onset within that distance of it, weighted
  *       towards the prediction. If it stands out, its timing error {@code e} pulls the next beat
  *       ({@code + PHASE_GAIN·e}) and the period ({@code + PERIOD_GAIN·e}); otherwise the
- *       tracker freewheels at the current period.</li>
+ *       tracker freewheels at the current period, and {@link #lockConfidence()} starts to fall.</li>
  *   <li><b>Re-acquire:</b> on each tempo update, if the estimate has moved more than
  *       {@value #TEMPO_SNAP} (relative), adopt it; then if another phase scores
  *       {@value #SWITCH_RATIO}× better on the comb than the current one (e.g. the tracker had
@@ -33,6 +33,8 @@ final class BeatPhaseTracker {
     static final double KICK_WEIGHT = 2.0;
     /** Time constant of the running mean onset strength, seconds. */
     static final double MEAN_SECONDS = 2.0;
+    /** Missed beats (after the first) over which {@link #lockConfidence()} halves. */
+    static final double MISS_HALF_LIFE = 4;
 
     private final double frameRate;
     private final BeatListener listener;
@@ -49,6 +51,8 @@ final class BeatPhaseTracker {
     private double nextBeat = Double.NaN;
     private double lastBeat = Double.NaN;
     private boolean correctionPending;
+    /** Consecutive beats with no significant onset near them. */
+    private int misses;
 
     BeatPhaseTracker(double frameRate, BeatListener listener) {
         this.frameRate = frameRate;
@@ -124,6 +128,25 @@ final class BeatPhaseTracker {
         }
     }
 
+    /**
+     * How well the predicted beats are still landing on onsets: 1 while they are, falling as
+     * consecutive beats pass with nothing significant near them (a breakdown, or the track
+     * changed) — down to ~0.5 after {@value #MISS_HALF_LIFE} missed beats.
+     * @return lock confidence in {@code (0, 1]}
+     */
+    float lockConfidence() {
+        return (float) Math.pow(0.5, Math.max(0, misses - 1) / (double) MISS_HALF_LIFE);
+    }
+
+    /** Forget the tempo and phase (e.g. the audio went silent); re-acquire from scratch. */
+    void reset() {
+        period = Double.NaN;
+        nextBeat = Double.NaN;
+        lastBeat = Double.NaN;
+        correctionPending = false;
+        misses = 0;
+    }
+
     /** @return the current beat period in seconds, or {@code NaN} before the first tempo */
     double period() {
         return period;
@@ -144,7 +167,11 @@ final class BeatPhaseTracker {
                 bestStrength = strength;
             }
         }
-        if (Double.isNaN(bestTime) || bestStrength < SIGNIFICANCE) return;
+        if (Double.isNaN(bestTime) || bestStrength < SIGNIFICANCE) {
+            misses++;
+            return;
+        }
+        misses = 0;
         double error = bestTime - lastBeat;
         nextBeat += PHASE_GAIN * error;
         period += PERIOD_GAIN * error;

@@ -149,7 +149,7 @@ Findings:
 
 The snapshot API for the GL thread is `BeatTrackerSink` (Phase 4).
 
-### Phase 4 — wire into experiments (SpectrumWave ✅, rest to do)
+### Phase 4 — wire into experiments ✅ (SpectrumWave, RadialSpectrumWave)
 `BeatTrackerSink` (`render-core/…/util/audio/beat/`) is an `AudioSink`: add it to the
 `AudioReader`'s sinks and it runs `BeatTracker` on the audio thread, publishing an immutable
 snapshot (volatile) on every beat/kick/tempo event and every 100 ms. The render thread calls
@@ -164,7 +164,20 @@ FFT (the direct sum stalled a write for ~2.4 ms every 0.5 s).
 `SpectrumWave`: the **B** letter now flashes with detected kicks, and a BPM readout at the
 bottom pulses on each tracked beat (dimmed by confidence). M and T still use `BeatDetector`.
 
-To do: `RadialSpectrumWave`; a debug overlay (onset curve, phase, confidence); tune the
+Edges of the music (tested by gluing audio together):
+- **Silence** used to leave the tracker ticking at the old tempo with confidence stuck around
+  0.8 — visuals kept pulsing after the music stopped. Now, below −60 dBFS for 1.5 s, it forgets
+  tempo and phase, reports a `NaN` tempo with zero confidence and stops emitting beats (none
+  more than 2 s after the music ends); it locks on afresh when sound returns.
+- **Losing the beat** without silence (a pad with no onsets): reported confidence is the tempo
+  confidence × a lock factor that halves every 4 consecutive beats with no onset near the
+  prediction — it falls below half within the pad and recovers when the beat returns. (A
+  breakdown that keeps its hats and claps keeps its beat, and its confidence.)
+- **Track changes** to a different tempo (pairs of GTZAN disco clips): re-locked in a median 5.3
+  s (p75 6.9 s; 4 of 26 didn't within the clip), vs 3.3 s from a cold start — the 8 s tempo
+  window still holds the old track. Fine for DJ mixes, which rarely jump tempo.
+
+To do: a debug overlay (onset curve, phase, confidence); tune the
 latency offset by eye/ear; decide whether to retire `BeatDetector`.
 
 ### Downbeats — spike, not shipped (branch `spike/downbeat-chroma`)

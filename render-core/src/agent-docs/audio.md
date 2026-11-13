@@ -936,6 +936,9 @@ long   beat = beats.beatCount();        // % 4 cycles a bar (downbeat not yet kn
 
 - `beatPhase()` is 0 on the beat rising to 1 just before the next — animate from it, not from
   discrete events, and the motion stays on the beat even when a kick is buried in the mix.
+- `confidence()` falls when predicted beats stop landing on onsets (a breakdown with no
+  percussion), and drops to 0 — with `bpm()` going `NaN` — after 1.5 s below −60 dBFS. Scale
+  pulses by it and they fade out when the music stops.
 - `setLatency(Duration)` makes the visuals lead the analysis, to make up for audio output
   latency. The spectrum experiments bind `.` / `,` to ±10 ms.
 - Cost: ~1% of real time on the audio thread; worst single write ~0.3 ms.
