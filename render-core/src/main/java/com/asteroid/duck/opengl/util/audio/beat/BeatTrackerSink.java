@@ -121,6 +121,11 @@ public final class BeatTrackerSink implements AudioSink {
         this.latencySeconds = latency.toNanos() / 1e9;
     }
 
+    /** @return the latency set by {@link #setLatency} (zero by default) */
+    public Duration latency() {
+        return Duration.ofNanos(Math.round(latencySeconds * 1e9));
+    }
+
     /** @return the current tempo estimate in BPM, or {@code NaN} until there is one */
     public double bpm() {
         return snapshot.bpm();

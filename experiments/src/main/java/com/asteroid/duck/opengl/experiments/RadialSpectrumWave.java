@@ -6,10 +6,10 @@ import com.asteroid.duck.opengl.util.audio.AudioSources;
 import com.asteroid.duck.opengl.util.audio.LineAcquirer;
 import com.asteroid.duck.opengl.util.audio.simulated.SimulatedSources;
 import com.asteroid.duck.opengl.util.keys.KeyCombination;
-import com.asteroid.duck.opengl.util.audio.analysis.FrequencyBand;
 import com.asteroid.duck.opengl.util.audio.analysis.FrequencyProcessor;
-import com.asteroid.duck.opengl.util.audio.analysis.BeatDetector;
+import com.asteroid.duck.opengl.util.audio.beat.BeatTrackerSink;
 import com.asteroid.duck.opengl.util.wave.RadialSpectrumAnalyser;
+import org.joml.Matrix4f;
 import org.joml.Vector4f;
 
 import java.io.IOException;
@@ -24,13 +24,15 @@ import static org.lwjgl.opengl.GL11.*;
  *
  * <p>A single {@link FrequencyProcessor} at 128 bins drives the {@link RadialSpectrumAnalyser},
  * which uses {@code GL_LINEAR} texture filtering to produce a smooth curve between FFT bins — no
- * hard bar edges. The same processor also feeds a {@link BeatDetector}, which reads its raw,
- * un-coarsened FFT bins directly rather than the 128-bin display grid, so beat detection keeps
- * full frequency resolution regardless of the display bin count.
- * A continuous white peak-hold line traces the historical outer maximum.</p>
+ * hard bar edges. A continuous white peak-hold line traces the historical outer maximum.</p>
+ *
+ * <p>A {@link BeatTrackerSink} on the same audio feed makes the whole shape pulse outward on
+ * each tracked beat (scaled by tempo confidence) and kick a little further on each detected
+ * kick drum.</p>
  *
  * <p>Key bindings: <kbd>J</kbd> / <kbd>H</kbd> cycle audio inputs; <kbd>P</kbd> saves a screenshot;
- * <kbd>]</kbd> / <kbd>[</kbd> increase or decrease the repeat count (1–16, default 1).</p>
+ * <kbd>]</kbd> / <kbd>[</kbd> increase or decrease the repeat count (1–16, default 1);
+ * <kbd>.</kbd> / <kbd>,</kbd> move the beat pulse 10 ms earlier / later.</p>
  */
 public class RadialSpectrumWave implements Experiment {
 
@@ -43,12 +45,14 @@ public class RadialSpectrumWave implements Experiment {
     private static final float DB_FLOOR    = -80f;
     private static final float DB_CEILING  = 0f;
 
-    // ── Beat bands (same tuning as SpectrumWave) ─────────────────────────────────
-    private static final List<FrequencyBand> BEAT_BANDS = List.of(
-            new FrequencyBand("bass",   40f,   200f),
-            new FrequencyBand("snare",  200f, 2_000f),
-            new FrequencyBand("hihat", 4_000f, 16_000f)
-    );
+    // ── Beat pulse ───────────────────────────────────────────────────────────────
+    /** Extra scale on the beat at full confidence, decaying through the beat. */
+    private static final float BEAT_PULSE = 0.06f;
+    /** Extra scale from a full-strength kick, decaying with the kick envelope. */
+    private static final float KICK_PULSE = 0.04f;
+    /** Pulse decay rate through the beat: {@code exp(-k * phase)}. */
+    private static final double PULSE_DECAY = 6;
+    private static final Duration LATENCY_STEP = Duration.ofMillis(10);
 
     // ── Colours: inner tip → base circle → outer tip → peak line ─────────────────
     private static final Vector4f COLOR_INNER = new Vector4f(0.0f, 0.2f, 0.6f, 1.0f);
@@ -65,9 +69,9 @@ public class RadialSpectrumWave implements Experiment {
                     .withColors(COLOR_INNER, COLOR_BASE, COLOR_OUTER)
                     .withPeakColor(COLOR_PEAK);
 
-    private final BeatDetector beats = new BeatDetector(
-            BEAT_BANDS, freqProc.getFftSize(), freqProc.getSampleRate(),
-            120, 1.15f, 4.0f, BeatDetector.DEFAULT_NOISE_FLOOR, Duration.ofMillis(333));
+    private final BeatTrackerSink beatTracker = new BeatTrackerSink(SAMPLE_RATE);
+    /** Reused every frame; {@code setTransform} copies it. */
+    private final Matrix4f pulse = new Matrix4f();
 
     private final AudioSources audioSources = new AudioSources();
     private int selectedSource = 0;
@@ -87,10 +91,9 @@ public class RadialSpectrumWave implements Experiment {
     @Override
     public void init(RenderContext ctx) throws IOException {
         freqProc.addSink(radial);
-        freqProc.addSink(beats);
         radial.init(ctx);
 
-        audioReader = new AudioReader(List.of(freqProc));
+        audioReader = new AudioReader(List.of(freqProc, beatTracker));
         audioReaderThread = new Thread(audioReader, "radial-spectrum-audio-reader");
         audioReaderThread.setDaemon(true);
         audioReaderThread.start();
@@ -118,11 +121,21 @@ public class RadialSpectrumWave implements Experiment {
         ctx.getKeyRegistry().registerKeyAction(KeyCombination.named("LEFT_BRACKET"), () ->
                 radial.withRepeats(Math.max(1, radial.getRepeats() - 1)),
                 "Decrease spectrum repeats");
+        ctx.getKeyRegistry().registerKeyAction(KeyCombination.named("PERIOD"), () ->
+                beatTracker.setLatency(beatTracker.latency().plus(LATENCY_STEP)),
+                "Beat pulse earlier (more latency compensation)");
+        ctx.getKeyRegistry().registerKeyAction(KeyCombination.named("COMMA"), () ->
+                beatTracker.setLatency(beatTracker.latency().minus(LATENCY_STEP)),
+                "Beat pulse later (less latency compensation)");
     }
 
     @Override
     public void doRender(RenderContext ctx) {
         freqProc.process();
+        float scale = 1
+                + BEAT_PULSE * beatTracker.confidence() * (float) Math.exp(-PULSE_DECAY * beatTracker.beatPhase())
+                + KICK_PULSE * beatTracker.kickStrength();
+        radial.setTransform(pulse.identity().scale(scale));
         radial.doRender(ctx);
     }
 

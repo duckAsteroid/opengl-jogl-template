@@ -35,11 +35,16 @@ import static org.lwjgl.opengl.GL11.*;
  * {@link BeatDetector} reads {@link FrequencyProcessor}'s raw, un-coarsened FFT bins rather than
  * its display-sized bars, one processor now serves both consumers at full frequency resolution —
  * no need for a second, higher-resolution FFT dedicated to beat detection. On each beat in the
- * bass / mid / treble bands the corresponding letter (B / M / T) flashes at full brightness over
- * the spectrum bars; between beats each letter stays visible at {@value #LETTER_DIM_ALPHA} alpha.</p>
+ * mid / treble bands the corresponding letter (M / T) flashes at full brightness over the spectrum
+ * bars; between beats each letter stays visible at {@value #LETTER_DIM_ALPHA} alpha.</p>
+ *
+ * <p>A {@link BeatTrackerSink} on the same audio feed drives the rest: the B letter flashes with
+ * each detected kick drum, and a BPM readout at the bottom pulses on each tracked beat, dimmed
+ * when the tempo is uncertain.</p>
  *
  * <p>Key bindings: <kbd>J</kbd> / <kbd>H</kbd> step through audio inputs; <kbd>P</kbd> saves a
- * screenshot.</p>
+ * screenshot; <kbd>.</kbd> / <kbd>,</kbd> move the beat pulse 10 ms earlier / later (the offset is
+ * shown next to the BPM).</p>
  */
 public class SpectrumWave implements Experiment {
 
@@ -91,6 +96,9 @@ public class SpectrumWave implements Experiment {
 	private final AudioSources audioSources = new AudioSources();
 	private int selectedSource = 0;
 
+	/** How far one press of <kbd>.</kbd> / <kbd>,</kbd> moves the beat pulse. */
+	private static final Duration LATENCY_STEP = Duration.ofMillis(10);
+
 	/** Tempo, beat phase and kicks, tracked live on the audio thread. */
 	private final BeatTrackerSink beatTracker = new BeatTrackerSink(SAMPLE_RATE);
 
@@ -140,6 +148,12 @@ public class SpectrumWave implements Experiment {
 			selectedSource = (selectedSource - 1 + audioSources.size()) % audioSources.size();
 			audioReader.setLine(audioSources.list().get(selectedSource));
 		}, "Switch to the previous audio input");
+		ctx.getKeyRegistry().registerKeyAction(KeyCombination.named("PERIOD"), () ->
+				beatTracker.setLatency(beatTracker.latency().plus(LATENCY_STEP)),
+				"Beat pulse earlier (more latency compensation)");
+		ctx.getKeyRegistry().registerKeyAction(KeyCombination.named("COMMA"), () ->
+				beatTracker.setLatency(beatTracker.latency().minus(LATENCY_STEP)),
+				"Beat pulse later (less latency compensation)");
 	}
 
 	private void initBeatLabels(RenderContext ctx) throws IOException {
@@ -201,7 +215,9 @@ public class SpectrumWave implements Experiment {
 
 	private String tempoText() {
 		double bpm = beatTracker.bpm();
-		return Double.isNaN(bpm) ? "--- BPM" : String.format(Locale.ROOT, "%.1f BPM", bpm);
+		String tempo = Double.isNaN(bpm) ? "--- BPM" : String.format(Locale.ROOT, "%.1f BPM", bpm);
+		long latency = beatTracker.latency().toMillis();
+		return latency == 0 ? tempo : String.format(Locale.ROOT, "%s %+dms", tempo, latency);
 	}
 
 	@Override
