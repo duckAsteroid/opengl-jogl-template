@@ -24,6 +24,8 @@ public final class BeatEval {
               --analyser NAME    analyser to run, or 'all' (default). Known: %s
               --filter REGEX     only tracks whose group/name contains a match
               --out DIR          where results.csv and summary.md go (default: build/beat-eval)
+              --export-synthetic DIR
+                                 write the synthetic tracks as WAV + .beats/.kicks/.bpm, then exit
             """;
 
     private BeatEval() {}
@@ -47,6 +49,10 @@ public final class BeatEval {
                 case "--analyser" -> analyserName = value(args, ++i);
                 case "--filter" -> filter = Pattern.compile(value(args, ++i));
                 case "--out" -> out = Path.of(expand(value(args, ++i)));
+                case "--export-synthetic" -> {
+                    TrackExporter.export(SyntheticTracks.all(), Path.of(expand(value(args, ++i))));
+                    return;
+                }
                 default -> usage("Unknown option: " + args[i]);
             }
         }
