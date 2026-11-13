@@ -42,3 +42,33 @@ dependencies {
   testImplementation 'org.junit.platform:junit-platform-launcher:6.1.2'
   testImplementation 'org.mockito:mockito-inline:5.2.0'
 }
+
+// ── Offline beat-tracking evaluation (docs/beat-tracking-plan.md) ────────────
+// A separate source set so the harness (and its JSON dependency) never ships in the library jar.
+sourceSets {
+  beatEval {
+    compileClasspath += sourceSets.main.output
+    runtimeClasspath += sourceSets.main.output
+  }
+}
+
+configurations {
+  beatEvalImplementation.extendsFrom implementation
+  beatEvalRuntimeOnly.extendsFrom runtimeOnly
+  testImplementation.extendsFrom beatEvalImplementation
+}
+
+dependencies {
+  // JAMS annotation files
+  beatEvalImplementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
+  testImplementation sourceSets.beatEval.output
+}
+
+tasks.register('beatEval', JavaExec) {
+  group = 'verification'
+  description = 'Scores the beat analysers against synthetic and local datasets; pass options with --args (see docs/beat-tracking-plan.md).'
+  classpath = sourceSets.beatEval.runtimeClasspath
+  mainClass = 'com.asteroid.duck.opengl.util.audio.beat.eval.BeatEval'
+  systemProperty 'beatEval.out', layout.buildDirectory.dir('beat-eval').get().asFile.path
+  maxHeapSize = '2g'
+}
