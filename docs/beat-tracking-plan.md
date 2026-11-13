@@ -72,6 +72,14 @@ Findings, from the harness:
 - GTZAN, kicks scored as beats (a proxy — GTZAN has no kick labels): beat F 0.315 → **0.425**
   overall; disco 0.53 → 0.69, hip-hop 0.28 → 0.41, pop 0.31 → 0.49.
 
+Tried and dropped — confirming kicks by their falling pitch: for each candidate onset, the
+110–250 Hz : 40–90 Hz energy ratio in the first 15 ms vs 30–45 ms later (a kick sweeps
+~150 → 50 Hz; a bass note holds its pitch). It separates kicks from plucks on the off-beat bass
+track (+11.6 dB vs −1.3 dB median) but fails on plain four-on-the-floor (kicks −3 dB): whatever
+else starts with the kick (an 8th-note lead around 220 Hz, the sidechained sub recovering) swamps
+the ratio. A full mix would be worse. Separating kick from bass by timbre looks like a job for a
+learned onset model (see Later).
+
 Broadband onset strength: `SpectralFlux` — ~43 ms Hann window (2048 @ 48 kHz, 1024 @ 22.05
 kHz), ~10 ms hop, magnitudes summed into 3-per-octave bands (30 Hz–16 kHz), `ln(1 + 1000·m)`,
 half-wave-rectified frame difference summed over bands. Its peaks land within ~5–9 ms of the
