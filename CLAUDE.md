@@ -34,7 +34,7 @@ A Java/LWJGL 3 OpenGL framework for GPU shader experiments and real-time visuali
 ./gradlew :experiments:graphicsCardLogger
 ```
 
-The `run` and `debugRun` tasks automatically inject `__NV_PRIME_RENDER_OFFLOAD=1` / `__GLX_VENDOR_LIBRARY_NAME=nvidia` for NVIDIA Optimus laptops. Java 25 with `--enable-preview` is used. Tests require `-Xshare:off`.
+The `run` and `debugRun` tasks automatically inject `__NV_PRIME_RENDER_OFFLOAD=1` / `__GLX_VENDOR_LIBRARY_NAME=nvidia` for NVIDIA Optimus laptops. `run` also sets `PIPEWIRE_PROPS='{ stream.capture.sink=true }'`, which makes the capture stream record the default sink's monitor (whatever is playing) instead of the microphone — no `pactl` and no change to the system default source. `-Daudio.source=simulated` (as `debugRun` uses) or `-Daudio.source=<part of a line name>` overrides the input. Java 25 with `--enable-preview` is used. Tests require `-Xshare:off`.
 
 ### `render-core`'s Gradle conventions
 
@@ -99,6 +99,8 @@ To add a new experiment: implement `Experiment`, add the fully-qualified class n
 `VertexElement.name()` is used verbatim as the GLSL `in` variable name when calling `VertexBufferObject.setup(ShaderProgram)`. Attribute names in Java and GLSL must match exactly. `VertexDataStructure` is immutable — offsets are pre-computed at construction.
 
 ### Audio thread safety
+
+Experiments capture through `AudioInput` (`util/audio/`): `AudioInput.start(ctx, sinks)` picks the system default (PipeWire) line with a simulated fallback, runs a supervised capture thread, `bindKeys(ctx)` maps J/H to switching source, and `close()` shuts it down. Beat/tempo/kick tracking lives in `util/audio/beat/` (`BeatTrackerSink` for live use); its evaluation harness and results are described in `docs/beat-tracking-plan.md`.
 
 `AudioReader` runs a producer thread (use a **platform** thread; it parks 0.5 ms when the line is empty) that fans PCM bytes out to `AudioSink`s. This is the only intentionally concurrent code; everything else is single-threaded on the GL thread.
 

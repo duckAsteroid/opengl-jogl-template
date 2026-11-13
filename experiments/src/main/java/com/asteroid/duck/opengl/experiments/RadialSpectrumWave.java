@@ -1,10 +1,7 @@
 package com.asteroid.duck.opengl.experiments;
 
 import com.asteroid.duck.opengl.util.RenderContext;
-import com.asteroid.duck.opengl.util.audio.AudioReader;
-import com.asteroid.duck.opengl.util.audio.AudioSources;
-import com.asteroid.duck.opengl.util.audio.LineAcquirer;
-import com.asteroid.duck.opengl.util.audio.simulated.SimulatedSources;
+import com.asteroid.duck.opengl.util.audio.AudioInput;
 import com.asteroid.duck.opengl.util.keys.KeyCombination;
 import com.asteroid.duck.opengl.util.audio.analysis.FrequencyProcessor;
 import com.asteroid.duck.opengl.util.audio.beat.BeatTrackerSink;
@@ -73,10 +70,7 @@ public class RadialSpectrumWave implements Experiment {
     /** Reused every frame; {@code setTransform} copies it. */
     private final Matrix4f pulse = new Matrix4f();
 
-    private final AudioSources audioSources = new AudioSources();
-    private int selectedSource = 0;
-    private AudioReader audioReader;
-    private Thread      audioReaderThread;
+    private AudioInput audioInput;
 
     @Override
     public String getTitle() {
@@ -93,28 +87,13 @@ public class RadialSpectrumWave implements Experiment {
         freqProc.addSink(radial);
         radial.init(ctx);
 
-        audioReader = new AudioReader(List.of(freqProc, beatTracker));
-        audioReaderThread = new Thread(audioReader, "radial-spectrum-audio-reader");
-        audioReaderThread.setDaemon(true);
-        audioReaderThread.start();
 
-        audioSources.add(SimulatedSources.middleC(ctx.getClock()));
-        LineAcquirer.allLinesMatching(LineAcquirer.IDEAL)
-                .map(LineAcquirer.MixerLine::toAudioDataSource)
-                .forEach(audioSources::add);
-        audioReader.setLine(audioSources.list().get(selectedSource));
+        audioInput = AudioInput.start(ctx, List.of(freqProc, beatTracker));
+        audioInput.bindKeys(ctx);
 
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        ctx.getKeyRegistry().registerKeyAction(KeyCombination.simple('J'), () -> {
-            selectedSource = (selectedSource + 1) % audioSources.size();
-            audioReader.setLine(audioSources.list().get(selectedSource));
-        }, "Switch to the next audio input");
-        ctx.getKeyRegistry().registerKeyAction(KeyCombination.simple('H'), () -> {
-            selectedSource = (selectedSource - 1 + audioSources.size()) % audioSources.size();
-            audioReader.setLine(audioSources.list().get(selectedSource));
-        }, "Switch to the previous audio input");
         ctx.getKeyRegistry().registerKeyAction(KeyCombination.named("RIGHT_BRACKET"), () ->
                 radial.withRepeats(Math.min(16, radial.getRepeats() + 1)),
                 "Increase spectrum repeats");
@@ -141,13 +120,7 @@ public class RadialSpectrumWave implements Experiment {
 
     @Override
     public void dispose() {
-        audioReader.setRunning(false);
-        audioReader.setLine(null);
-        try {
-            audioReaderThread.join(2000);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+        audioInput.close();
         radial.dispose();
     }
 }

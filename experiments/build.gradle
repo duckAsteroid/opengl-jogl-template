@@ -20,39 +20,11 @@ def resolveX11Env = { ->
     return ['DISPLAY': display, 'XAUTHORITY': xauth]
 }
 
-// Runs `pactl <subcommand>` and returns trimmed stdout, or null if pactl is absent.
-def pactlExec = { String subcommand ->
-    try {
-        def proc = ['pactl', subcommand].execute()
-        proc.waitFor()
-        return proc.inputStream.text.trim()
-    } catch (IOException ignored) {
-        return null
-    }
-}
-
-// Temp file used to carry the original PulseAudio source name across tasks.
-// Using a file rather than project.ext keeps this configuration-cache compatible.
-def audioSourceFile = layout.buildDirectory.file('audio-source.tmp')
-
-tasks.register('restorePulseAudioSource') {
-    group = ApplicationPlugin.APPLICATION_GROUP
-    description = 'Restores the PulseAudio default capture source to the value it had before the experiment started'
-    def tmpFile = audioSourceFile
-    onlyIf { tmpFile.get().asFile.exists() }
-    doLast {
-        def f = tmpFile.get().asFile
-        if (!f.exists()) return
-        def original = f.text.trim()
-        f.delete()
-        try {
-            ['pactl', 'set-default-source', original].execute().waitFor()
-            logger.lifecycle('Audio loopback: restored default source → {}', original)
-        } catch (IOException e) {
-            logger.warn('Could not restore PulseAudio source: {}', e.message)
-        }
-    }
-}
+// Live audio: PipeWire's ALSA plugin (what Java Sound's default line goes through) reads
+// PIPEWIRE_PROPS for each stream it creates. stream.capture.sink=true makes the capture stream
+// record the default sink's monitor — whatever is playing — rather than the microphone, without
+// changing the system default source (so there is nothing to set up or restore).
+def captureWhatIsPlaying = ['PIPEWIRE_PROPS': '{ stream.capture.sink=true }']
 
 dependencies {
     implementation project(':render-core')
@@ -78,34 +50,9 @@ application {
 }
 
 tasks.named('run', JavaExec) {
-    finalizedBy 'restorePulseAudioSource'
-    def tmpFile = audioSourceFile
-    doFirst {
-        def sink = pactlExec('get-default-sink')
-        if (sink == null) {
-            logger.warn('pactl not available — skipping audio loopback setup')
-        } else {
-            def currentSource = pactlExec('get-default-source')
-            def monitorSource = "${sink}.monitor"
-            logger.lifecycle('Audio loopback: setting default source → {}', monitorSource)
-            try {
-                def proc = ['pactl', 'set-default-source', monitorSource].execute()
-                proc.waitFor()
-                if (proc.exitValue() != 0) {
-                    logger.warn('pactl set-default-source failed (exit {}): {}',
-                            proc.exitValue(), proc.errorStream.text.trim())
-                } else {
-                    def f = tmpFile.get().asFile
-                    f.parentFile.mkdirs()
-                    f.text = currentSource
-                }
-            } catch (IOException e) {
-                logger.warn('Could not set PulseAudio source: {}', e.message)
-            }
-        }
-    }
     systemProperty "slf4j.internal.verbosity", "WARN"
     environment += resolveX11Env()
+    environment += captureWhatIsPlaying
     environment += [
             '__NV_PRIME_RENDER_OFFLOAD'  : '1',
             '__GLX_VENDOR_LIBRARY_NAME'  : 'nvidia',
@@ -118,7 +65,8 @@ tasks.named('startScripts', CreateStartScripts) {
     doLast {
         def envVars = ['__NV_PRIME_RENDER_OFFLOAD=1',
                        '__GLX_VENDOR_LIBRARY_NAME=nvidia',
-                       '__GL_THREADED_OPTIMIZATIONS=0']
+                       '__GL_THREADED_OPTIMIZATIONS=0',
+                       "PIPEWIRE_PROPS='${captureWhatIsPlaying.PIPEWIRE_PROPS}'"]
         def envVarsScript = envVars.collect { "export ${it}" }.join('\n')
         def x2 = 'export APP_MODE=production\nexport LOG_LEVEL=debug'
         // Inject them right after the shebang or near the top of the script
@@ -137,7 +85,7 @@ tasks.register("runTextureRenderer", JavaExec) {
   mainClass = 'com.asteroid.duck.opengl.TextureRenderer'
   workingDir = project.rootDir
   jvmArgs = ["-javaagent:src/test/resources/lwjglx-debug-1.0.0.jar=tn;o=texture_renderer.gl.log"]
-  def myProps = ["simulate.audio": "TRUE"]
+  def myProps = ["audio.source": "simulated"]
   systemProperties myProps
   args = ["--interactive=false"]
 }
@@ -149,7 +97,7 @@ tasks.register("runTextureRenderer2", JavaExec) {
   mainClass = 'com.asteroid.duck.opengl.TextureRenderer2'
   workingDir = project.rootDir
   jvmArgs = ["-javaagent:src/test/resources/lwjglx-debug-1.0.0.jar=tn;o=texture_renderer2.gl.log"]
-  def myProps = ["simulate.audio": "TRUE"]
+  def myProps = ["audio.source": "simulated"]
   systemProperties myProps
   args = ["--enable-preview","--interactive=false"]
 }
@@ -167,7 +115,7 @@ tasks.register("debugRun", JavaExec) {
              "--enable-native-access=ALL-UNNAMED"
             ]
   def myProps = [
-          "simulate.audio": "TRUE",
+          "audio.source": "simulated",
           "slf4j.internal.verbosity": "WARN"
   ]
   systemProperties myProps

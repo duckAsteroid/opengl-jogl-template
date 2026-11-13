@@ -1,10 +1,7 @@
 package com.asteroid.duck.opengl.experiments;
 
 import com.asteroid.duck.opengl.util.RenderContext;
-import com.asteroid.duck.opengl.util.audio.AudioReader;
-import com.asteroid.duck.opengl.util.audio.AudioSources;
-import com.asteroid.duck.opengl.util.audio.LineAcquirer;
-import com.asteroid.duck.opengl.util.audio.simulated.SimulatedSources;
+import com.asteroid.duck.opengl.util.audio.AudioInput;
 import com.asteroid.duck.opengl.util.color.StandardColors;
 import com.asteroid.duck.opengl.util.keys.KeyCombination;
 import com.asteroid.duck.opengl.util.resources.font.FontTexture;
@@ -93,8 +90,6 @@ public class SpectrumWave implements Experiment {
 			Duration.ofMillis(333) // fast decay — clears in ~0.3 s so next kick can re-trigger
 	);
 
-	private final AudioSources audioSources = new AudioSources();
-	private int selectedSource = 0;
 
 	/** How far one press of <kbd>.</kbd> / <kbd>,</kbd> moves the beat pulse. */
 	private static final Duration LATENCY_STEP = Duration.ofMillis(10);
@@ -102,8 +97,7 @@ public class SpectrumWave implements Experiment {
 	/** Tempo, beat phase and kicks, tracked live on the audio thread. */
 	private final BeatTrackerSink beatTracker = new BeatTrackerSink(SAMPLE_RATE);
 
-	private AudioReader audioReader;
-	private Thread      audioReaderThread;
+	private AudioInput audioInput;
 
 	// ── Beat letter renderers (shared font texture) ───────────────────────────
 	private FontTexture    fontTexture;
@@ -124,30 +118,15 @@ public class SpectrumWave implements Experiment {
 		freqProc.addSink(beats);
 		analyser.init(ctx);
 
-		audioReader = new AudioReader(List.of(freqProc, beatTracker));
-		audioReaderThread = new Thread(audioReader, "spectrum-audio-reader");
-		audioReaderThread.setDaemon(true);
-		audioReaderThread.start();
 
-		audioSources.add(SimulatedSources.middleC(ctx.getClock()));
-		LineAcquirer.allLinesMatching(LineAcquirer.IDEAL)
-				.map(LineAcquirer.MixerLine::toAudioDataSource)
-				.forEach(audioSources::add);
-		audioReader.setLine(audioSources.list().get(selectedSource));
+		audioInput = AudioInput.start(ctx, List.of(freqProc, beatTracker));
+		audioInput.bindKeys(ctx);
 
 		initBeatLabels(ctx);
 
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-		ctx.getKeyRegistry().registerKeyAction(KeyCombination.simple('J'), () -> {
-			selectedSource = (selectedSource + 1) % audioSources.size();
-			audioReader.setLine(audioSources.list().get(selectedSource));
-		}, "Switch to the next audio input");
-		ctx.getKeyRegistry().registerKeyAction(KeyCombination.simple('H'), () -> {
-			selectedSource = (selectedSource - 1 + audioSources.size()) % audioSources.size();
-			audioReader.setLine(audioSources.list().get(selectedSource));
-		}, "Switch to the previous audio input");
 		ctx.getKeyRegistry().registerKeyAction(KeyCombination.named("PERIOD"), () ->
 				beatTracker.setLatency(beatTracker.latency().plus(LATENCY_STEP)),
 				"Beat pulse earlier (more latency compensation)");
@@ -249,13 +228,7 @@ public class SpectrumWave implements Experiment {
 
 	@Override
 	public void dispose() {
-		audioReader.setRunning(false);
-		audioReader.setLine(null);
-		try {
-			audioReaderThread.join(2000);
-		} catch (InterruptedException e) {
-			Thread.currentThread().interrupt();
-		}
+		audioInput.close();
 		analyser.dispose();
 		bassLabel.dispose();
 		midLabel.dispose();
