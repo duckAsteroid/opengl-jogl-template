@@ -44,6 +44,6 @@ class SyntheticTracksTest {
             assertTrue(r.beatF() >= 0 && r.beatF() <= 1);
         }
         String summary = Report.summary(results, Analysers.ALL);
-        assertTrue(summary.contains("| synthetic | 7 |"), summary);
+        assertTrue(summary.contains("| synthetic | " + SyntheticTracks.all().size() + " |"), summary);
     }
 }

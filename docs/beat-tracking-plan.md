@@ -48,7 +48,7 @@ interface BeatTracker {
   - **lock time** — first of 4 consecutive correct beats;
   - kick **F-measure** (±50 ms) where kick annotations exist (synthetic set only).
 - Datasets: built-in synthetic set (clicks, four-on-the-floor, buried kick, rolling bass,
-  breakbeat, breakdown, tempo change), plus local-only datasets (never committed).
+  off-beat bass, breakbeat, swung lo-fi hip-hop, breakdown, tempo change; mastered), plus local-only datasets (never committed).
 - **Baseline**: the current `BeatDetector` as tuned in `SpectrumWave`, kicks = rising edges,
   tempo = median inter-onset interval. Later phases must beat it.
 
@@ -98,11 +98,23 @@ confidence), tune latency offset. Retire `BeatDetector` or keep it as the simple
 | synthetic | 7 | 0.861 | 0.797 | 0.832 | 83% | 83% | 2.2 (86%) | 0.930 |
 | **all** | 1006 | 0.315 | 0.168 | 0.287 | 36% | 45% | 5.9 (37%) | 0.930 |
 
-The synthetic set is too easy as it stands: the baseline is perfect on five of seven tracks and
-only fails the breakbeat (kicks off the beat, which it can't separate from beats) and the
-breakdown (no kicks → no beats). Only the rolling bass dents kick F (0.63). Before Phase 1,
-harden it: un-sidechained bass, a limiter/compressor over the mix, reverb, background noise,
-humanised timing, real-ish mix levels.
+The first synthetic set (7 dry tracks, row above) was too easy: the baseline was perfect on
+five of them. It has since been hardened — a master bus (reverb, noise, fast bus compressor,
+soft clip), an un-ducked sub under a quiet kick, an off-beat house bassline, an 8th-note lead,
+humanised timing and a swung 90 BPM lo-fi hip-hop track (9 tracks). Baseline on the hardened set:
+
+| track | beat F | AMLt | Acc2 | kick F |
+|---|--:|--:|--:|--:|
+| clicks-120 | 1.000 | 1.000 | 100% | – |
+| four-on-floor-128 | 1.000 | 1.000 | 100% | 1.000 |
+| buried-kick-140 | 0.558 | 0.279 | 100% | 0.326 |
+| rolling-bass-124 | 0.000 | 0.000 | – | 0.000 |
+| offbeat-bass-122 | 0.991 | 0.982 | 100% | 0.844 |
+| breakbeat-130 | 0.277 | 0.245 | 0% | 1.000 |
+| lofi-hiphop-90 | 0.829 | 0.707 | 100% | 0.563 |
+| breakdown-126 | 0.807 | 0.628 | 100% | 0.777 |
+| tempo-change-120-128 | 1.000 | 1.000 | – | 0.994 |
+| **mean** | 0.718 | 0.649 | 86% | 0.688 |
 
 Pass marks are set relative to this baseline; for reference, published offline trackers
 reach beat F around 0.8 on GTZAN, and online ones somewhat lower.
@@ -113,7 +125,7 @@ None of this is committed — point the harness at a local directory.
 
 | Dataset | Content | Annotations | Notes |
 |---|---|---|---|
-| Synthetic (built in) | 7 generated dance-style tracks | beats, kicks, tempo | Exact labels; covers the hard cases on purpose |
+| Synthetic (built in) | 9 generated dance-style tracks | beats, kicks, tempo | Exact labels; covers the hard cases on purpose |
 | GTZAN | 1000 × 30 s, 10 genres, 22.05 kHz mono | none on its own | No electronic genre; disco/pop/hip-hop closest. Known duplicates/mislabels/distortions; copyright unclear → local use only |
 | GTZAN-Rhythm (Marchand & Peeters) | — | beats (with bar position), tempo for GTZAN | Turns GTZAN into a beat benchmark. Plain-text copy at `github.com/TempoBeatDownbeat/gtzan_tempo_beat` (`beats/gtzan_blues_00000.beats`, `tempo/gtzan_blues_00000.bpm`; 999 tracks, one reggae clip unannotated). No licence stated |
 | GiantSteps Tempo | ~660 × 2 min EDM previews | global tempo only | The dance-music tempo check; audio is MP3 → needs `ffmpeg` |
