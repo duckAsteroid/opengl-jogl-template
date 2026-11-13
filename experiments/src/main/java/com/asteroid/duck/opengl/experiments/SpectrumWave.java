@@ -11,6 +11,7 @@ import com.asteroid.duck.opengl.util.resources.font.FontTexture;
 import com.asteroid.duck.opengl.util.resources.font.FontTextureFactory;
 import com.asteroid.duck.opengl.util.text.StringRenderer;
 import com.asteroid.duck.opengl.util.audio.analysis.BeatDetector;
+import com.asteroid.duck.opengl.util.audio.beat.BeatTrackerSink;
 import com.asteroid.duck.opengl.util.audio.analysis.FrequencyBand;
 import com.asteroid.duck.opengl.util.audio.analysis.FrequencyProcessor;
 import com.asteroid.duck.opengl.util.wave.SpectrumAnalyser;
@@ -21,6 +22,7 @@ import java.awt.*;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
+import java.util.Locale;
 
 import static org.lwjgl.opengl.GL11.*;
 
@@ -89,6 +91,9 @@ public class SpectrumWave implements Experiment {
 	private final AudioSources audioSources = new AudioSources();
 	private int selectedSource = 0;
 
+	/** Tempo, beat phase and kicks, tracked live on the audio thread. */
+	private final BeatTrackerSink beatTracker = new BeatTrackerSink(SAMPLE_RATE);
+
 	private AudioReader audioReader;
 	private Thread      audioReaderThread;
 
@@ -97,6 +102,8 @@ public class SpectrumWave implements Experiment {
 	private StringRenderer bassLabel;
 	private StringRenderer midLabel;
 	private StringRenderer trebleLabel;
+	/** BPM readout that pulses on each tracked beat. */
+	private StringRenderer tempoLabel;
 
 	@Override
 	public String getDescription() {
@@ -109,7 +116,7 @@ public class SpectrumWave implements Experiment {
 		freqProc.addSink(beats);
 		analyser.init(ctx);
 
-		audioReader = new AudioReader(List.of(freqProc));
+		audioReader = new AudioReader(List.of(freqProc, beatTracker));
 		audioReaderThread = new Thread(audioReader, "spectrum-audio-reader");
 		audioReaderThread.setDaemon(true);
 		audioReaderThread.start();
@@ -142,10 +149,13 @@ public class SpectrumWave implements Experiment {
 		bassLabel   = new StringRenderer(fontTexture);
 		midLabel    = new StringRenderer(fontTexture);
 		trebleLabel = new StringRenderer(fontTexture);
+		tempoLabel  = new StringRenderer(fontTexture);
 
 		bassLabel.init(ctx);
 		midLabel.init(ctx);
 		trebleLabel.init(ctx);
+		tempoLabel.init(ctx);
+		tempoLabel.setText(tempoText());
 
 		bassLabel.setText("B");
 		midLabel.setText("M");
@@ -180,6 +190,18 @@ public class SpectrumWave implements Experiment {
 		bassLabel.setTransform(  new Matrix4f().translate(xB, baseline, 0).scale(scale, scale, 1));
 		midLabel.setTransform(   new Matrix4f().translate(xM, baseline, 0).scale(scale, scale, 1));
 		trebleLabel.setTransform(new Matrix4f().translate(xT, baseline, 0).scale(scale, scale, 1));
+
+		// BPM readout: 8% of the screen height, bottom centre (width of a typical "128.0 BPM").
+		float tempoScale = win.height * 0.08f / fontH;
+		float tempoW = fontTexture.getWidth("128.0 BPM") * tempoScale;
+		tempoLabel.setTransform(new Matrix4f()
+				.translate((win.width - tempoW) / 2.0f, win.height * 0.96f, 0)
+				.scale(tempoScale, tempoScale, 1));
+	}
+
+	private String tempoText() {
+		double bpm = beatTracker.bpm();
+		return Double.isNaN(bpm) ? "--- BPM" : String.format(Locale.ROOT, "%.1f BPM", bpm);
 	}
 
 	@Override
@@ -187,13 +209,21 @@ public class SpectrumWave implements Experiment {
 		freqProc.process();
 		analyser.doRender(ctx);
 
-		bassLabel.setTextColor(  StandardColors.WHITE.withAlpha(letterAlpha(beats.getBeatStrength(0))));
+		// "B" is the kick drum, from the beat tracker; M and T are BeatDetector bands
+		bassLabel.setTextColor(  StandardColors.WHITE.withAlpha(letterAlpha(beatTracker.kickStrength())));
 		midLabel.setTextColor(   StandardColors.WHITE.withAlpha(letterAlpha(beats.getBeatStrength(1))));
 		trebleLabel.setTextColor(StandardColors.WHITE.withAlpha(letterAlpha(beats.getBeatStrength(2))));
 
 		bassLabel.doRender(ctx);
 		midLabel.doRender(ctx);
 		trebleLabel.doRender(ctx);
+
+		String tempo = tempoText();
+		if (!tempo.equals(tempoLabel.getText())) tempoLabel.setText(tempo);
+		float pulse = (float) Math.exp(-6 * beatTracker.beatPhase());
+		tempoLabel.setTextColor(StandardColors.WHITE.withAlpha(
+				LETTER_DIM_ALPHA + (1 - LETTER_DIM_ALPHA) * pulse * beatTracker.confidence()));
+		tempoLabel.doRender(ctx);
 	}
 
 	/** Maps beat strength [0,1] to alpha [LETTER_DIM_ALPHA, 1]. */
@@ -214,6 +244,7 @@ public class SpectrumWave implements Experiment {
 		bassLabel.dispose();
 		midLabel.dispose();
 		trebleLabel.dispose();
+		tempoLabel.dispose();
 		fontTexture.dispose();
 	}
 }

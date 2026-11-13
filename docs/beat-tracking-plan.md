@@ -131,12 +131,25 @@ Findings:
   The kick detector alone reads ~20 ms early on GTZAN vs ~6.5 ms on synthetic, so GTZAN's labels
   sit ~13 ms after physical onsets — a labelling convention, not something to tune for.
 
-Still to do: the `bpm()` / `beatPhase()` / `beatCount()` / `confidence()` / `kickStrength()`
-snapshot for the GL thread (see API above) — part of Phase 4.
+The snapshot API for the GL thread is `BeatTrackerSink` (Phase 4).
 
-### Phase 4 — wire into experiments
-Beat phase in `SpectrumWave` / `RadialSpectrumWave`, debug overlay (onset curve, BPM, phase,
-confidence), tune latency offset. Retire `BeatDetector` or keep it as the simple option.
+### Phase 4 — wire into experiments (SpectrumWave ✅, rest to do)
+`BeatTrackerSink` (`render-core/…/util/audio/beat/`) is an `AudioSink`: add it to the
+`AudioReader`'s sinks and it runs `BeatTracker` on the audio thread, publishing an immutable
+snapshot (volatile) on every beat/kick/tempo event and every 100 ms. The render thread calls
+`bpm()`, `confidence()`, `beatPhase()`, `beatCount()` and `kickStrength()`, extrapolated to
+*now* from the snapshot's sample-clock time plus elapsed `nanoTime`; `setLatency(Duration)`
+makes the visuals lead by the audio output latency.
+
+Audio-thread cost (64-byte `AudioReader` chunks, 48 kHz): ~1% of real time, worst single write
+0.32 ms against the ~2.7 ms capture line buffer — after moving the tempo autocorrelation to an
+FFT (the direct sum stalled a write for ~2.4 ms every 0.5 s).
+
+`SpectrumWave`: the **B** letter now flashes with detected kicks, and a BPM readout at the
+bottom pulses on each tracked beat (dimmed by confidence). M and T still use `BeatDetector`.
+
+To do: `RadialSpectrumWave`; a debug overlay (onset curve, phase, confidence); tune the
+latency offset by eye/ear; decide whether to retire `BeatDetector`.
 
 ### Later (optional)
 - Downbeat / bar detection (phrase-aware visuals: 4/8/16/32-bar changes, build-ups).

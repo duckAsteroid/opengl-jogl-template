@@ -1,5 +1,7 @@
 package com.asteroid.duck.opengl.util.audio.beat;
 
+import org.jtransforms.fft.DoubleFFT_1D;
+
 /**
  * Estimates the tempo from a fixed-rate onset-strength signal (e.g. {@link SpectralFlux}).
  *
@@ -9,6 +11,9 @@ package com.asteroid.duck.opengl.util.audio.beat;
  * repeat beats one that only repeats itself; weight by a log-normal tempo prior; then fold into
  * a running average of scores, which gives hysteresis — one odd window doesn't flip the tempo.
  * The winning period is refined by parabolic interpolation.</p>
+ *
+ * <p>The autocorrelation is computed by FFT (zero-padded, so it is linear, not circular): the
+ * direct sum took ~2 ms every update, too long a stall for the audio thread.</p>
  */
 public final class TempoEstimator {
 
@@ -24,6 +29,8 @@ public final class TempoEstimator {
     private final double priorOctaves;
     private final float[] ring;
     private final double[] frame;
+    private final double[] padded;
+    private final DoubleFFT_1D fft;
     private final double[] acf;
     private final double[] smoothed;
     private final int minLag;
@@ -45,6 +52,9 @@ public final class TempoEstimator {
         int window = (int) Math.round(WINDOW_SECONDS * frameRate);
         this.ring = new float[window];
         this.frame = new double[window];
+        int size = Integer.highestOneBit(2 * window - 1) << 1;
+        this.padded = new double[size];
+        this.fft = new DoubleFFT_1D(size);
         this.minLag = (int) Math.floor(60 * frameRate / MAX_BPM);
         this.maxLag = (int) Math.ceil(60 * frameRate / MIN_BPM);
         this.acf = new double[Math.min(window, 4 * maxLag + 1)];
@@ -72,11 +82,7 @@ public final class TempoEstimator {
         mean /= n;
         for (int i = 0; i < n; i++) frame[i] -= mean;
         int lags = Math.min(acf.length, n);
-        for (int lag = 0; lag < lags; lag++) {
-            double sum = 0;
-            for (int i = 0; i + lag < n; i++) sum += frame[i] * frame[i + lag];
-            acf[lag] = sum / (n - lag);
-        }
+        autocorrelate(n, lags);
         if (acf[0] <= 0) return !Double.isNaN(bpm);
 
         for (int lag = minLag; lag <= maxLag; lag++) {
@@ -105,6 +111,22 @@ public final class TempoEstimator {
         double average = total / (maxLag - minLag + 1);
         confidence = (float) Math.clamp((smoothed[best] - average) / smoothed[best], 0, 1);
         return true;
+    }
+
+    /** {@code acf[lag] = Σ frame[i]·frame[i+lag] / (n − lag)} for {@code lag < lags}, via FFT. */
+    private void autocorrelate(int n, int lags) {
+        java.util.Arrays.fill(padded, 0);
+        System.arraycopy(frame, 0, padded, 0, n);
+        fft.realForward(padded);
+        // realForward layout: [Re0, Re(N/2), Re1, Im1, Re2, Im2, ...] → power spectrum in place
+        padded[0] *= padded[0];
+        padded[1] *= padded[1];
+        for (int k = 2; k < padded.length; k += 2) {
+            padded[k] = padded[k] * padded[k] + padded[k + 1] * padded[k + 1];
+            padded[k + 1] = 0;
+        }
+        fft.realInverse(padded, true);
+        for (int lag = 0; lag < lags; lag++) acf[lag] = padded[lag] / (n - lag);
     }
 
     private double at(int lag, int lags) {

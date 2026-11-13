@@ -70,6 +70,15 @@ public final class BeatTracker implements BeatAnalyser {
         return flux.fftSize() / 4.0 / sampleRate;
     }
 
+    /**
+     * The beat period the phase tracker is currently running at — the tempo estimate as refined
+     * by the phase-locked loop.
+     * @return seconds per beat, or {@code NaN} before the first tempo estimate
+     */
+    public double period() {
+        return phase.period();
+    }
+
     @Override
     public float getSampleRate() {
         return sampleRate;
