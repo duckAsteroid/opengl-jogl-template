@@ -14,11 +14,17 @@ import java.util.Locale;
 /**
  * Reference annotations for one track. An empty array or a {@code NaN} tempo means "not
  * annotated", and the metrics that need it are skipped for that track.
- * @param beats beat times in seconds, ascending
- * @param kicks kick onset times in seconds, ascending
- * @param bpm   global tempo in BPM, or {@code NaN} if unknown (or not constant)
+ * @param beats     beat times in seconds, ascending
+ * @param kicks     kick onset times in seconds, ascending
+ * @param bpm       global tempo in BPM, or {@code NaN} if unknown (or not constant)
+ * @param downbeats downbeat (first beat of the bar) times in seconds, ascending
  */
-public record Annotations(double[] beats, double[] kicks, double bpm) {
+public record Annotations(double[] beats, double[] kicks, double bpm, double[] downbeats) {
+
+    /** Annotations without downbeats. */
+    public Annotations(double[] beats, double[] kicks, double bpm) {
+        this(beats, kicks, bpm, new double[0]);
+    }
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
@@ -34,22 +40,65 @@ public record Annotations(double[] beats, double[] kicks, double bpm) {
     public static Annotations load(List<Path> files) throws IOException {
         double[] beats = new double[0];
         double[] kicks = new double[0];
+        double[] downbeats = new double[0];
         double bpm = Double.NaN;
         for (Path file : files) {
             switch (FileDataset.extension(file)) {
-                case "beats", "beat" -> { if (beats.length == 0) beats = readTimes(file); }
+                case "beats", "beat" -> {
+                    if (beats.length == 0) {
+                        beats = readTimes(file);
+                        downbeats = readDownbeats(file);
+                    }
+                }
                 case "kicks" -> { if (kicks.length == 0) kicks = readTimes(file); }
                 case "bpm" -> { if (Double.isNaN(bpm)) bpm = readBpm(file); }
                 case "jams" -> {
                     Annotations jams = readJams(file);
-                    if (beats.length == 0) beats = jams.beats;
+                    if (beats.length == 0) {
+                        beats = jams.beats;
+                        downbeats = jams.downbeats;
+                    }
                     if (Double.isNaN(bpm)) bpm = jams.bpm;
                 }
                 default -> { }
             }
         }
         if (Double.isNaN(bpm)) bpm = tempoFromBeats(beats);
-        return new Annotations(beats, kicks, bpm);
+        return new Annotations(beats, kicks, bpm, downbeats);
+    }
+
+    /**
+     * Read downbeats from a beat file whose second column is the position in the bar (as in
+     * GTZAN-Rhythm: {@code 1.173 1}): the times at position 1.
+     * @param file the text file
+     * @return downbeat times, sorted; empty if the file has no position column
+     * @throws IOException if the file can't be read
+     */
+    static double[] readDownbeats(Path file) throws IOException {
+        double[] downbeats = Files.readAllLines(file).stream()
+                .map(Annotations::numbers)
+                .filter(n -> n.length >= 2 && n[1] == 1)
+                .mapToDouble(n -> n[0])
+                .toArray();
+        Arrays.sort(downbeats);
+        return downbeats;
+    }
+
+    /** The leading numeric fields of a line; stops at the first non-number. */
+    private static double[] numbers(String line) {
+        String trimmed = line.strip();
+        if (trimmed.isEmpty() || trimmed.startsWith("#")) return new double[0];
+        String[] fields = trimmed.split("[\\s,;]+");
+        double[] values = new double[fields.length];
+        int n = 0;
+        for (String field : fields) {
+            try {
+                values[n++] = Double.parseDouble(field);
+            } catch (NumberFormatException e) {
+                break;
+            }
+        }
+        return Arrays.copyOf(values, n);
     }
 
     /**
@@ -89,18 +138,20 @@ public record Annotations(double[] beats, double[] kicks, double bpm) {
      * namespace, highest-confidence observation) from a JAMS file. Handles both the current
      * list-of-observations {@code data} layout and the older column layout.
      * @param file the JAMS file
-     * @return its beats and tempo; kicks are always empty
+     * @return its beats, downbeats (observations whose value is 1) and tempo; kicks are always empty
      * @throws IOException if the file can't be read or parsed
      */
     static Annotations readJams(Path file) throws IOException {
         JsonNode root = JSON.readTree(file.toFile());
         double[] beats = new double[0];
+        double[] downbeats = new double[0];
         double bpm = Double.NaN;
         for (JsonNode annotation : root.path("annotations")) {
             String namespace = annotation.path("namespace").asText();
             List<double[]> observations = observations(annotation.path("data"));
             if ((namespace.equals("beat") || namespace.equals("beat_position")) && beats.length == 0) {
                 beats = observations.stream().mapToDouble(o -> o[0]).filter(t -> !Double.isNaN(t)).sorted().toArray();
+                downbeats = observations.stream().filter(o -> o[1] == 1).mapToDouble(o -> o[0]).sorted().toArray();
             } else if (namespace.equals("tempo") && Double.isNaN(bpm)) {
                 double bestConfidence = Double.NEGATIVE_INFINITY;
                 for (double[] o : observations) {
@@ -112,7 +163,7 @@ public record Annotations(double[] beats, double[] kicks, double bpm) {
                 }
             }
         }
-        return new Annotations(beats, new double[0], bpm);
+        return new Annotations(beats, new double[0], bpm, downbeats);
     }
 
     /** JAMS observations as {@code [time, value, confidence]}; non-numeric fields become NaN. */

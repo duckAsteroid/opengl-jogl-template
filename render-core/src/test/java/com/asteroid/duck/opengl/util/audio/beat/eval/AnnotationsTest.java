@@ -29,6 +29,18 @@ class AnnotationsTest {
     }
 
     @Test
+    void readsDownbeatsFromTheBarPositionColumn() throws IOException {
+        // GTZAN-Rhythm style: time, then position in the bar (1 = downbeat)
+        Path beats = write("g.beats", "0.217\t3\n0.695\t4\n1.173\t1\n1.653\t2\n2.137\t3\n2.611\t4\n3.108\t1\n");
+        assertArrayEquals(new double[] {1.173, 3.108}, Annotations.readDownbeats(beats));
+        Annotations a = Annotations.load(List.of(beats));
+        assertArrayEquals(new double[] {1.173, 3.108}, a.downbeats());
+        assertEquals(7, a.beats().length);
+        // No position column: no downbeats
+        assertEquals(0, Annotations.readDownbeats(write("plain.beats", "0.5\n1.0\n")).length);
+    }
+
+    @Test
     void readsScientificNotationTempo() throws IOException {
         assertEquals(125.87, Annotations.readBpm(write("a.bpm", "1.258700000000000045e+02\n")), 1e-9);
     }

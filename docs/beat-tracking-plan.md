@@ -88,13 +88,13 @@ Prior swept (centre 100–130, σ 0.5–3 octaves): 120 / 1.0 is at or near the 
 
 ### Phase 3 — beat phase (PLL) ✅ (snapshot API still to do)
 `BeatPhaseTracker`, wired into `BeatTracker` (registered in the harness as `tracker`):
-- Acquire: comb search over the last 4 s of onset strength (flux / running mean + 2 × kick
+- Acquire: comb search over the last 6 s of onset strength (flux / running mean + 2 × kick
   strength) for the best phase at the estimated period.
 - Track: after each predicted beat, the strongest onset within ±20% of a period (Gaussian
   weighted towards the prediction) corrects the next beat by 0.3 × error and the period by
   0.05 × error; freewheels when nothing stands out (< 1.5 × mean).
 - Re-acquire: adopt a tempo estimate that moves > 4%; jump phase when another phase's comb
-  scores 1.3 × better (e.g. locked to the off-beat).
+  scores 1.5 × better (e.g. locked to the off-beat).
 - Every beat is reported at its **predicted** time, never revised — the scores are what a live
   visual would get.
 
@@ -117,6 +117,14 @@ Results (GTZAN + hardened synthetic):
 
 (Baseline overall: beat F 0.315, CMLt 0.168, AMLt 0.287.) Published *offline* trackers, which
 see the whole track, reach beat F around 0.8 on GTZAN.
+
+Parameter sweep (cached flux/kick/tempo streams per track, replaying only the phase tracker,
+one parameter at a time, then combinations): every single change moved beat F by < 0.005 — the
+first-guess values were already near a local optimum. Kick weight in the onset signal makes no
+difference. Adopted a 6 s acquisition comb (was 4) and a 1.5× phase-switch ratio (was 1.3):
+beat F 0.735 → **0.737**, AMLt 0.723 → **0.750** (fewer phase flips), disco 0.933 → **0.938**,
+hip-hop AMLt 0.777 → 0.823. The remaining gap is metrical level — Acc1 70% vs Acc2 89% means
+~1 track in 5 locks to double or half tempo — which needs structural work, not tuning.
 
 Findings:
 - **Frame clock drift.** The flux hop is a whole number of samples: at 22.05 kHz,
@@ -151,8 +159,38 @@ bottom pulses on each tracked beat (dimmed by confidence). M and T still use `Be
 To do: `RadialSpectrumWave`; a debug overlay (onset curve, phase, confidence); tune the
 latency offset by eye/ear; decide whether to retire `BeatDetector`.
 
+### Downbeats — spike, not shipped (branch `spike/downbeat-chroma`)
+The harness now reads bar positions from GTZAN-Rhythm's second column (`1.173 1` = downbeat),
+generates them for the synthetic set, and scores **downbeat F** (±70 ms) for any analyser that
+reports `BeatListener.onDownbeat`.
+
+Tried: per-beat-interval features fed to a causal vote — four accumulators (beat index mod 4,
+decayed 0.9 per bar), leader kept with 10% hysteresis. Results on GTZAN (chance ≈ 0.25):
+
+| features | with tracked beats: all / disco | with annotated beats: all / disco |
+|---|--:|--:|
+| ceiling (best bar position in hindsight) | 0.63 / 0.93 | 0.96 / 1.00 |
+| onset strength, kick, 3-per-octave band change | 0.13–0.27 / 0.11–0.30 | 0.19–0.42 / 0.11–0.37 |
+| bass (< 250 Hz) change | 0.26 / 0.25 (synthetic 0.83) | 0.41 / 0.30 |
+| **chroma change** (12 pitch classes, 170 ms FFT) | 0.29 / **0.49** | 0.45 / 0.56 |
+| chroma + 0.2 × bass change (implemented) | 0.28–0.30 / 0.46–0.49 | — |
+
+Not shipped, because:
+- Half right on disco, near chance elsewhere.
+- It doesn't firm up with longer listening (disco clips looped ×3: 0.46 → 0.40) — phase jumps
+  in the beat tracker shift the beat-index → bar alignment the vote relies on.
+- Its confidence barely predicts correctness: downbeats reported at confidence > 0.5 were right
+  40% of the time, < 0.1 26%.
+
+Beat tracking isn't the bottleneck for dance music (disco ceiling 0.93 with tracked beats); the
+features are. Next steps if revisited: anchor the vote to bar *time* rather than beat count so
+phase jumps don't scramble it; beat-synchronous chroma with finer pitch resolution; or a
+learned model (madmom-style RNN + DBN downbeat tracking is the reference — well above these
+simple cues).
+
 ### Later (optional)
-- Downbeat / bar detection (phrase-aware visuals: 4/8/16/32-bar changes, build-ups).
+- Downbeat / bar detection (phrase-aware visuals: 4/8/16/32-bar changes, build-ups) — see the
+  spike above; simple causal cues aren't good enough.
 - Small causal CNN replacing the Phase 1 onset function (ONNX Runtime); the harness decides
   whether it earns its keep. Same structure as madmom / BeatNet: network → activation,
   classic tracker → timing.

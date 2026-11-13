@@ -16,8 +16,10 @@ package com.asteroid.duck.opengl.util.audio.beat.eval;
  * @param amlt     beat continuity, any metrical level, total
  * @param lockTime seconds until locked on, or {@code NaN} if it never locked (or no beats)
  * @param kickF    kick onset F-measure
+ * @param downbeatF downbeat F-measure; {@code NaN} if the analyser reported no downbeats
  */
 public record TrackResult(String analyser, String group, String track, double duration,
                           double refBpm, double estBpm, double acc1, double acc2,
-                          double beatF, double cmlt, double amlt, double lockTime, double kickF) {
+                          double beatF, double cmlt, double amlt, double lockTime, double kickF,
+                          double downbeatF) {
 }

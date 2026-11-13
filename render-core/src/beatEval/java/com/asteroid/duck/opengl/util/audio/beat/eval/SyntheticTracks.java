@@ -428,7 +428,7 @@ public final class SyntheticTracks {
 
         /**
          * Apply the master bus (unless {@code master} is null), normalise to a 0.9 peak and attach
-         * the annotations.
+         * the annotations (every track starts on a downbeat and is in 4/4).
          */
         Track.Loaded finish(double[] kicks, double bpm, Master master) {
             if (master != null) {
@@ -442,7 +442,9 @@ public final class SyntheticTracks {
                 float scale = 0.9f / peak;
                 for (int i = 0; i < out.length; i++) out[i] *= scale;
             }
-            return new Track.Loaded(new AudioClip(out, SAMPLE_RATE), new Annotations(beats, kicks, bpm));
+            double[] downbeats = java.util.stream.IntStream.range(0, beats.length)
+                    .filter(i -> i % BEATS_PER_BAR == 0).mapToDouble(i -> beats[i]).toArray();
+            return new Track.Loaded(new AudioClip(out, SAMPLE_RATE), new Annotations(beats, kicks, bpm, downbeats));
         }
 
         /** Schroeder reverb: four parallel feedback combs into two series all-passes, mixed in. */

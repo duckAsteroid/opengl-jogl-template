@@ -16,6 +16,13 @@ public interface BeatListener {
     default void onBeat(double time) {}
 
     /**
+     * A downbeat — the first beat of a bar — occurred. Reported straight after the
+     * {@link #onBeat} for the same beat, with the same time.
+     * @param time seconds on the analyser's sample clock
+     */
+    default void onDownbeat(double time) {}
+
+    /**
      * A kick (bass drum) onset occurred.
      * @param time     seconds on the analyser's sample clock
      * @param strength onset strength in {@code [0, 1]}

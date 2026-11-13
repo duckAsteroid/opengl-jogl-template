@@ -21,12 +21,12 @@ package com.asteroid.duck.opengl.util.audio.beat;
  */
 final class BeatPhaseTracker {
 
-    static final double COMB_SECONDS = 4;
+    static final double COMB_SECONDS = 6;
     static final double WINDOW_FRACTION = 0.2;
     static final double PHASE_GAIN = 0.3;
     static final double PERIOD_GAIN = 0.05;
     static final double TEMPO_SNAP = 0.04;
-    static final double SWITCH_RATIO = 1.3;
+    static final double SWITCH_RATIO = 1.5;
     /** An onset must be this many times the running mean onset strength to correct the phase. */
     static final double SIGNIFICANCE = 1.5;
     /** Weight of a full-strength kick relative to the mean onset strength. */

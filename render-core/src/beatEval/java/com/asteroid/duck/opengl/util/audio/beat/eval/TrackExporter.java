@@ -14,7 +14,7 @@ import java.util.Locale;
 import java.util.stream.Collectors;
 
 /**
- * Writes tracks to disk as 16-bit mono WAV plus {@code .beats}, {@code .kicks} and
+ * Writes tracks to disk as 16-bit mono WAV plus {@code .beats} (with bar positions), {@code .kicks} and
  * {@code .bpm} annotation files — the format {@link FileDataset} reads back, and one Sonic
  * Visualiser can import as time-instant layers.
  */
@@ -33,7 +33,7 @@ public final class TrackExporter {
             Track.Loaded loaded = track.loader().load();
             writeWav(loaded.audio(), dir.resolve(track.name() + ".wav"));
             Annotations a = loaded.annotations();
-            if (a.beats().length > 0) Files.writeString(dir.resolve(track.name() + ".beats"), times(a.beats()));
+            if (a.beats().length > 0) Files.writeString(dir.resolve(track.name() + ".beats"), beats(a));
             if (a.kicks().length > 0) Files.writeString(dir.resolve(track.name() + ".kicks"), times(a.kicks()));
             if (!Double.isNaN(a.bpm())) {
                 Files.writeString(dir.resolve(track.name() + ".bpm"), String.format(Locale.ROOT, "%.3f%n", a.bpm()));
@@ -54,6 +54,22 @@ public final class TrackExporter {
         try (AudioInputStream in = new AudioInputStream(new ByteArrayInputStream(pcm), format, samples.length)) {
             AudioSystem.write(in, AudioFileFormat.Type.WAVE, file.toFile());
         }
+    }
+
+    /** One beat per line with its position in the bar ({@code 1} = downbeat), GTZAN-Rhythm style. */
+    private static String beats(Annotations a) {
+        StringBuilder out = new StringBuilder();
+        int position = 0;
+        int d = 0;
+        for (double beat : a.beats()) {
+            while (d < a.downbeats().length && a.downbeats()[d] < beat - 1e-6) d++;
+            boolean downbeat = d < a.downbeats().length && Math.abs(a.downbeats()[d] - beat) < 1e-6;
+            position = downbeat ? 1 : position == 0 ? 0 : position + 1;
+            out.append(String.format(Locale.ROOT, "%.4f", beat));
+            if (position > 0) out.append('\t').append(position);
+            out.append('\n');
+        }
+        return out.toString();
     }
 
     private static String times(double[] times) {

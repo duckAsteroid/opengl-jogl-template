@@ -10,11 +10,17 @@ final class EventRecorder implements BeatListener {
 
     private final List<Double> beats = new ArrayList<>();
     private final List<Double> kicks = new ArrayList<>();
+    private final List<Double> downbeats = new ArrayList<>();
     private final List<double[]> tempos = new ArrayList<>();
 
     @Override
     public void onBeat(double time) {
         beats.add(time);
+    }
+
+    @Override
+    public void onDownbeat(double time) {
+        downbeats.add(time);
     }
 
     @Override
@@ -30,6 +36,11 @@ final class EventRecorder implements BeatListener {
     /** @return reported beat times, ascending */
     double[] beats() {
         return sorted(beats);
+    }
+
+    /** @return reported downbeat times, ascending */
+    double[] downbeats() {
+        return sorted(downbeats);
     }
 
     /** @return reported kick times, ascending */

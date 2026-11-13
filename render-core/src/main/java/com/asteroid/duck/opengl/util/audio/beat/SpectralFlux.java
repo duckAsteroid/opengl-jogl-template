@@ -102,6 +102,24 @@ public final class SpectralFlux {
         return sampleRate / (double) hop;
     }
 
+    /**
+     * The current frame's log-compressed band levels, {@code ln(1 + γ·m)} per band, lowest band
+     * first. Valid only during {@link Listener#onFrame}; the array is reused — copy it to keep it,
+     * and don't modify it.
+     * @return band levels
+     */
+    public double[] bands() {
+        return bands;
+    }
+
+    /**
+     * @param band band index
+     * @return the band's lower edge in Hz
+     */
+    public double bandLowHz(int band) {
+        return bandStart[band] * (double) sampleRate / fftSize;
+    }
+
     /** @return the FFT size chosen for this sample rate */
     int fftSize() {
         return fftSize;

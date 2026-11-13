@@ -20,11 +20,12 @@ public final class Report {
      */
     public static String csv(List<TrackResult> results) {
         StringBuilder out = new StringBuilder(
-                "analyser,group,track,duration,ref_bpm,est_bpm,acc1,acc2,beat_f,cmlt,amlt,lock_time,kick_f\n");
+                "analyser,group,track,duration,ref_bpm,est_bpm,acc1,acc2,beat_f,cmlt,amlt,lock_time,kick_f,downbeat_f\n");
         for (TrackResult r : results) {
             out.append(String.join(",", r.analyser(), r.group(), r.track(),
                     cell(r.duration()), cell(r.refBpm()), cell(r.estBpm()), cell(r.acc1()), cell(r.acc2()),
-                    cell(r.beatF()), cell(r.cmlt()), cell(r.amlt()), cell(r.lockTime()), cell(r.kickF())))
+                    cell(r.beatF()), cell(r.cmlt()), cell(r.amlt()), cell(r.lockTime()), cell(r.kickF()),
+                    cell(r.downbeatF())))
                     .append('\n');
         }
         return out.toString();
@@ -46,8 +47,8 @@ public final class Report {
             List<TrackResult> mine = byAnalyser.getOrDefault(analyser.name(), List.of());
             if (mine.isEmpty()) continue;
             out.append("\n## ").append(analyser.name()).append("\n\n").append(analyser.description()).append("\n\n");
-            out.append("| group | tracks | beat F | CMLt | AMLt | Acc1 | Acc2 | lock s (locked) | kick F |\n");
-            out.append("|---|--:|--:|--:|--:|--:|--:|--:|--:|\n");
+            out.append("| group | tracks | beat F | CMLt | AMLt | Acc1 | Acc2 | lock s (locked) | kick F | downbeat F |\n");
+            out.append("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|\n");
             Map<String, List<TrackResult>> groups = new TreeMap<>(mine.stream()
                     .collect(Collectors.groupingBy(TrackResult::group)));
             List<Map.Entry<String, List<TrackResult>>> rows = new ArrayList<>(groups.entrySet());
@@ -63,6 +64,7 @@ public final class Report {
                         .append(" | ").append(percent(rs, TrackResult::acc2))
                         .append(" | ").append(lock(rs))
                         .append(" | ").append(score(rs, TrackResult::kickF))
+                        .append(" | ").append(score(rs, TrackResult::downbeatF))
                         .append(" |\n");
             }
         }

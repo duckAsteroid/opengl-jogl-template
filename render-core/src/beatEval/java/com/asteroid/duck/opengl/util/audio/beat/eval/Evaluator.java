@@ -48,11 +48,15 @@ public final class Evaluator {
         double kickF = reference.kicks().length == 0 ? Double.NaN
                 : BeatMetrics.fMeasure(BeatMetrics.trim(reference.kicks(), WARM_UP),
                         BeatMetrics.trim(recorder.kicks(), WARM_UP), BeatMetrics.ONSET_WINDOW);
+        // NaN unless the track has downbeat labels and the analyser reports downbeats at all
+        double downbeatF = reference.downbeats().length == 0 || recorder.downbeats().length == 0 ? Double.NaN
+                : BeatMetrics.fMeasure(BeatMetrics.trim(reference.downbeats(), WARM_UP),
+                        BeatMetrics.trim(recorder.downbeats(), WARM_UP), BeatMetrics.BEAT_WINDOW);
         double estBpm = recorder.tempo(WARM_UP);
 
         return new TrackResult(analyser.name(), group, name, audio.duration(),
                 reference.bpm(), estBpm,
                 TempoMetrics.acc1(estBpm, reference.bpm()), TempoMetrics.acc2(estBpm, reference.bpm()),
-                beatF, cmlt, amlt, lockTime, kickF);
+                beatF, cmlt, amlt, lockTime, kickF, downbeatF);
     }
 }
