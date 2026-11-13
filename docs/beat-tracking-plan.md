@@ -52,10 +52,28 @@ interface BeatTracker {
 - **Baseline**: the current `BeatDetector` as tuned in `SpectrumWave`, kicks = rising edges,
   tempo = median inter-onset interval. Later phases must beat it.
 
-### Phase 1 — onset strength + kick detection
-1024-point FFT, hop 256; multi-band log-power spectral flux (rises only). Separate 40–120 Hz
-flux, peak-picked with median + k·MAD and a refractory period → kick events.
-Exit: kick F on synthetic clearly above baseline.
+### Phase 1 — onset strength + kick detection (kick ✅, broadband flux to do)
+`KickDetector` (`render-core/…/util/audio/beat/`): time-domain 80–250 Hz band-pass (4th-order
+Butterworth each side), band level over a 20 ms sliding window every 5 ms, onset strength = dB
+rise over the last 20 ms, peak-picked at ≥ 10 dB rise with a level gate, absolute floor and
+100 ms refractory period; timed at the start of the rise. Registered in the harness as `kick`.
+
+Findings, from the harness:
+- **Band:** the first cut used 40–150 Hz and scored *worse* than the baseline (kick F 0.35).
+  On a loud master the sub-bass is sustained near full scale, so a kick adds ~1 dB there; and
+  the kick's tail beats against the sub, so the rebound ~120 ms later reads as an onset. The
+  kick's attack (pitch drop from ~150 Hz, click) is what stands out: 80–250 Hz.
+- **Level window:** per-hop (5 ms) power of a 45 Hz tone swings by many dB with phase; the
+  level must be measured over ≥ ~20 ms or the ripple reads as onsets.
+- **Threshold:** onset strength is zero on most hops, so median + k·MAD collapses to the
+  minimum rise; a fixed 10 dB minimum is what actually decides (swept 2–12 dB).
+- Synthetic kick F 0.688 → **0.840** (rolling bass 0.00 → 0.99). Still weak: off-beat house
+  bass (0.66 — its plucks read as kicks) and the buried kick (0.34).
+- GTZAN, kicks scored as beats (a proxy — GTZAN has no kick labels): beat F 0.315 → **0.425**
+  overall; disco 0.53 → 0.69, hip-hop 0.28 → 0.41, pop 0.31 → 0.49.
+
+Still to do in this phase: the multi-band log spectral flux (1024-point FFT, hop 256) that
+Phase 2's tempo estimate needs.
 
 ### Phase 2 — tempo estimation
 Autocorrelation of a rolling 6–8 s onset-strength window, tempo prior (centred ~120–128 BPM),
