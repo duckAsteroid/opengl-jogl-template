@@ -52,7 +52,7 @@ interface BeatTracker {
 - **Baseline**: the current `BeatDetector` as tuned in `SpectrumWave`, kicks = rising edges,
   tempo = median inter-onset interval. Later phases must beat it.
 
-### Phase 1 — onset strength + kick detection (kick ✅, broadband flux to do)
+### Phase 1 — onset strength + kick detection ✅
 `KickDetector` (`render-core/…/util/audio/beat/`): time-domain 80–250 Hz band-pass (4th-order
 Butterworth each side), band level over a 20 ms sliding window every 5 ms, onset strength = dB
 rise over the last 20 ms, peak-picked at ≥ 10 dB rise with a level gate, absolute floor and
@@ -72,19 +72,67 @@ Findings, from the harness:
 - GTZAN, kicks scored as beats (a proxy — GTZAN has no kick labels): beat F 0.315 → **0.425**
   overall; disco 0.53 → 0.69, hip-hop 0.28 → 0.41, pop 0.31 → 0.49.
 
-Still to do in this phase: the multi-band log spectral flux (1024-point FFT, hop 256) that
-Phase 2's tempo estimate needs.
+Broadband onset strength: `SpectralFlux` — ~43 ms Hann window (2048 @ 48 kHz, 1024 @ 22.05
+kHz), ~10 ms hop, magnitudes summed into 3-per-octave bands (30 Hz–16 kHz), `ln(1 + 1000·m)`,
+half-wave-rectified frame difference summed over bands. Its peaks land within ~5–9 ms of the
+GTZAN beat labels once frames are timed a *quarter* window before the window's end (the steepest
+part of the Hann window, where the frame-to-frame energy increase peaks — not the centre).
 
-### Phase 2 — tempo estimation
-Autocorrelation of a rolling 6–8 s onset-strength window, tempo prior (centred ~120–128 BPM),
-comb summing at 1×/2×/4× lags against octave errors, hysteresis before switching.
-Exit: Acc1/Acc2 on GiantSteps + GTZAN, lock time.
+### Phase 2 — tempo estimation ✅
+`TempoEstimator`: autocorrelation of the last 8 s of flux (mean removed) every 0.5 s; candidate
+period `L` scored `acf(L) + ½·acf(2L) + ¼·acf(4L)`, times a log-normal prior (120 BPM, σ = 1
+octave), exponentially smoothed across updates (hysteresis), parabolic peak interpolation.
+GTZAN Acc1 **70%** / Acc2 **89%** (baseline 36% / 45%); disco 94% / 98%; synthetic 100%.
+Prior swept (centre 100–130, σ 0.5–3 octaves): 120 / 1.0 is at or near the best overall; 110
+/ 0.75 is ~3 points better on disco/hip-hop/pop only because hip-hop is slow.
 
-### Phase 3 — beat phase (PLL) + `BeatTracker` API
-Predict next beat, small phase/period corrections from onsets near the prediction, freewheel
-through breakdowns, confidence from onset/beat alignment. Lock-free snapshot to the GL thread,
-which extrapolates phase per frame with a configurable latency offset.
-Exit: beat F / continuity on GTZAN-Rhythm (disco, pop, hip-hop especially) and own tracks.
+### Phase 3 — beat phase (PLL) ✅ (snapshot API still to do)
+`BeatPhaseTracker`, wired into `BeatTracker` (registered in the harness as `tracker`):
+- Acquire: comb search over the last 4 s of onset strength (flux / running mean + 2 × kick
+  strength) for the best phase at the estimated period.
+- Track: after each predicted beat, the strongest onset within ±20% of a period (Gaussian
+  weighted towards the prediction) corrects the next beat by 0.3 × error and the period by
+  0.05 × error; freewheels when nothing stands out (< 1.5 × mean).
+- Re-acquire: adopt a tempo estimate that moves > 4%; jump phase when another phase's comb
+  scores 1.3 × better (e.g. locked to the off-beat).
+- Every beat is reported at its **predicted** time, never revised — the scores are what a live
+  visual would get.
+
+Results (GTZAN + hardened synthetic):
+
+| group | beat F | CMLt | AMLt | Acc1 | Acc2 | lock s (locked) |
+|---|--:|--:|--:|--:|--:|--:|
+| blues | 0.658 | 0.538 | 0.647 | 71% | 89% | 3.8 (90%) |
+| classical | 0.392 | 0.267 | 0.354 | 42% | 56% | 8.3 (58%) |
+| country | 0.807 | 0.586 | 0.798 | 62% | 97% | 3.6 (88%) |
+| disco | **0.933** | 0.896 | 0.941 | 94% | 98% | 3.3 (96%) |
+| hiphop | 0.788 | 0.699 | 0.777 | 87% | 93% | 3.7 (91%) |
+| jazz | 0.580 | 0.404 | 0.585 | 58% | 87% | 4.9 (82%) |
+| metal | 0.745 | 0.550 | 0.712 | 60% | 88% | 3.9 (95%) |
+| pop | 0.776 | 0.670 | 0.772 | 76% | 89% | 3.5 (82%) |
+| reggae | 0.848 | 0.644 | 0.836 | 68% | 95% | 3.3 (95%) |
+| rock | 0.807 | 0.699 | 0.786 | 82% | 94% | 3.6 (91%) |
+| synthetic | 0.977 | 0.992 | 0.992 | 100% | 100% | 3.3 (100%) |
+| **all** | **0.735** | 0.599 | 0.723 | 70% | 89% | 3.6 (87%) |
+
+(Baseline overall: beat F 0.315, CMLt 0.168, AMLt 0.287.) Published *offline* trackers, which
+see the whole track, reach beat F around 0.8 on GTZAN.
+
+Findings:
+- **Frame clock drift.** The flux hop is a whole number of samples: at 22.05 kHz,
+  round(220.5) = 221, i.e. 99.77 frames/s, not 100. Converting frame counts to time at the
+  nominal 100/s drifted ~2.3 ms per second: beats ran ~45 ms early by mid-track (beat F 0.52),
+  and tempo read 0.2% fast. At 48 kHz the hop is exact, which is why the synthetic set never
+  showed it. `SpectralFlux.frameRate()` now gives the exact rate (regression test in
+  `BeatTrackerTest`).
+- Kicks arrive before the flux frame for their time exists; they were being dropped. They are
+  now stored against their frame number.
+- Residual timing against GTZAN labels: median −2 to −14 ms (disco −5 ms); synthetic +2.5 ms.
+  The kick detector alone reads ~20 ms early on GTZAN vs ~6.5 ms on synthetic, so GTZAN's labels
+  sit ~13 ms after physical onsets — a labelling convention, not something to tune for.
+
+Still to do: the `bpm()` / `beatPhase()` / `beatCount()` / `confidence()` / `kickStrength()`
+snapshot for the GL thread (see API above) — part of Phase 4.
 
 ### Phase 4 — wire into experiments
 Beat phase in `SpectrumWave` / `RadialSpectrumWave`, debug overlay (onset curve, BPM, phase,

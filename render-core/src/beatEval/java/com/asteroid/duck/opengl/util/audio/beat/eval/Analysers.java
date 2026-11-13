@@ -2,6 +2,7 @@ package com.asteroid.duck.opengl.util.audio.beat.eval;
 
 import com.asteroid.duck.opengl.util.audio.beat.BeatAnalyser;
 import com.asteroid.duck.opengl.util.audio.beat.BeatListener;
+import com.asteroid.duck.opengl.util.audio.beat.BeatTracker;
 import com.asteroid.duck.opengl.util.audio.beat.KickDetector;
 
 import java.util.List;
@@ -33,7 +34,9 @@ public final class Analysers {
             new Entry("baseline", "existing BeatDetector (SpectrumWave tuning), bass rising edges",
                     BaselineAnalyser::new),
             new Entry("kick", "KickDetector: time-domain 80–250 Hz energy rise, peak-picked (kicks reported as beats too)",
-                    (sampleRate, listener) -> new KickDetector(sampleRate, kicksAsBeats(listener)))
+                    (sampleRate, listener) -> new KickDetector(sampleRate, kicksAsBeats(listener))),
+            new Entry("tracker", "BeatTracker: KickDetector, spectral-flux autocorrelation tempo, PLL beat phase (predicted beats)",
+                    BeatTracker::new)
     );
 
     /**
