@@ -1,5 +1,5 @@
 ---
-description: "Reference for the io.github.duckasteroid:render-core library, including lifecycle, shaders, geometry, audio visualisation (waveform, spectrum analyser, beat detection), and key input."
+description: "Reference for the io.github.duckasteroid:render-core library, including lifecycle, shaders, geometry, audio visualisation (waveform, spectrum analyser), beat/tempo/kick detection, and key input."
 ---
 
 # render-core — Agent Reference
@@ -172,7 +172,8 @@ The `SHIFT+PRINT_SCREEN` → recording binding is likewise wired in `Main.regist
 | Resource manager, textures, texture units | [resources.md](resources.md) |
 | Utility renderers, timer/clock library | [utilities.md](utilities.md) |
 | Key input, cross-thread actions, colours | [input.md](input.md) |
-| Audio capture, FFT analysis, beat detection, spectrum rendering | [audio.md](audio.md) |
+| Audio capture, FFT analysis, spectrum rendering | [audio.md](audio.md) |
+| Beat, tempo and kick drum detection | [beat.md](beat.md) |
 
 ---
 

@@ -916,35 +916,8 @@ values until `update()` has been called at least `historyLength * 3` times.
 
 ## BeatTrackerSink — live tempo, beat phase and kick drum
 
-`BeatTrackerSink` (`util.audio.beat`) is an `AudioSink`: add it to the capture sinks and it
-tracks the music on the audio thread — kicks (time-domain 80–250 Hz onset detector), tempo
-(spectral-flux autocorrelation) and beat phase (a phase-locked loop that *predicts* beats). The
-render thread reads an immutable snapshot, extrapolated to the current moment:
-
-```java
-private final BeatTrackerSink beats = new BeatTrackerSink(48_000f);
-
-// init():
-audioInput = AudioInput.start(ctx, List.of(freqProc, beats));
-
-// doRender():
-float pulse = (float) Math.exp(-6 * beats.beatPhase()) * beats.confidence();  // hits on the beat
-float kick  = beats.kickStrength();     // last kick, decaying (150 ms time constant)
-double bpm  = beats.bpm();              // NaN until the first estimate (~3 s)
-long   beat = beats.beatCount();        // % 4 cycles a bar (downbeat not yet known)
-```
-
-- `beatPhase()` is 0 on the beat rising to 1 just before the next — animate from it, not from
-  discrete events, and the motion stays on the beat even when a kick is buried in the mix.
-- `confidence()` falls when predicted beats stop landing on onsets (a breakdown with no
-  percussion), and drops to 0 — with `bpm()` going `NaN` — after 1.5 s below −60 dBFS. Scale
-  pulses by it and they fade out when the music stops.
-- `setLatency(Duration)` makes the visuals lead the analysis, to make up for audio output
-  latency. The spectrum experiments bind `.` / `,` to ±10 ms.
-- Cost: ~1% of real time on the audio thread; worst single write ~0.3 ms.
-- Accuracy and how it was measured: `docs/beat-tracking-plan.md` in the repo (GTZAN beat F 0.735,
-  disco 0.93, vs 0.32 for `BeatDetector`-based beats). Prefer it over `BeatDetector` for beat
-  and kick timing; `BeatDetector` remains useful for per-band energy flashes.
+For beat timing, tempo and kick drum, use `BeatTrackerSink` (or `BeatTracker` for callbacks)
+from `util.audio.beat` rather than `BeatDetector`: see [beat.md](beat.md).
 
 ---
 
