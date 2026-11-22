@@ -154,7 +154,7 @@ All three hand the matrix to the GL thread through a `PendingValue` (`util/rende
 
 This separation keeps all key bindings in one place (`Main.registerKeys()`) while GLWindow owns the action logic.
 
-**Screenshot flow:** `captureNextFrame(Path)` stores the path in `volatile pendingCapture`. After `render()` on the GL thread, `readFramebuffer()` runs `glReadPixels` → row-flip → `BufferedImage`, then a virtual thread writes the PNG via `ImageIO`.
+**Screenshot flow:** `captureNextFrame(Path)` stores the path in `volatile pendingCapture`. After `render()` on the GL thread, `readFramebuffer()` runs `glReadPixels` → row-flip → `BufferedImage`, then `ScreenshotWriter` encodes it on a non-daemon platform thread into a temp sibling file, `force()`s it to disk and atomically renames it onto the destination. The JVM cannot exit mid-write: `dispose()` and a shutdown hook (which also covers `System.exit`) both block on `ScreenshotWriter.awaitPending()`.
 
 **Video recording flow:** `startRecording(Path, Duration)` (capped at 60 s) stores a `RecordingRequest` in `volatile pendingRecording`. On the next frame the GL thread calls `beginRecordingSession()`, which opens a JCodec `AWTSequenceEncoder` (H.264/MP4, 30 fps) and spawns an encode virtual thread. Each subsequent frame calls `readFramebuffer()` and offers the image to a bounded `ArrayBlockingQueue<BufferedImage>` (capacity 30). The encode thread drains the queue and feeds frames to JCodec. When `Timer.elapsed()` passes the requested duration, the GL thread signals `stopping = true`; the encode thread drains remaining frames and calls `encoder.finish()` to write the MP4 trailer. If the window closes mid-recording, `dispose()` signals the session and joins the encode thread (up to 30 s).
 

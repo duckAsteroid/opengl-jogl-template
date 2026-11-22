@@ -44,7 +44,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
-import javax.imageio.ImageIO;
 
 import static org.lwjgl.glfw.Callbacks.glfwFreeCallbacks;
 import static org.lwjgl.glfw.GLFW.*;
@@ -533,20 +532,13 @@ public abstract class GLWindow implements RenderContext {
 	}
 
 	/**
-	 * Captures the current framebuffer as a PNG. Pixel data is read on the GL thread;
-	 * file I/O is handed off to a virtual thread to avoid stalling the render loop.
+	 * Captures the current framebuffer as a PNG. Pixel data is read on the GL thread; encoding and
+	 * file I/O run on a {@link ScreenshotWriter} thread so the render loop doesn't stall, but the
+	 * JVM cannot exit (normally, via {@link System#exit}, or after {@link #dispose()}) until the
+	 * file is completely written and flushed to disk.
 	 */
 	private void captureFramebuffer(Path path) {
-		BufferedImage img = readFramebuffer();
-		Thread.ofVirtual().start(() -> {
-			try {
-				if (path.getParent() != null) Files.createDirectories(path.getParent());
-				ImageIO.write(img, "PNG", path.toFile());
-				LOG.info("Screenshot saved: {}", path.toAbsolutePath());
-			} catch (IOException e) {
-				LOG.error("Failed to write screenshot to {}", path, e);
-			}
-		});
+		ScreenshotWriter.writeAsync(readFramebuffer(), path);
 	}
 
 	/** Starts a new {@link RecordingSession}: selects encoder, allocates PBOs, and launches the encode thread. */
@@ -705,7 +697,8 @@ public abstract class GLWindow implements RenderContext {
 	/**
 	 * Free all GLFW callbacks, dispose the {@link ResourceManager}, and release the error callback.
 	 * If a recording is in progress it is finalised before resources are destroyed; this blocks
-	 * until the encode thread completes (up to 30 s).
+	 * until the encode thread completes (up to 30 s). It also blocks until every pending
+	 * screenshot has been fully written and flushed to disk.
 	 * Called automatically at the end of {@link #displayLoop()}; subclasses that override this
 	 * must call {@code super.dispose()}.
 	 */
@@ -728,6 +721,8 @@ public abstract class GLWindow implements RenderContext {
 				Thread.currentThread().interrupt();
 			}
 		}
+		// Block until any screenshot still being written is complete and on disk.
+		ScreenshotWriter.awaitPending();
 		resourceManager.dispose();
 		if (errorCallback != null) errorCallback.free();
 	}

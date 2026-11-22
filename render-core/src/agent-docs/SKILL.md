@@ -126,7 +126,10 @@ ctx.captureNextFrame(Path.of("captures/frame.png"));   // parent dirs are create
   `volatile` field and consumed on the render thread.
 - Only the most recently requested path is captured if multiple calls arrive in the same frame.
 - Pixel read (`glReadPixels`) happens on the GL thread immediately after rendering completes;
-  the vertical flip and PNG write are offloaded to a virtual thread to avoid frame hitches.
+  the PNG is encoded off the GL thread, written to a temporary file, flushed to disk and
+  atomically renamed into place, so the path only ever holds a complete image.
+- The JVM won't exit with a screenshot half-written: `dispose()` and a shutdown hook (which
+  also covers `System.exit`) wait for pending writes.
 - Uses `glfwGetFramebufferSize` for dimensions, so the output is correct on HiDPI displays.
 
 ---
