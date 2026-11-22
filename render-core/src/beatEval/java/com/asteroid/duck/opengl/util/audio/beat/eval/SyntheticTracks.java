@@ -57,6 +57,87 @@ public final class SyntheticTracks {
                 track("tempo-change-120-128", SyntheticTracks::tempoChange120To128));
     }
 
+    /**
+     * A track with a dance-music arrangement and the times its sections start, for testing
+     * structure detection. Not part of {@link #all()}, so beat-tracking results stay comparable.
+     * @param loaded    the audio and its beat annotations
+     * @param groove    when the kick first comes in, seconds
+     * @param breakdown when the kick and bass drop out
+     * @param buildup   when the riser and snare roll start
+     * @param drop      when the kick and bass come back
+     */
+    public record Arranged(Track.Loaded loaded, double groove, double breakdown, double buildup, double drop) {}
+
+    /**
+     * 4 bars intro (pad, hats), 16 bars groove, 8 bars breakdown (pad and lead only), 4 bars
+     * build-up (riser, accelerating snare roll), then the drop into 12 bars of groove.
+     * @return the track and its section times
+     */
+    public static Arranged arranged128() {
+        int intro = 4 * BEATS_PER_BAR;
+        int breakStart = intro + 16 * BEATS_PER_BAR;
+        int buildStart = breakStart + 8 * BEATS_PER_BAR;
+        int drop = buildStart + 4 * BEATS_PER_BAR;
+        double[] beats = grid(LEAD_IN, 128, drop + 12 * BEATS_PER_BAR);
+        Mix mix = new Mix(beats, 10, 0.002);
+        IntPredicate kickOn = i -> (i >= intro && i < breakStart) || i >= drop;
+        double[] kicks = drums(mix, beats, kickOn, 0.8f);
+        mix.sub(kicks, intro, breakStart, 0.4f, true);
+        mix.sub(kicks, drop, beats.length, 0.4f, true);
+        mix.lead(intro, buildStart, 0.1f);
+        mix.lead(drop, beats.length, 0.1f);
+        mix.pad(beats[0], beats[drop], 0.2f);
+        mix.riser(beats[buildStart], beats[drop], 0.35f);
+        // snare roll: quarters, then 8ths, then 16ths
+        for (int i = buildStart; i < drop; i++) {
+            int bar = (i - buildStart) / BEATS_PER_BAR;
+            int hits = bar < 2 ? 1 : bar < 3 ? 2 : 4;
+            for (int h = 0; h < hits; h++) {
+                mix.clap(beats[i] + h * 4.0 / hits * mix.sixteenth(i), 0.15f + 0.25f * (i - buildStart) / (drop - buildStart));
+            }
+        }
+        return new Arranged(mix.finish(kicks, 128, MASTERED), beats[intro], beats[breakStart], beats[buildStart], beats[drop]);
+    }
+
+    /**
+     * A gapless mix: 24 bars of a 124 BPM groove in A minor, then — with no gap — 24 bars of a
+     * 132 BPM groove a fourth higher (D minor).
+     * @return the audio (beat annotations cover both halves)
+     */
+    public static Track.Loaded mixedTracks() {
+        Track.Loaded first = groove(124, 24, 11, 1);
+        Track.Loaded second = groove(132, 24, 12, Math.pow(2, 5 / 12.0));
+        double cut = mixPoint();
+        int from = (int) Math.round(cut * SAMPLE_RATE);
+        int skip = (int) Math.round(LEAD_IN * SAMPLE_RATE);
+        float[] a = first.audio().samples();
+        float[] b = second.audio().samples();
+        float[] out = new float[from + b.length - skip];
+        System.arraycopy(a, 0, out, 0, from);
+        System.arraycopy(b, skip, out, from, b.length - skip);
+        double[] beats = java.util.stream.DoubleStream.concat(
+                Arrays.stream(first.annotations().beats()).filter(t -> t < cut),
+                Arrays.stream(second.annotations().beats()).map(t -> t - LEAD_IN + cut)).toArray();
+        return new Track.Loaded(new AudioClip(out, SAMPLE_RATE), new Annotations(beats, new double[0], Double.NaN));
+    }
+
+    /** @return when {@link #mixedTracks()} switches to the second track, seconds */
+    public static double mixPoint() {
+        return LEAD_IN + 24 * BEATS_PER_BAR * 60.0 / 124;
+    }
+
+    private static Track.Loaded groove(double bpm, int bars, long seed, double pitch) {
+        double[] beats = grid(LEAD_IN, bpm, bars * BEATS_PER_BAR);
+        Mix mix = new Mix(beats, seed, 0.002);
+        mix.pitch = pitch;
+        double[] kicks = drums(mix, beats, i -> true, 0.8f);
+        mix.sub(kicks, 0, beats.length, 0.4f, true);
+        for (int i = 0; i < beats.length; i++) mix.pluck(beats[i] + 2 * mix.sixteenth(i), root(i), 0.4f);
+        mix.lead(0, beats.length, 0.12f);
+        mix.pad(beats[0], mix.end(), 0.15f);
+        return mix.finish(kicks, bpm, MASTERED);
+    }
+
     private static Track track(String name, Supplier<Track.Loaded> render) {
         return new Track(GROUP, name, render::get);
     }
@@ -240,6 +321,8 @@ public final class SyntheticTracks {
         private final float[] out;
         private final SplittableRandom random;
         private final double jitter;
+        /** Frequency multiplier for every pitched voice (transposition). */
+        double pitch = 1;
 
         /**
          * @param beats  the beat grid; the mix runs one second past the last beat
@@ -350,7 +433,8 @@ public final class SyntheticTracks {
             int length = index(0.2);
             for (int i = 0; i < length && start + i < out.length; i++) {
                 double t = i / SAMPLE_RATE;
-                double tone = Math.sin(2 * Math.PI * frequency * t) + 0.5 * Math.sin(4 * Math.PI * frequency * t);
+                double f = frequency * pitch;
+                double tone = Math.sin(2 * Math.PI * f * t) + 0.5 * Math.sin(4 * Math.PI * f * t);
                 out[start + i] += (float) (gain * tone * Math.exp(-t / 0.08) * Math.min(1, t / 0.002));
             }
         }
@@ -373,7 +457,7 @@ public final class SyntheticTracks {
                     double sinceKick = kicks.length > 0 && kicks[k] <= t ? t - kicks[k] : Double.POSITIVE_INFINITY;
                     duck = 1 - 0.85 * Math.exp(-sinceKick / 0.1);
                 }
-                out[i] += (float) (gain * duck * Math.sin(2 * Math.PI * root(beat) * t));
+                out[i] += (float) (gain * duck * Math.sin(2 * Math.PI * root(beat) * pitch * t));
             }
         }
 
@@ -383,7 +467,7 @@ public final class SyntheticTracks {
             for (int i = from; i < to; i++) {
                 for (int half = 0; half < 2; half++) {
                     double t0 = beats[i] + half * 2 * sixteenth(i);
-                    double frequency = LEAD_NOTES[note++ % LEAD_NOTES.length];
+                    double frequency = LEAD_NOTES[note++ % LEAD_NOTES.length] * pitch;
                     int start = index(t0);
                     int length = index(0.25);
                     for (int s = 0; s < length && start + s < out.length; s++) {
@@ -401,8 +485,8 @@ public final class SyntheticTracks {
             for (int i = index(from); i < index(to) && i < out.length; i++) {
                 double t = i / SAMPLE_RATE;
                 double swell = 0.6 + 0.4 * Math.sin(2 * Math.PI * 0.25 * t);
-                double chord = Math.sin(2 * Math.PI * 220 * t) + Math.sin(2 * Math.PI * 261.6 * t)
-                        + Math.sin(2 * Math.PI * 329.6 * t);
+                double chord = Math.sin(2 * Math.PI * 220 * pitch * t) + Math.sin(2 * Math.PI * 261.6 * pitch * t)
+                        + Math.sin(2 * Math.PI * 329.6 * pitch * t);
                 out[i] += (float) (gain * swell * chord / 3);
             }
         }

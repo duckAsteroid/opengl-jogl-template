@@ -100,7 +100,7 @@ To add a new experiment: implement `Experiment`, add the fully-qualified class n
 
 ### Audio thread safety
 
-Experiments capture through `AudioInput` (`util/audio/`): `AudioInput.start(ctx, sinks)` picks the system default (PipeWire) line with a simulated fallback, runs a supervised capture thread, `bindKeys(ctx)` maps J/H to switching source, and `close()` shuts it down. Beat/tempo/kick tracking lives in `util/audio/beat/` (`BeatTrackerSink` for live use); its evaluation harness and results are described in `docs/beat-tracking-plan.md`.
+Experiments capture through `AudioInput` (`util/audio/`): `AudioInput.start(ctx, sinks)` picks the system default (PipeWire) line with a simulated fallback, runs a supervised capture thread, `bindKeys(ctx)` maps J/H to switching source, and `close()` shuts it down. Beat/tempo/kick tracking lives in `util/audio/beat/` (`BeatTrackerSink` for live use); its evaluation harness and results are described in `docs/beat-tracking-plan.md`. Slower musical signals — intensity, timbre, key, arousal/valence, and structure events (breakdown, build-up, drop, section and track changes) — come from `MusicStateSink`/`MusicAnalyser` in `util/audio/music/` (see `render-core/src/agent-docs/music.md`); it takes its tempo from a `BeatTrackerSink`.
 
 `AudioReader` runs a producer thread (use a **platform** thread; it parks 0.5 ms when the line is empty) that fans PCM bytes out to `AudioSink`s. This is the only intentionally concurrent code; everything else is single-threaded on the GL thread.
 

@@ -9,6 +9,7 @@ of live music, and predicts beats so visuals land *on* them rather than after th
 | Callbacks for every beat, kick and tempo change, on your own thread or offline | `BeatTracker` + `BeatListener` |
 | Kick drum onsets only | `KickDetector` + `BeatListener` |
 | Per-band energy flashes (not timing) | `BeatDetector` — see [audio.md](audio.md) |
+| Intensity, breakdowns/drops, key, mood | `MusicStateSink` — see [music.md](music.md) |
 
 ---
 
